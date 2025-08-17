@@ -1,0 +1,27 @@
+{
+  "departments": [
+    { "slug": "cardiology", "name": "Cardiology" },
+    { "slug": "neurology", "name": "Neurology" },
+    { "slug": "orthopedics", "name": "Orthopedics" },
+    { "slug": "pediatrics", "name": "Pediatrics" },
+    { "slug": "general", "name": "General Medicine" }
+  ],
+
+  "doctors": [
+    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "2010", "photo": "img/team/team01.png" },
+    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "2015", "photo": "img/team/team02.png" },
+    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "2012", "photo": "img/team/team03.png" },
+    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "2018", "photo": "img/team/team01.png" },
+    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "2008", "photo": "img/team/team02.png" },
+    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "2010", "photo": "img/team/team01.png" },
+    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "2015", "photo": "img/team/team02.png" },
+    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "2012", "photo": "img/team/team03.png" },
+    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "2018", "photo": "img/team/team01.png" },
+    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "2008", "photo": "img/team/team02.png" },
+    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "2010", "photo": "img/team/team01.png" },
+    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "2015", "photo": "img/team/team02.png" },
+    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "2012", "photo": "img/team/team03.png" },
+    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "2018", "photo": "img/team/team01.png" },
+    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "2008", "photo": "img/team/team02.png" }
+  ]
+}

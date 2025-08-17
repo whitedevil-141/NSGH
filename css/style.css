@@ -21,6 +21,7 @@
 19. contact
 20. footer
 21. appointment
+22. Doctor
 */
 
 /* 1. Theme default css */
@@ -7258,15 +7259,210 @@ form textarea {
   background: #0056b3;
 }
 
+/* === Doctor Filter Box === */
+.filter-box {
+  margin-bottom: 20px;
+  text-align: left;
+  padding: 20px 15px; /* Default mobile-first padding */
+}
+
+.filter-box select {
+  padding: 10px 14px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%; /* Full width on mobile */
+  max-width: 300px; /* Maximum width */
+  min-width: 200px;
+}
+
+.filter-box select:hover {
+  border-color: #007bff;
+  box-shadow: 0 0 6px rgba(0, 123, 255, 0.3);
+}
+
+/* === Doctor Cards === */
+.doctor-card {
+  margin-bottom: 30px;
+  padding: 0 10px; /* Add padding for mobile */
+}
+
+#doctorsContainer {
+  padding: 0px 15px; /* Mobile-first padding */
+  background-color: #fff;
+}
+
+.single-team {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+  padding: 20px;
+  height: 100%; /* Ensure equal height cards */
+}
+
+.single-team:hover {
+  transform: translateY(-6px);
+  box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Doctor Image */
+.team-thumb {
+  width: 100%;
+  height: 200px; /* Smaller on mobile */
+  overflow: hidden;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.team-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.single-team:hover .team-thumb img {
+  transform: scale(1.05);
+}
+
+/* Doctor Info */
+.team-info h4 {
+  font-size: 18px; /* Smaller on mobile */
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #222;
+  line-height: 1.3;
+}
+
+.team-info span {
+  display: block;
+  font-size: 13px; /* Smaller on mobile */
+  font-weight: 500;
+  color: #007bff;
+  margin-bottom: 8px;
+}
+
+.team-info p {
+  font-size: 13px; /* Smaller on mobile */
+  color: #666;
+  margin: 0;
+}
+
+/* Doctor Modal container */
+#doctorModal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0; 
+  left: 0;
+  width: 100%; 
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 9999;
+}
+
+/* Show modal */
+#doctorModal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Modal content */
+#doctorModal .modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 25px 20px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  transform: scale(0.7);
+  transition: transform 0.3s ease;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Modal content visible */
+#doctorModal.show .modal-content {
+  transform: scale(1);
+}
+
+
+/* Pagination Container */
+#pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+    flex-wrap: wrap;
+    gap: 6px; /* Smaller gap on mobile */
+    padding: 0 15px;
+}
+
+/* Pagination Button */
+#pagination .page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px; /* Smaller on mobile */
+    height: 35px;
+    border-radius: 50%;
+    border: 1px solid #007bff;
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+/* Hover effect */
+#pagination .page-link:hover {
+    background-color: #e6f0ff;
+    color: #0056b3;
+}
+
+/* Active page */
+#pagination .page-item.active .page-link {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+/* Loading Spinner */
+#loader {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 60px; /* Smaller on mobile */
+    height: 60px;
+    animation: spin 2s linear infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    display: none;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -7275,5 +7471,222 @@ form textarea {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+#doctorsContainer {
+  transition: opacity 0.4s ease;
+}
+
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Small phones (up to 480px) */
+@media (max-width: 480px) {
+  .filter-box {
+    padding: 15px 10px;
+    text-align: center;
+  }
+  
+  .filter-box select {
+    width: 100%;
+    min-width: auto;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+  
+  #doctorsContainer {
+    padding: 0px 10px;
+  }
+  
+  .doctor-card {
+    padding: 0 5px;
+    margin-bottom: 20px;
+  }
+  
+  .single-team {
+    padding: 15px;
+  }
+  
+  .team-thumb {
+    height: 180px;
+  }
+  
+  .team-info h4 {
+    font-size: 16px;
+  }
+  
+  .team-info span, .team-info p {
+    font-size: 12px;
+  }
+  
+  #pagination .page-link {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+  
+  #loader {
+    width: 50px;
+    height: 50px;
+    border-width: 6px;
+  }
+}
+
+/* Medium phones (481px to 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .filter-box {
+    padding: 20px 20px;
+  }
+  
+  #doctorsContainer {
+    padding: 0px 20px;
+  }
+  
+  .team-thumb {
+    height: 220px;
+  }
+  
+  .team-info h4 {
+    font-size: 17px;
+  }
+}
+
+/* Tablets (768px to 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .filter-box {
+    padding: 20px 40px;
+  }
+  
+  #doctorsContainer {
+    padding: 0px 40px;
+  }
+  
+  .team-thumb {
+    height: 200px;
+  }
+  
+  .team-info h4 {
+    font-size: 18px;
+  }
+  
+  .team-info span, .team-info p {
+    font-size: 13px;
+  }
+  
+  #pagination .page-link {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* Small laptops (992px to 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .filter-box {
+    padding: 20px 80px;
+  }
+  
+  #doctorsContainer {
+    padding: 0px 80px;
+  }
+  
+  .team-thumb {
+    height: 220px;
+  }
+  
+  .team-info h4 {
+    font-size: 19px;
+  }
+  
+  .team-info span, .team-info p {
+    font-size: 14px;
+  }
+  
+  #pagination .page-link {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Large screens (1200px and up) */
+@media (min-width: 1200px) {
+  .filter-box {
+    padding: 20px 150px;
+  }
+  
+  #doctorsContainer {
+    padding: 0px 150px;
+  }
+  
+  .team-thumb {
+    height: 240px;
+  }
+  
+  .team-info h4 {
+    font-size: 20px;
+  }
+  
+  .team-info span, .team-info p {
+    font-size: 14px;
+  }
+}
+
+/* Extra large screens (1400px and up) */
+@media (min-width: 1400px) {
+  .filter-box {
+    padding: 20px 250px;
+  }
+  
+  #doctorsContainer {
+    padding: 0px 250px;
+  }
+}
+
+/* ===== UTILITY CLASSES FOR RESPONSIVENESS ===== */
+
+/* Hide elements on specific screen sizes if needed */
+.hide-mobile {
+  display: block;
+}
+
+.hide-tablet {
+  display: block;
+}
+
+.hide-desktop {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Responsive text sizes */
+.responsive-text {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .responsive-text {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .responsive-text {
+    font-size: 18px;
   }
 }
