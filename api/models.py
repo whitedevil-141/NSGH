@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text
-from database import Base
+from api.database import Base
 
 class Doctor(Base):
     __tablename__ = "doctors"
