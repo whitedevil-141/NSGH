@@ -8,20 +8,21 @@
   ],
 
   "doctors": [
-    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "2010", "photo": "img/team/team01.png" },
-    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "2015", "photo": "img/team/team02.png" },
-    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "2012", "photo": "img/team/team03.png" },
-    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "2018", "photo": "img/team/team01.png" },
-    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "2008", "photo": "img/team/team02.png" },
-    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "2010", "photo": "img/team/team01.png" },
-    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "2015", "photo": "img/team/team02.png" },
-    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "2012", "photo": "img/team/team03.png" },
-    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "2018", "photo": "img/team/team01.png" },
-    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "2008", "photo": "img/team/team02.png" },
-    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "2010", "photo": "img/team/team01.png" },
-    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "2015", "photo": "img/team/team02.png" },
-    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "2012", "photo": "img/team/team03.png" },
-    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "2018", "photo": "img/team/team01.png" },
-    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "2008", "photo": "img/team/team02.png" }
+    { "id": 1, "name": "Dr. Rahman", "specialization": "Cardiologist", "category": "cardiology", "experience": "10", "photo": "img/team/team01.png", "description": "Treats heart diseases and manages cardiac health.", "phone": "01987654321" },
+    { "id": 2, "name": "Dr. Karim", "specialization": "Neurologist", "category": "neurology", "experience": "15", "photo": "img/team/team02.png", "description": "Specializes in brain and nerve disorders.", "phone": "01987654321" },
+    { "id": 3, "name": "Dr. Fatima", "specialization": "Orthopedic Surgeon", "category": "orthopedics", "experience": "12", "photo": "img/team/team03.png", "description": "Expert in bones, joints, and fractures.", "phone": "01987654321" },
+    { "id": 4, "name": "Dr. Amina", "specialization": "Pediatrician", "category": "pediatrics", "experience": "18", "photo": "img/team/team01.png", "description": "Provides care for children and infants.", "phone": "01987654321" },
+    { "id": 5, "name": "Dr. Ali", "specialization": "General Practitioner", "category": "general", "experience": "08", "photo": "img/team/team02.png", "description": "Offers general health and preventive care.", "phone": "01987654321" },
+    { "id": 6, "name": "Dr. Shaila", "specialization": "Dermatologist", "category": "dermatology", "experience": "13", "photo": "img/team/team04.png", "description": "Treats skin, hair, and nail conditions.", "phone": "01987654322" },
+    { "id": 7, "name": "Dr. Hasan", "specialization": "ENT Specialist", "category": "ent", "experience": "11", "photo": "img/team/team05.png", "description": "Cares for ear, nose, and throat problems.", "phone": "01987654323" },
+    { "id": 8, "name": "Dr. Laila", "specialization": "Gynecologist", "category": "gynecology", "experience": "14", "photo": "img/team/team06.png", "description": "Focuses on women’s reproductive health.", "phone": "01987654324" },
+    { "id": 9, "name": "Dr. Tanvir", "specialization": "Psychiatrist", "category": "psychiatry", "experience": "16", "photo": "img/team/team07.png", "description": "Treats mental health and emotional issues.", "phone": "01987654325" },
+    { "id": 10, "name": "Dr. Nabila", "specialization": "Ophthalmologist", "category": "ophthalmology", "experience": "09", "photo": "img/team/team08.png", "description": "Expert in eye care and vision correction.", "phone": "01987654326" },
+    { "id": 11, "name": "Dr. Samir", "specialization": "Endocrinologist", "category": "endocrinology", "experience": "12", "photo": "img/team/team09.png", "description": "Manages hormonal and metabolic disorders.", "phone": "01987654327" },
+    { "id": 12, "name": "Dr. Farhana", "specialization": "Nutritionist", "category": "nutrition", "experience": "17", "photo": "img/team/team10.png", "description": "Provides dietary advice and meal planning.", "phone": "01987654328" },
+    { "id": 13, "name": "Dr. Imran", "specialization": "Pulmonologist", "category": "pulmonology", "experience": "10", "photo": "img/team/team11.png", "description": "Treats lung and respiratory issues.", "phone": "01987654329" },
+    { "id": 14, "name": "Dr. Rina", "specialization": "Oncologist", "category": "oncology", "experience": "13", "photo": "img/team/team12.png", "description": "Provides cancer diagnosis and treatment.", "phone": "01987654330" },
+    { "id": 15, "name": "Dr. Arif", "specialization": "Urologist", "category": "urology", "experience": "11", "photo": "img/team/team13.png", "description": "Specializes in urinary tract and kidney care.", "phone": "01987654331" }
   ]
+
 }
