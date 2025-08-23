@@ -3377,10 +3377,12 @@ div.single-cta:last-child {
 .pricing-box {
   background: #ffffff 0% 0% no-repeat padding-box;
   box-shadow: 3px 4px 15px #0000001a;
+  border: 0px dashed #e0e0e000;
   border-radius: 10px;
   float: left;
   width: 100%;
   position: relative;
+  transition: transform 0.3s ease, border 0.3s ease; /* add border here */
 }
 .pricing-btn {
   position: absolute;
@@ -3473,6 +3475,11 @@ div.single-cta:last-child {
 }
 .pricing-box.active {
   border: 3px dashed #1c19a1;
+}
+.pricing-box:hover {
+  border: 3px dashed #1c19a1;
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
 }
 .pricing-body {
   float: left;
