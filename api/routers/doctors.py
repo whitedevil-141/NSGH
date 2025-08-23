@@ -27,7 +27,7 @@ def get_doctor(doctor_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=DoctorOut)
 def create_doctor(data: DoctorBase, db: Session = Depends(get_db)):
-    new_doc = Doctor(**data.dict())
+    new_doc = Doctor(**data.model_dump())
     db.add(new_doc)
     db.commit()
     db.refresh(new_doc)
@@ -38,7 +38,7 @@ def update_doctor(doctor_id: int, data: DoctorBase, db: Session = Depends(get_db
     doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
-    for key, value in data.dict().items():
+    for key, value in data.model_dump().items():
         setattr(doctor, key, value)
     db.commit()
     db.refresh(doctor)
