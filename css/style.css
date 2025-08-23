@@ -2245,7 +2245,7 @@ section:hover .section-title h2::before {
 }
 .single-testimonial-bg {
   background: #ffffff 0% 0% no-repeat padding-box;
-  box-shadow: 3px 4px 15px #0000001a;
+  box-shadow: 3px 4px 15px 10px #0000001a;
   border-radius: 10px;
   width: 90%;
   float: right;
