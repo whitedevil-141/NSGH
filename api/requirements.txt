@@ -7,3 +7,4 @@ passlib[bcrypt]
 requests          # For SSLCOMMERZ / API calls
 python-multipart  # If you use form uploads
 slowapi
+pymysql
