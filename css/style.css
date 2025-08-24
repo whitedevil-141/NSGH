@@ -2520,7 +2520,10 @@ section:hover .section-title h2::before {
 }
 .blog-thumb:hover img.b-link {
   opacity: 1;
+  transform: scale(1.1);
+  
 }
+
 .blog-thumb img {
   width: 100%;
 }
@@ -2546,6 +2549,9 @@ section:hover .section-title h2::before {
   border-radius: 10px;
   overflow: hidden;
   margin: 10px 0;
+}
+.single-post:hover .blog-content  {
+  transform: translateY(-15px);
 }
 .b-meta ul li {
   display: inline-block;
@@ -2584,6 +2590,7 @@ section:hover .section-title h2::before {
 }
 .single-post:hover .blog-btn {
   opacity: 1;
+  transform: translateY(0); /* slide into place */
 }
 
 .blog-btn a {
