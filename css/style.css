@@ -1372,6 +1372,7 @@ section:hover .section-title h2::before {
   color: #f5f5f5;
   text-align: center;
 }
+
 .services-two .services-icon {
   display: inline-block;
   width: 120px;
@@ -1383,6 +1384,11 @@ section:hover .section-title h2::before {
   padding: 10px;
   line-height: 100px;
   text-align: center;
+}
+.services-icon:hover{
+  background: #533ceb96;
+  transition: 0.3s;
+
 }
 .services-two .second-services-content {
   float: left;
@@ -2258,12 +2264,24 @@ section:hover .section-title h2::before {
   position: relative;
 }
 .testimonial-active .testi-img {
-  float: left;
-  margin-bottom: 20px;
+  width: 20%;              /* container width */
   position: absolute;
   left: 0;
   top: 0;
+  margin-bottom: 20px;
+  box-shadow: 3px 4px 15px 10px #0000001a;
+  overflow: hidden;
+  border-radius: 50%;        /* hides overflow if image is bigger */
 }
+
+.testimonial-active .testi-img img {
+  width: 100%;             /* makes image fit container */
+  height: auto;            /* keeps aspect ratio */
+  display: block;
+  object-fit: cover;       /* trims instead of stretching (optional) */
+  border-radius: 50%;
+}
+
 .testimonial-active .ta-info {
   overflow: hidden;
   float: left;
