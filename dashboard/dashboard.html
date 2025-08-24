@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>NSGH Admin Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body class="dashboard-body">
+
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>NSGH Admin Dashboard</h2>
+        <button id="logoutBtn" class="btn btn-danger">Logout</button>
+      </div>
+
+      <!-- ===== Tabs ===== -->
+      <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" id="doctors-tab" data-bs-toggle="tab"
+            href="#doctors" role="tab">Doctors</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="services-tab" data-bs-toggle="tab"
+            href="#services" role="tab">Services</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="departments-tab" data-bs-toggle="tab"
+            href="#departments" role="tab">Departments</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="machines-tab" data-bs-toggle="tab"
+            href="#machines" role="tab">Machines</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="gallery-tab" data-bs-toggle="tab"
+            href="#gallery" role="tab">Gallery</a>
+        </li>
+      </ul>
+
+      <div class="tab-content mt-3">
+        <!-- ================== Doctors Tab ================== -->
+        <div class="tab-pane fade show active" id="doctors" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h4>Doctors</h4>
+            <button class="btn btn-success" data-bs-toggle="modal"
+              data-bs-target="#addDoctorModal">
+              Add New Doctor
+            </button>
+          </div>
+
+          <hr>
+          <h4>Doctors List</h4>
+          <select id="doctorFilter" class="form-control mb-3 w-auto">
+            <option value="all">All Categories</option>
+          </select>
+
+          <div id="doctorsContainer" class="row"></div>
+          <ul id="pagination"
+            class="pagination justify-content-center mt-3"></ul>
+        </div>
+
+        <!-- ================== Placeholder Tabs ================== -->
+        <div class="tab-pane fade" id="services" role="tabpanel"><h4>Services
+            Page - Placeholder</h4></div>
+        <div class="tab-pane fade" id="departments"
+          role="tabpanel"><h4>Departments Page - Placeholder</h4></div>
+        <div class="tab-pane fade" id="machines" role="tabpanel"><h4>Machines
+            Page - Placeholder</h4></div>
+        <div class="tab-pane fade" id="gallery" role="tabpanel"><h4>Gallery Page
+            - Placeholder</h4></div>
+      </div>
+    </div>
+    <!-- Add Doctor Modal -->
+    <div class="modal fade" id="addDoctorModal" tabindex="-1"
+      aria-labelledby="addDoctorModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="addDoctorForm" enctype="multipart/form-data">
+            <div class="modal-header">
+              <h5 class="modal-title" id="addDoctorModalLabel">Add New
+                Doctor</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input class="form-control" name="name" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Specialization</label>
+                <input class="form-control" name="specialization" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Category</label>
+                <input class="form-control" name="category" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Experience (yrs)</label>
+                <input class="form-control" name="experience" type="number"
+                  required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input class="form-control" name="phone">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" name="description"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Photo</label>
+                <input class="form-control" name="photo" type="file"
+                  accept="image/*" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary"
+                data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-success">Add Doctor</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- Edit Doctor Modal -->
+    <div class="modal fade" id="editDoctorModal" tabindex="-1"
+      aria-labelledby="editDoctorModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form id="editDoctorForm">
+            <div class="modal-header">
+              <h5 class="modal-title" id="editDoctorModalLabel">Edit Doctor</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="editDoctorId">
+              <div class="mb-3">
+                <label for="editName" class="form-label">Name</label>
+                <input type="text" class="form-control" id="editName" required>
+              </div>
+              <div class="mb-3">
+                <label for="editSpecialization"
+                  class="form-label">Specialization</label>
+                <input type="text" class="form-control" id="editSpecialization"
+                  required>
+              </div>
+              <div class="mb-3">
+                <label for="editCategory" class="form-label">Category</label>
+                <input type="text" class="form-control" id="editCategory"
+                  required>
+              </div>
+              <div class="mb-3">
+                <label for="editExperience" class="form-label">Experience
+                  (yrs)</label>
+                <input type="number" class="form-control" id="editExperience"
+                  required>
+              </div>
+              <div class="mb-3">
+                <label for="editPhone" class="form-label">Phone</label>
+                <input type="text" class="form-control" id="editPhone">
+              </div>
+              <div class="mb-3">
+                <label for="editDescription"
+                  class="form-label">Description</label>
+                <textarea class="form-control" id="editDescription"></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="editPhoto" class="form-label">Photo</label>
+                <input type="file" class="form-control" id="editPhoto"
+                  accept="image/*">
+              </div>
+
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary"
+                data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Update
+                Doctor</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- ===== JS ===== -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/dashboard.js"></script>
+
+  </body>
+</html>

@@ -1,0 +1,178 @@
+/* ================= Global Styles ================= */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+}
+
+/* ================= Login Page ================= */
+body.login-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #6a11cb, #2575fc);
+}
+
+.login-box {
+  background: white;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.login-box h2 {
+  margin-bottom: 25px;
+  color: #333;
+  font-weight: 600;
+}
+
+.login-box input {
+  width: 100%;
+  padding: 12px 15px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1em;
+}
+
+.login-box input:focus {
+  border-color: #2575fc;
+  outline: none;
+  box-shadow: 0 0 5px rgba(37, 117, 252, 0.5);
+}
+
+.login-box button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  background: #2575fc;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-box button:hover {
+  background: #6a11cb;
+}
+
+.login-box p {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+/* ================= Dashboard Page ================= */
+body.dashboard-body {
+  background: #f4f6f9;
+  padding: 20px;
+}
+
+h2 {
+  color: #333;
+}
+
+#logoutBtn {
+  border-radius: 8px;
+  transition: 0.3s;
+  float: right;
+  margin-bottom: 20px;
+}
+
+#logoutBtn:hover {
+  transform: translateY(-2px);
+}
+
+/* ===== Tabs ===== */
+.nav-tabs .nav-link {
+  border-radius: 8px 8px 0 0;
+  color: #555;
+  margin-right: 5px;
+  transition: 0.3s;
+}
+
+.nav-tabs .nav-link.active {
+  background: #2575fc;
+  color: #fff;
+  font-weight: 500;
+}
+
+.tab-content {
+  background: #fff;
+  border-radius: 0 8px 8px 8px;
+  padding: 20px;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== Doctor Cards ===== */
+.doctor-card {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 20px 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  background: #fff;
+  transition: 0.3s;
+}
+
+.doctor-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.doctor-card img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #2575fc;
+  margin-bottom: 10px;
+}
+
+.doctor-card h5 {
+  margin: 5px 0;
+  font-weight: 600;
+  color: #333;
+}
+
+.doctor-card p {
+  font-size: 0.9em;
+  color: #666;
+}
+
+/* ===== Buttons ===== */
+.btn-small {
+  padding: 5px 10px;
+  font-size: 0.85em;
+  margin: 2px;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.btn-small:hover {
+  transform: translateY(-1px);
+}
+
+/* ===== Pagination ===== */
+.pagination .page-item.active .page-link {
+  background: #2575fc;
+  border-color: #2575fc;
+  color: #fff;
+}
+
+.pagination .page-link {
+  border-radius: 6px;
+  margin: 0 2px;
+}
+
+/* ===== Form Inputs ===== */
+.form-control:focus {
+  border-color: #2575fc;
+  box-shadow: 0 0 5px rgba(37, 117, 252, 0.3);
+  outline: none;
+}
