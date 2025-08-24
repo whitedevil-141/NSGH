@@ -4,7 +4,8 @@ sqlalchemy
 pydantic
 python-jose[cryptography]
 passlib[bcrypt]
-requests          # For SSLCOMMERZ / API calls
-python-multipart  # If you use form uploads
+requests
+python-multipart
 slowapi
 pymysql
+PyJWT
