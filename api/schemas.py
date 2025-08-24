@@ -1,12 +1,19 @@
 from pydantic import BaseModel
 
+# Auth
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    role: str | None = "admin"
+
+
 # Doctor
 class DoctorBase(BaseModel):
     name: str
     specialization: str
     category: str
-    experience: int
-    photo: str
+    experience_yr: int
+    photo_url: str
     description: str
     phone: str
 
