@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "mysql+pymysql://nsg_user:StrongPassword123@localhost/nsg_hospital"
+DATABASE_URL = "mysql+pymysql://admin:U4p79y8Xq2%21@localhost/nsg_hospital"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
