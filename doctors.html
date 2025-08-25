@@ -292,7 +292,7 @@
             // Fetch data from API
             async function loadData() {
                 try {
-                    const res = await fetch('http://localhost:5000/public/doctors/data');
+                    const res = await fetch('/public/doctors/data');
 
                 if (!res.ok) {
                     // Handle non-200 responses gracefully
