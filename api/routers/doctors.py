@@ -2,7 +2,7 @@ import os
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from typing import List
-from api.database import SessionLocal
+from api.database import get_db
 from api.models import Doctor
 from api.schemas import DoctorBase, DoctorOut
 from api.utils.deps import get_current_user
@@ -13,20 +13,7 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)]  # ✅ protect all routes
 )
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 # -------------------- ROUTES --------------------
-
-@router.get("/fetch", response_model=List[DoctorOut])
-@limiter.limit("10/minute")
-def get_doctors(request: Request, db: Session = Depends(get_db)):
-    doctors = db.query(Doctor).all()
-    return doctors
 
 @router.get("/get/{doctor_id}", response_model=DoctorOut)
 @limiter.limit("15/minute")

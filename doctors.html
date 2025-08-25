@@ -289,21 +289,30 @@
 
             const container = document.getElementById("doctorsContainer");
 
-            // Fetch JSON data
+            // Fetch data from API
             async function loadData() {
                 try {
-                    const response = await fetch('data.json');
-                    const data = await response.json();
+                    const res = await fetch('http://localhost:5000/public/doctors/data');
 
-                    sampleDepartments = data.departments;
-                    sampleDoctors = data.doctors;
+                if (!res.ok) {
+                    // Handle non-200 responses gracefully
+                    const text = await res.text();
+                    console.error(`Error fetching doctors: ${res.status} ${res.statusText}`, text);
+                    alert(`Failed to fetch doctors: ${res.status} ${res.statusText}. Please try again after few minutes`);
+                    return;
+                }
+                data = await res.json();
+                sampleDoctors = data.doctors
+                
+                sampleDepartments = data.categories;
 
-                    loadDepartments();
-                    loadDoctors();
+                loadDepartments();
+                loadDoctors();
                 } catch (error) {
                     console.error("Error loading data:", error);
                 }
             }
+
 
             /* ===================== Load Departments ===================== */
             function loadDepartments() {
@@ -311,8 +320,8 @@
                 select.innerHTML = `<option value="all">All Departments</option>`;
                 sampleDepartments.forEach(dep => {
                     const option = document.createElement("option");
-                    option.value = dep.slug;
-                    option.textContent = dep.name;
+                    option.value = dep;
+                    option.textContent = dep;
                     select.appendChild(option);
                 });
             }
@@ -335,7 +344,7 @@
                         <div class="col-xl-3 col-lg-3 col-md-6 doctor-card">
                         <div class="single-team mb-30" style="min-height: 380px;" data-id="${doc.id}">
                             <div class="team-thumb">
-                            <img src="${doc.photo}" alt="${doc.name}" loading="lazy">
+                            <img src="${doc.photo_url}" alt="${doc.name}" loading="lazy">
                             </div>
                             <div class="team-info">
                             <h4>${doc.name}</h4>
@@ -404,7 +413,7 @@
 
                 modalBody.innerHTML = `
                     <div style="text-align:center; max-width:300px; margin:auto; font-family:Arial, sans-serif; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:15px;">
-                        <img src="${doc.photo}" alt="${doc.name}" 
+                        <img src="${doc.photo_url}" alt="${doc.name}" 
                             style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:15px;">
 
                         <h3 style="margin-bottom:10px; font-size:1.4em; color:#333;">${doc.name}</h3>
@@ -413,7 +422,7 @@
                             
                             <strong>Phone:</strong> ${doc.phone} <br> 
                             <strong>Specialization:</strong> ${doc.specialization}<br>
-                            <strong>Experience:</strong> ${doc.experience} years
+                            <strong>Experience:</strong> ${doc.experience_yr} years
                         </p>
                         <a href="tel:${doc.phone}" 
                             style="display:inline-block; margin-top:10px; padding:10px 20px; background-color:#28a745; color:white; text-decoration:none; font-weight:bold; border-radius:8px; transition:0.3s;">

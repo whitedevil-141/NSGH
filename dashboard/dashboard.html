@@ -8,9 +8,30 @@
       rel="stylesheet">
 
     <link rel="stylesheet" href="css/style.css">
+    <script>
+      const token = sessionStorage.getItem('token');
+      const expiresAt = sessionStorage.getItem('token_expiry'); // timestamp in seconds
+
+      function redirectToLogin() {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('token_expiry');
+          window.location.href = 'login.html';
+      }
+
+      if (!token || !expiresAt) {
+          // No token stored
+          redirectToLogin();
+      } else {
+          const now = Math.floor(Date.now() / 1000); // current time in seconds
+          if (now >= parseInt(expiresAt)) {
+              // Token expired
+              redirectToLogin();
+          }
+      }
+    </script>
   </head>
   <body class="dashboard-body">
-
+    
     <div class="container-fluid">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>NSGH Admin Dashboard</h2>

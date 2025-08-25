@@ -21,7 +21,15 @@ class DoctorOut(DoctorBase):
     id: int
     class Config:
         orm_mode = True
-
+        
+class DoctorPublic(BaseModel):
+    id: int
+    name: str
+    specialization: str
+    category: str
+    experience_yr: int
+    photo_url: str
+    
 # Gallery
 class GalleryBase(BaseModel):
     image_url: str

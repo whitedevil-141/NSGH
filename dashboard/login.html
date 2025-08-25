@@ -41,9 +41,15 @@ document.getElementById('loginForm').addEventListener('submit', async e=>{
       return; 
     }
     
-    const data = await res.json();
-    sessionStorage.setItem('token', data.access_token);
+    // After successful login
+    const tokenData = await res.json();
+    const expiresAt = Math.floor(Date.now() / 1000) + tokenData.expires_in;
+
+    sessionStorage.setItem('token', tokenData.access_token);
+    sessionStorage.setItem('token_expiry', expiresAt);
     window.location.href='dashboard.html';
+    
+
     
   } catch(err){
     console.error(err);

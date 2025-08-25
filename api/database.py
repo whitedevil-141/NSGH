@@ -18,3 +18,10 @@ def get_session(db_url: str):
     """Return a session factory bound to the engine"""
     engine = get_engine(db_url)
     return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

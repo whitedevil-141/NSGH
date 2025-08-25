@@ -1,6 +1,3 @@
-const token = sessionStorage.getItem('token');
-if (!token) { window.location.href = 'login.html'; }
-
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', () => {
     sessionStorage.removeItem('token');
@@ -24,18 +21,28 @@ const editModal = new bootstrap.Modal(editModalEl);
 // Load doctors from API
 async function loadDoctors() {
     try {
-        const res = await fetch('http://localhost:5000/doctors/fetch', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        doctors = await res.json();
-        categories = [...new Set(doctors.map(d => d.category))];
+        const res = await fetch('http://localhost:5000/public/doctors/data');
+
+        if (!res.ok) {
+            // Handle non-200 responses gracefully
+            const text = await res.text();
+            console.error(`Error fetching doctors: ${res.status} ${res.statusText}`, text);
+            alert(`Failed to fetch doctors: ${res.status} ${res.statusText}. Please try again after few minutes`);
+            return;
+        }
+
+        data = await res.json();
+        doctors = data.doctors
+        
+        categories = data.categories;
         loadFilterOptions();
         renderDoctors();
     } catch (err) {
-        console.error(err);
-        alert("Failed to fetch doctors");
+        console.error("Fetch error:", err);
+        alert("Failed to fetch doctors: Network or server error");
     }
 }
+
 
 function loadFilterOptions() {
     filter.innerHTML = `<option value="all">All Categories</option>`;
@@ -201,11 +208,6 @@ function editDoctor(id) {
     document.getElementById('editPhone').value = d.phone || '';
     document.getElementById('editDescription').value = d.description || '';
 
-    const modalEl = document.getElementById('editDoctorModal');
-    let editModal = bootstrap.Modal.getInstance(modalEl); // check existing instance
-    if (!editModal) {
-        editModal = new bootstrap.Modal(modalEl);
-    }
     editModal.show();
 }
 
