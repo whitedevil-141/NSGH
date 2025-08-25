@@ -12,10 +12,7 @@ from api.limiter import limiter, Request
 
 router = APIRouter()
 
-# DB connection (single DB)
-DB_URL = "mysql+pymysql://root:@localhost/hospital_db"
-engine = database.get_engine(DB_URL)
-SessionLocal = database.get_session(DB_URL)
+
 
 # ==========================
 # LOGIN ENDPOINT
@@ -23,7 +20,7 @@ SessionLocal = database.get_session(DB_URL)
 @limiter.limit("5/minute")
 @router.post("/login")
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    with SessionLocal() as db:
+    with database.SessionLocal() as db:
         user = crud.get_user_by_username(db, form_data.username)
         if not user or not verify_password(form_data.password, user.password):
             raise HTTPException(
@@ -53,7 +50,7 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 @limiter.limit("3/minute")
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(request: Request, data: RegisterRequest):
-    with SessionLocal() as db:
+    with database.SessionLocal() as db:
         # check if username already exists
         existing = crud.get_user_by_username(db, data.username)
         if existing:
