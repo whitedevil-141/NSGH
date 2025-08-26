@@ -21,7 +21,7 @@ const editModal = new bootstrap.Modal(editModalEl);
 // Load doctors from API
 async function loadDoctors() {
     try {
-        const res = await fetch('/public/doctors/data');
+        const res = await fetch('/api/public/doctors/data');
 
         if (!res.ok) {
             // Handle non-200 responses gracefully
@@ -157,7 +157,7 @@ document.getElementById('editDoctorForm').addEventListener('submit', async e => 
     }
 
     try {
-        const res = await fetch(`/doctors/update/${id}`, {
+        const res = await fetch(`/api/doctors/update/${id}`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
@@ -183,7 +183,7 @@ document.getElementById('editDoctorForm').addEventListener('submit', async e => 
 async function deleteDoctor(id) {
     if (!confirm("Delete this doctor?")) return;
     try {
-        await fetch(`/doctors/${id}`, {
+        await fetch(`/api/doctors/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
