@@ -341,7 +341,7 @@
                                 <img src="img/icon/cunt-icon01.png" alt="img">
                                 <div class="counter p-relative">
                                     <span
-                                        class="count">500</span><small>+</small>
+                                        class="count">75</span><small>+</small>
                                 </div>
                                 <p>Doctors At Work</p>
                             </div>
@@ -351,7 +351,7 @@
                                 <img src="img/icon/cunt-icon02.png" alt="img">
                                 <div class="counter p-relative">
                                     <span
-                                        class="count">58796</span><small>+</small>
+                                        class="count">12,500</span><small>+</small>
                                 </div>
                                 <p>Happy Patients</p>
                             </div>
@@ -361,7 +361,7 @@
                                 <img src="img/icon/cunt-icon03.png" alt="img">
                                 <div class="counter p-relative">
                                     <span
-                                        class="count">500</span><small>+</small>
+                                        class="count">200</span><small>+</small>
                                 </div>
                                 <p>Medical Beds</p>
                             </div>
@@ -371,7 +371,7 @@
                                 <img src="img/icon/cunt-icon04.png" alt="img">
                                 <div class="counter p-relative">
                                     <span
-                                        class="count">200</span><small>+</small>
+                                        class="count">15</span><small>+</small>
                                 </div>
                                 <p>Winning Awards</p>
                             </div>
@@ -389,44 +389,39 @@
                         <div class="col-lg-6">
                             <div class="section-title mb-50  ">
                                 <span>OUR DEPARTMENTS</span>
-                                <h2>We Take Care Of Your Life Healthy
-                                    Health</h2>
+                                <h2>We Take Care of Your Health and Wellbeing</h2>
                             </div>
-                            <ul>
-                                <li>
+                            <ul id="departmentTabs">
+                                <li data-img="img/bg/de-illustration01.png">
                                     <div class="icon">
                                         <div><img src="img/icon/de-icon01.png"
-                                                alt="de-icon"></div></div>
+                                                alt="Pediatrics Icon"></div></div>
                                     <a href="#" class="text">
                                         <h3>Pedlatric</h3>
-                                        Fusce eget condimentum lectus, sed
-                                        commodo dui. Suspendisse non vehicula
-                                        ant aecenas placerat finibus metus, at
-                                        finibus neque.
+                                        Providing specialized healthcare for infants, children, and adolescents. 
+                                        Our pediatricians focus on preventive care, vaccinations, and treatment of childhood illnesses.
                                     </a>
                                 </li>
-                                <li class="active">
+                                <li data-img="img/bg/de-illustration.png">
                                     <div class="icon">
-                                        <div><img src="img/icon/de-icon02.png"
-                                                alt="de-icon"></div></div>
+                                        <div><img src="img/icon/de-icon01.png"
+                                                alt="Dental"></div></div>
                                     <a href="#" class="text">
                                         <h3>Dental</h3>
-                                        Fusce eget condimentum lectus, sed
-                                        commodo dui. Suspendisse non vehicula
-                                        ant aecenas placerat finibus metus, at
-                                        finibus neque.
+                                        Comprehensive dental care including routine checkups, 
+                                        teeth cleaning, orthodontics, and emergency dental treatments. 
+                                        Ensuring healthy smiles for all ages.
                                     </a>
                                 </li>
-                                <li>
+                                <li data-img="img/bg/de-illustration03.png">
                                     <div class="icon">
-                                        <div><img src="img/icon/de-icon03.png"
-                                                alt="de-icon"></div></div>
+                                        <div><img src="img/icon/de-icon01.png"
+                                                alt="Physicians"></div></div>
                                     <a href="#" class="text">
                                         <h3>Physicians</h3>
-                                        Fusce eget condimentum lectus, sed
-                                        commodo dui. Suspendisse non vehicula
-                                        ant aecenas placerat finibus metus, at
-                                        finibus neque.
+                                        Expert consultation and treatment for adults covering a wide 
+                                        range of medical conditions. Our physicians provide accurate 
+                                        diagnosis and effective treatment plans.
                                     </a>
                                 </li>
                             </ul>
@@ -434,7 +429,7 @@
                         </div>
                         <div class="col-lg-6">
                             <div class="s-d-img p-relative">
-                                <img src="img/bg/de-illustration.png" alt="img">
+                                <img id="departmentImage" src="img/bg/de-illustration.png" alt="Medical Illustration">
 
                             </div>
 
@@ -1271,16 +1266,36 @@
             document.getElementById("year").textContent = new Date().getFullYear();
         </script>
         <script>
-        $(document).ready(function(){
-            $('.testimonial-active').slick({
-            slidesToShow: 1,
-            slidesToScroll: 1,
-            autoplay: true,
-            autoplaySpeed: 2000,
-            arrows: false,
-            adaptiveHeight: true
+            $(document).ready(function(){
+                $('.testimonial-active').slick({
+                slidesToShow: 1,
+                slidesToScroll: 1,
+                autoplay: true,
+                autoplaySpeed: 2000,
+                arrows: false,
+                adaptiveHeight: true
+                });
             });
-        });
+        </script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const tabs = document.querySelectorAll('#departmentTabs li');
+                const departmentImage = document.getElementById('departmentImage');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('mouseenter', () => {
+                        const newImg = tab.getAttribute('data-img');
+                        if(departmentImage.src.endsWith(newImg)) return; // prevent reload
+
+                        departmentImage.style.opacity = 0; // fade out
+                        setTimeout(() => {
+                            departmentImage.src = newImg; // change image
+                            departmentImage.style.opacity = 1; // fade in
+                        }, 200);
+                    });
+                });
+            });
+
         </script>
 
     </body>
