@@ -32,6 +32,10 @@
         <link rel="stylesheet" href="css/responsive.css">
     </head>
     <body>
+        <!-- Preloader -->
+        <div id="preloader">
+            <div class="spinner"></div>
+        </div>
         <!-- header -->
         <header class="header-area">  
 			<div class="header-top second-header d-none d-md-block">
@@ -1257,6 +1261,24 @@
             });
             });
         </script>
+
+        <script>
+            window.addEventListener('load', function(){
+                const preloader = document.getElementById('preloader');
+                const minTime = 2000; // Minimum 2 seconds
+                const startTime = performance.timing.navigationStart;
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(minTime - elapsed, 0);
+
+                setTimeout(() => {
+                    preloader.style.opacity = '0'; // start fade-out
+                    setTimeout(() => {
+                        preloader.style.display = 'none'; // remove after fade-out
+                    }, 500); // match transition duration
+                }, remaining);
+            });
+        </script>
+
 
 
     </body>
