@@ -976,9 +976,9 @@ label {
   padding-right: 50px;
 }
 .header-img {
-  max-width: initial;
+  width: 120%;
   margin-top: -50px;
-  margin-left: -50px;
+  margin-left: 100px;
 }
 .btn.ss-btn {
   background: transparent linear-gradient(90deg, #1e0b9b 0%, #07ccec 100%) 0% 0%
