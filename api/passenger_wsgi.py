@@ -1,16 +1,13 @@
-import sys
-import os
+import sys, os
 
-# Add the API folder to the Python path
-sys.path.insert(0, os.path.dirname(__file__))
+# Add the bundled dependencies to sys.path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'python'))
 
-# Import your FastAPI app
-from main import app  # assuming main.py has `app = FastAPI()`
+from fastapi import FastAPI
+from fastapi.middleware.wsgi import WSGIMiddleware
 
-# Use Mangum ASGI → WSGI adapter for Passenger
-try:
-    from mangum import Mangum
-    application = Mangum(app)
-except ImportError:
-    # fallback: in case Mangum is not installed, Passenger will attempt to run app directly
-    application = app
+# Import your FastAPI app (assume it's in main.py as `app`)
+from main import app as fastapi_app
+
+# Wrap FastAPI in WSGI for Passenger
+app = WSGIMiddleware(fastapi_app)
