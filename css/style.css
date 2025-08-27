@@ -1041,6 +1041,18 @@ label {
   top: 20% !important;
   left: 89% !important;
 }
+
+.s-about-img {
+    margin-left: -150px;
+    width: 120%;
+    position: relative;      /* for positioning child if needed */
+    overflow: hidden;        /* crop any overflow if rounded */
+    border-radius: 20px;    /* adjust for rounded corners */
+    box-shadow: 0px 8px 16px 0px rgba(26, 35, 126, 0.32);
+}
+.about-img {
+  margin-left: -50px;
+}
 /* 4. about */
 .s-about-img img {
   width: inherit;
@@ -1050,16 +1062,6 @@ label {
 }
 .s-about-img img:hover {
     transform: scale(1.1);
-}
-.s-about-img {
-    width: 120%;
-    position: relative;      /* for positioning child if needed */
-    overflow: hidden;        /* crop any overflow if rounded */
-    border-radius: 20px;
-    margin-left: -90px;     /* adjust for rounded corners */
-}
-.about-img {
-  margin-left: -50px;
 }
 .about-text {
   position: absolute;
@@ -3642,9 +3644,25 @@ div.single-cta:last-child {
   z-index: 1;
 }
 .contact-img {
-  margin-left: -400px;
+  margin-left: -200px;
+  margin-top: 80px;
+  width: 130%;
+  border-radius: 20px;
+  overflow: hidden; 
+  box-shadow: 0px 8px 16px 0px rgba(26, 35, 126, 0.32);
 }
+.contact-img img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 20px;
+    transition: 0.5s;
+    
 
+}
+.contact-img img:hover {
+    transform: scale(1.1);
+}
 /* 20. footer */
 .footer-bg {
   background-size: cover;
@@ -7102,8 +7120,21 @@ p.checkout-coupon input[type="text"] {
 .department-area {
 }
 .s-d-img {
-  margin-right: -400px;
+    margin-right: -400px; /* keep your existing spacing */
+    border-radius: 20px;  /* rounds the corners */
+    overflow: hidden;     /* ensures child images respect the rounding */
+    padding-right: 50px;
+    padding-top: 200px;
+    width: 150%;
 }
+
+.s-d-img img {
+    width: 100%;
+    height: auto;        /* keeps aspect ratio */
+    display: block;
+    border-radius: 20px; /* match container rounding */
+}
+
 .department-area li {
   display: flex;
   margin-bottom: 30px;
@@ -7605,7 +7636,7 @@ form textarea {
   .filter-box {
     padding: 20px 40px;
   }
-  
+
   #doctorsContainer {
     padding: 0px 40px;
   }

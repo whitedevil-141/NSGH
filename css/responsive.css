@@ -268,11 +268,15 @@
     display: inline-block;
     width: 100%;
     }
-     .s-about-img img {
-    width: inherit;
-    max-width: inherit;
-    margin-left: -100px;
-}
+    .s-d-img,
+    .s-d-img * {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+    }
     .sr-line{background: none;}
     .counter-area {
     padding-top: 0;
@@ -603,7 +607,6 @@
     .s-about-img img {
     width: inherit;
     max-width: inherit;
-    margin-left: -55px;
 }
     .single-counter-img {
     margin-bottom: 50px;
@@ -895,6 +898,7 @@ border-bottom: none;
 	padding: 0;
 }
 .section-title {
+	padding-top: 20px;
 	padding-left: 0;
 	padding-right: 0;
 }
