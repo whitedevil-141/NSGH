@@ -7371,11 +7371,13 @@ form textarea {
 .single-team {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.08);
+  box-shadow: -1px 0px 20px 0px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   text-align: center;
   padding: 20px;
+  margin-top: 20px;
+  margin-bottom: 20px;
   height: 100%; /* Ensure equal height cards */
 }
 
