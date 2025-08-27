@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Response
 from api.database import engine, Base
 from api.routers import auth, public, doctors, gallery, machineries, departments, about
-from api.limiter import limiter
+from api.limiter import limiter, Request
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -36,4 +36,13 @@ app.include_router(doctors.router, prefix="/doctors")
 # app.include_router(about.router)
 
 
+@app.get("/", tags=["root"])
+@limiter.limit("30/minute")  # Optional per-route limit
+def root(request: Request):
+    return {
+        "message": "Welcome to NSGH API 🚀",
+        "docs_url": "/docs",
+        "redoc_url": "/redoc",
+        "version": "1.0.0"
+    }
 
