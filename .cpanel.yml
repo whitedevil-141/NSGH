@@ -5,7 +5,7 @@ deployment:
     - export DEPLOYPATH=/home/username/public_html/NSGH
 
     # Install Python dependencies in cPanel virtual environment
-    - /usr/local/bin/pip install -r api/requirements.txt
+    # - /usr/local/bin/pip install -r api/requirements.txt
 
     # Copy all frontend files (recursively) to deployment path
     - /bin/cp -R !(api|.git|venv) $DEPLOYPATH/
