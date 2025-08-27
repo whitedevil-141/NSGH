@@ -481,6 +481,7 @@
 	margin-bottom: 20px;
 }
 .s-about-img img {
+
 	width: 100%;
 }
 .s-video-content {
@@ -607,7 +608,9 @@
     .s-about-img img {
     width: inherit;
     max-width: inherit;
+	
 }
+
     .single-counter-img {
     margin-bottom: 50px;
 }

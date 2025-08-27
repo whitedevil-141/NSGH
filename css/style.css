@@ -1043,8 +1043,7 @@ label {
 }
 
 .s-about-img {
-    margin-left: -150px;
-    width: 120%;
+    width: 100%;
     position: relative;      /* for positioning child if needed */
     overflow: hidden;        /* crop any overflow if rounded */
     border-radius: 20px;    /* adjust for rounded corners */
