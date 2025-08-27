@@ -1045,7 +1045,18 @@ label {
 .s-about-img img {
   width: inherit;
   max-width: inherit;
-  margin-left: -397px;
+  margin-left: auto;
+  transition: 0.5s;
+}
+.s-about-img img:hover {
+    transform: scale(1.1);
+}
+.s-about-img {
+    width: 120%;
+    position: relative;      /* for positioning child if needed */
+    overflow: hidden;        /* crop any overflow if rounded */
+    border-radius: 20px;
+    margin-left: -90px;     /* adjust for rounded corners */
 }
 .about-img {
   margin-left: -50px;
