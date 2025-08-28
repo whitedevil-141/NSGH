@@ -1,6 +1,16 @@
 ---
 deployment:
   tasks:
-    - export DEPLOY_DIR=/home/nsghbdco/public_html/myproject
-    - echo "Deploying HTML files..."
-    - cp -R * $DEPLOY_DIR
+    - export DEPLOYPATH=/home/nsghbdco/public_html/
+    # Copy all folders
+    - /bin/cp -R api $DEPLOYPATH
+    - /bin/cp -R css $DEPLOYPATH
+    - /bin/cp -R dashboard $DEPLOYPATH
+    - /bin/cp -R fontawesome $DEPLOYPATH
+    - /bin/cp -R fonts $DEPLOYPATH
+    - /bin/cp -R img $DEPLOYPATH
+    - /bin/cp -R js $DEPLOYPATH
+    # Copy all HTML files
+    - /bin/cp *.html $DEPLOYPATH
+    # Optional: copy other files
+    - /bin/cp data.json $DEPLOYPATH
