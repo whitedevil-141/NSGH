@@ -54,6 +54,40 @@ def upload_to_hosting(file: UploadFile):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+def delete_from_hosting(file_url: str):
+    """
+    Deletes a file from the remote server using SFTP.
+    Expects the full URL of the file (e.g., https://www.nsghbd.com/img/team/filename.jpg)
+    """
+    # Extract the path relative to the server root
+    # Example: https://www.nsghbd.com/img/team/filename.jpg -> /home/nsghbdco/public_html/img/team/filename.jpg
+    filename = file_url.split("/")[-1]
+    remote_path = f"/home/nsghbdco/public_html/img/team/{filename}"
+
+    host = "94.130.22.223"
+    port = 22
+    username = "nsghbdco"
+    password = "r7T)Bth7dEC#16"
+
+    try:
+        transport = paramiko.Transport((host, port))
+        transport.connect(username=username, password=password)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        # Delete the file
+        sftp.remove(remote_path)
+
+        sftp.close()
+        transport.close()
+    except FileNotFoundError:
+        # File already missing, ignore
+        pass
+    except paramiko.AuthenticationException:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+    except paramiko.SSHException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/add", response_model=DoctorOut, status_code=status.HTTP_201_CREATED)
 def create_doctor(
@@ -139,6 +173,13 @@ def delete_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db
     doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
+
+    # Delete the file from server first
+    if doctor.photo_url:
+        delete_from_hosting(doctor.photo_url)
+
+    # Delete the database record
     db.delete(doctor)
     db.commit()
+
     return {"message": "Doctor deleted successfully"}
