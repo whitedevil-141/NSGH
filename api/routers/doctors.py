@@ -9,6 +9,11 @@ from api.schemas import DoctorBase, DoctorOut
 from api.utils.deps import get_current_user
 from api.limiter import limiter, Request
 import paramiko
+import logging
+
+
+logger = logging.getLogger("uvicorn")
+logger.setLevel(logging.INFO)
 
 router = APIRouter(
     tags=["Doctors"],
@@ -27,7 +32,7 @@ def get_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db)):
 
 
 def upload_to_hosting(file: UploadFile):
-    
+    logger.info(f"Uploading file: {file.filename}")
     host = "94.130.22.223"
     port = 22
     username = "nsghbdco"
@@ -47,7 +52,6 @@ def upload_to_hosting(file: UploadFile):
         sftp.close()
         transport.close()
         
-        print(f"https://www.nsghbd.com/img/team/{filename}", flush=True)
         return f"https://www.nsghbd.com/img/team/{filename}"
     except paramiko.AuthenticationException:
         raise HTTPException(status_code=401, detail="Authentication failed")
