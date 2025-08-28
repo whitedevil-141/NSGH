@@ -591,9 +591,12 @@
     top: 80px;
         width: 50px;
 }
+	.submenu-arrow {
+    display: none;
+}
     .com-icon img{
         width: 100%;
-    }
+}
     
     .counter-area {
     background-size: cover;

@@ -3903,20 +3903,49 @@ div.single-cta:last-child {
 .main-menu ul li.current a {
   color: #1e0b9b;
 }
+/* Base submenu hidden */
 .main-menu .has-sub > ul {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-20px) scale(0.95); /* start slightly lower and smaller */
   position: absolute;
-  background-color: #ffff;
-  min-width: 250px;
-  z-index: 1;
-  transition: all 0.3s ease-in-out;
-  margin-top: 15px;
-  border-top: 4px solid #1e0b9b;
-  box-shadow: 0 10px 15px rgba(25, 25, 25, 0.1);
-  -webkit-box-shadow: 0 10px 15px rgba(25, 25, 25, 0.1);
+  background-color: #ffffff;
+  min-width: 200px;
+  z-index: 1000;
+  border-radius: 8px; /* rounded corners */
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);; /* soft shadow */
+  border-top: 3px solid #1e0b9b;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); /* smooth ease */
+  padding: 5px 0;
+}
+
+/* Arrow style */
+.submenu-arrow {
+  width: 12px;           /* adjust size */
+  height: auto;
+  margin-left: 6px;
+  margin-bottom: 2px;
+  transition: transform 0.3s ease;
+  vertical-align: middle;
+}
+
+/* Rotate arrow when submenu opens */
+.main-menu li.has-sub:hover > a .submenu-arrow {
+  transform: rotate(-180deg);
 }
 .main-menu .has-sub li a {
-  padding: 15px;
+  display: block;
+  padding: 12px 15px;
+  font-size: 15px;
+  color: #000;
+  border-bottom: 1px solid #eee;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.main-menu .has-sub li a:hover {
+  background: #f8f9ff;
+  color: #1e0b9b;
 }
 .main-menu .has-sub li {
   margin-left: 0 !important;
@@ -3931,9 +3960,11 @@ div.single-cta:last-child {
 }
 
 .main-menu .has-sub:hover > ul {
-  display: block;
-  margin-top: 0px;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
 }
+
 .main-menu .has-sub > ul > .has-sub > ul {
   display: none;
   position: absolute;
@@ -3963,10 +3994,17 @@ div.single-cta:last-child {
   display: block;
 }
 
+/* Submenu items styling */
 .main-menu .has-sub ul li a {
-  color: #000;
+  display: block;
+  padding: 12px 20px;
+  color: #333;
+  font-size: 14px;
+  transition: background 0.3s ease, color 0.3s ease;
 }
+
 .main-menu .has-sub ul li a:hover {
+  background-color: #f0f4ff;
   color: #1e0b9b;
 }
 /* 23. mega menu */
