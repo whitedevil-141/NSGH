@@ -1,6 +1,6 @@
 ---
 deployment:
   tasks:
-    - export DEPLOY_DIR=/home/username/public_html/myproject
+    - export DEPLOY_DIR=/home/nsghbdco/public_html/myproject
     - echo "Deploying HTML files..."
     - cp -R * $DEPLOY_DIR
