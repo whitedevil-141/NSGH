@@ -7646,7 +7646,7 @@ form textarea {
 .dots span {
     width: 15px;
     height: 15px;
-    background: #3498db;
+    background: #1e0b9b;
     border-radius: 50%;
     animation: bounce 1.2s infinite ease-in-out;
 }
