@@ -78,7 +78,7 @@ def create_doctor(
             experience_yr=experience,
             description=description,
             phone=phone,
-            photo_url=f"https://www.nsghbd.com/img/{photo.filename}"  # relative path for frontend
+            photo_url=f"https://www.nsghbd.com/img/team/{photo.filename}"  # relative path for frontend
         )
         db.add(new_doc)
         db.commit()
