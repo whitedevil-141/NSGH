@@ -53,11 +53,13 @@
                                 <ul>                                   
                                     <li>
                                         <i class="icon dripicons-mail"></i>
-                                        <span>nsfg@gmail.com</span>
+                                        <span onclick="window.location.href='mailto:support@nsghbd.com'" style="cursor: pointer;">support@nsghbd.com</span>
                                     </li>
                                      <li>
                                         <i class="icon dripicons-phone"></i>
-                                        <span>+8801711902062</span>
+                                        <span onclick="window.location.href='tel:+8801711902062'" style="cursor: pointer;">
+                                            +8801711902062
+                                        </span>
                                     </li>
                                 </ul>
                             </div>
@@ -92,7 +94,7 @@
 											<li><a href="index.html">Home</a></li>
                                             <li class="has-sub">
                                                 <a href="about.html">
-                                                    About Us 
+                                                    About Us
                                                     <img src="img/icon/arrow-down.png" class="submenu-arrow" alt="arrow">
                                                 </a>
                                                 <ul class="submenu">
@@ -106,7 +108,8 @@
                                             <li><a href="services.html">Services</a></li>
                                             <li><a href="departments.html">Departments</a></li>                                                                  
                                             <li><a href="machines.html">Machines</a></li>
-                                            
+											<li><a href="doctors.html">Doctors</a></li>
+											<li><a href="staffs.html">Staffs</a></li>
 											<li><a href="gallery.html">Gallery</a></li>               
                                         </ul>
                                     </nav>
@@ -1283,6 +1286,31 @@
                 }, remaining);
             });
         </script>
+        <!-- Smooth Scroll JS -->
+        <script>
+        (function() {
+            const ease = 0.05; // smaller = smoother/slower
+            let target = 0;
+            let current = 0;
+
+            window.addEventListener('wheel', function(e) {
+                target += e.deltaY; // scroll target
+                target = Math.max(0, Math.min(target, document.body.scrollHeight - window.innerHeight));
+                e.preventDefault(); // prevent default jump
+            }, { passive: false });
+
+            function smoothScroll() {
+                current += (target - current) * ease;
+                window.scrollTo(0, current);
+                requestAnimationFrame(smoothScroll);
+            }
+
+            requestAnimationFrame(smoothScroll);
+        })();
+        </script>
+
+
+
 
 
 
