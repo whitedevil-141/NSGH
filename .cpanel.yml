@@ -3,7 +3,6 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/nsghbdco/public_html/
     # Copy all folders
-    - /bin/cp -R api $DEPLOYPATH
     - /bin/cp -R css $DEPLOYPATH
     - /bin/cp -R dashboard $DEPLOYPATH
     - /bin/cp -R fontawesome $DEPLOYPATH
