@@ -1087,8 +1087,20 @@
         <!-- Slick & Owl Carousel -->
         <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+        <script src="https://unpkg.com/lenis@1.3.8/dist/lenis.min.js"></script> 
 
-        <!-- Appointment Modal -->
+        <script>
+            // Initialize Lenis
+            const lenis = new Lenis();
+
+            // Use requestAnimationFrame to continuously update the scroll
+            function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+            }
+
+            requestAnimationFrame(raf);
+        </script>
         <script>
         const modal = document.getElementById('appointmentModal');
         const form = document.getElementById('appointmentForm');
