@@ -25,6 +25,7 @@ def get_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db)):
 
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "img")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True) # path relative to dashboard.html
 @router.post("/add", response_model=DoctorOut, status_code=status.HTTP_201_CREATED)
 def create_doctor(
