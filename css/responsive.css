@@ -1044,10 +1044,7 @@ right: 11%;
     padding-top: 70px;
 }
     .header-img {
-    max-width: 100%;
-    margin-top: 30px;
-    margin-left: 0;
-    margin-bottom: 87px;
+	display: none;
 }
     .slider-content h2 {
     margin-top: 100px;
