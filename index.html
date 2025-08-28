@@ -1286,33 +1286,6 @@
                 }, remaining);
             });
         </script>
-        <!-- Smooth Scroll JS -->
-        <script>
-        (function() {
-            const ease = 0.05; // smaller = smoother/slower
-            let target = 0;
-            let current = 0;
-
-            window.addEventListener('wheel', function(e) {
-                target += e.deltaY; // scroll target
-                target = Math.max(0, Math.min(target, document.body.scrollHeight - window.innerHeight));
-                e.preventDefault(); // prevent default jump
-            }, { passive: false });
-
-            function smoothScroll() {
-                current += (target - current) * ease;
-                window.scrollTo(0, current);
-                requestAnimationFrame(smoothScroll);
-            }
-
-            requestAnimationFrame(smoothScroll);
-        })();
-        </script>
-
-
-
-
-
 
     </body>
 </html>
