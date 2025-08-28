@@ -10,3 +10,4 @@ slowapi
 pymysql
 PyJWT
 mangum
+paramiko

@@ -7,6 +7,7 @@ from api.models import Doctor
 from api.schemas import DoctorBase, DoctorOut
 from api.utils.deps import get_current_user
 from api.limiter import limiter, Request
+import paramiko
 
 router = APIRouter(
     tags=["Doctors"],
@@ -24,9 +25,32 @@ def get_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db)):
     return doctor
 
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "img")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(UPLOAD_DIR, exist_ok=True) # path relative to dashboard.html
+def upload_to_hosting(file: UploadFile):
+    
+    host = "94.130.22.223"
+    port = 22
+    username = "nsghbdco"
+    password = "r7T)Bth7dEC#16"  # or use key authentication
+    remote_path = f"/home/nsghbdco/public_html/img/team/{file.filename}"
+    try:
+        transport = paramiko.Transport((host, port))
+        transport.connect(username=username, password=password)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        with file.file as f:
+            sftp.putfo(f, remote_path)  # Upload the file-like object
+
+        sftp.close()
+        transport.close()
+
+    except paramiko.AuthenticationException:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+    except paramiko.SSHException as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
 @router.post("/add", response_model=DoctorOut, status_code=status.HTTP_201_CREATED)
 def create_doctor(
     request: Request,
@@ -40,9 +64,11 @@ def create_doctor(
     db: Session = Depends(get_db)
 ):
     # Save the uploaded file
-    file_location = os.path.join(UPLOAD_DIR, photo.filename)
-    with open(file_location, "wb") as f:
-        f.write(photo.file.read())
+    try:
+        upload_to_hosting(photo)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
+        
     try:
         # Create DB entry
         new_doc = Doctor(
@@ -52,7 +78,7 @@ def create_doctor(
             experience_yr=experience,
             description=description,
             phone=phone,
-            photo_url=f"../img/{photo.filename}"  # relative path for frontend
+            photo_url=f"https://www.nsghbd.com/img/{photo.filename}"  # relative path for frontend
         )
         db.add(new_doc)
         db.commit()
@@ -91,10 +117,9 @@ def update_doctor(
 
         # Handle photo if provided
         if photo:
-            file_location = os.path.join(UPLOAD_DIR, photo.filename)
-            with open(file_location, "wb") as f:
-                f.write(photo.file.read())
-            doctor.photo_url = f"../img/{photo.filename}"
+            upload_to_hosting(photo)
+            doctor.photo_url = f"https://www.nsghbd.com/img/team/{photo.filename}"
+
 
         db.commit()
         db.refresh(doctor)
