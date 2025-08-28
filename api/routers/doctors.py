@@ -1,4 +1,5 @@
 import os
+import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -31,10 +32,13 @@ def upload_to_hosting(file: UploadFile):
     port = 22
     username = "nsghbdco"
     password = "r7T)Bth7dEC#16"  # or use key authentication
-    remote_path = f"/home/nsghbdco/public_html/img/team/{file.filename}"
+    ext = os.path.splitext(file.filename)[1]
+    filename = f"{uuid.uuid4().hex}{ext}"
+    remote_path = f"/home/nsghbdco/public_html/img/team/{filename}"
     try:
         transport = paramiko.Transport((host, port))
         transport.connect(username=username, password=password)
+        
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         with file.file as f:
@@ -42,7 +46,7 @@ def upload_to_hosting(file: UploadFile):
 
         sftp.close()
         transport.close()
-
+        return f"https://www.nsghbd.com/img/team/{filename}"
     except paramiko.AuthenticationException:
         raise HTTPException(status_code=401, detail="Authentication failed")
     except paramiko.SSHException as e:
@@ -65,7 +69,7 @@ def create_doctor(
 ):
     # Save the uploaded file
     try:
-        upload_to_hosting(photo)
+        photo_url = upload_to_hosting(photo)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
         
@@ -78,7 +82,7 @@ def create_doctor(
             experience_yr=experience,
             description=description,
             phone=phone,
-            photo_url=f"https://www.nsghbd.com/img/team/{photo.filename}"  # relative path for frontend
+            photo_url=photo_url  # relative path for frontend
         )
         db.add(new_doc)
         db.commit()
@@ -117,8 +121,8 @@ def update_doctor(
 
         # Handle photo if provided
         if photo:
-            upload_to_hosting(photo)
-            doctor.photo_url = f"https://www.nsghbd.com/img/team/{photo.filename}"
+            photo_url = upload_to_hosting(photo)
+            doctor.photo_url = photo_url
 
 
         db.commit()
