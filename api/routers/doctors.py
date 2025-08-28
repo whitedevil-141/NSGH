@@ -46,6 +46,8 @@ def upload_to_hosting(file: UploadFile):
 
         sftp.close()
         transport.close()
+        
+        print(f"https://www.nsghbd.com/img/team/{filename}", flush=True)
         return f"https://www.nsghbd.com/img/team/{filename}"
     except paramiko.AuthenticationException:
         raise HTTPException(status_code=401, detail="Authentication failed")
@@ -104,6 +106,7 @@ def create_doctor(
     # Save the uploaded file
     try:
         photo_url = upload_to_hosting(photo)
+        print(photo_url)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
         
