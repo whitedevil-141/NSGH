@@ -1,5 +1,18 @@
 (function ($) {
 "use strict";
+// preloader
+window.addEventListener('load', function(){
+	const preloader = document.getElementById('preloader');
+	const minTime = 2000;
+	const startTime = performance.timing.navigationStart;
+	const elapsed = Date.now() - startTime;
+	const remaining = Math.max(minTime - elapsed, 0);
+
+	setTimeout(() => {
+		preloader.style.opacity = '0';
+		setTimeout(() => { preloader.style.display = 'none'; }, 500);
+	}, remaining);
+});
 
 // One Page Nav
 var top_offset = $('.header-area').height() - 100;

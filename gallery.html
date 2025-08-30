@@ -4,24 +4,46 @@
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <title>New Shafipur General Hospital</title>
-        <meta name="description" content="">
+        <meta name="description" content="New Shafipur General Hospital – Quality healthcare with modern facilities.">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="shortcut icon" type="image/x-icon" href="img/favicon.ico">
-        <!-- Place favicon.ico in the root Internist, General Practitonery -->
 
-		<!-- CSS here -->
+        <!-- Favicon -->
+        <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
+        <link rel="icon" type="image/svg+xml" href="/img/favicon/favicon.svg">
+        <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-touch-icon.png">
+        <link rel="manifest" href="/img/favicon/site.webmanifest">
+
+        <!-- CSS Libraries -->
         <link rel="stylesheet" href="css/bootstrap.min.css">
         <link rel="stylesheet" href="css/animate.min.css">
         <link rel="stylesheet" href="css/magnific-popup.css">
         <link rel="stylesheet" href="fontawesome/css/all.min.css">
         <link rel="stylesheet" href="css/dripicons.css">
-        <link rel="stylesheet" href="css/slick.css">
+
+        <!-- Slick Carousel -->
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
+
+        <!-- Owl Carousel -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css"/>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css"/>
+
+        <!-- Custom CSS -->
         <link rel="stylesheet" href="css/default.css">
         <link rel="stylesheet" href="css/meanmenu.css">
         <link rel="stylesheet" href="css/style.css">
         <link rel="stylesheet" href="css/responsive.css">
     </head>
     <body>
+        <!-- Preloader -->
+        <div id="preloader">
+            <div class="dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
         <!-- header -->
         <header class="header-area">  
 			<div class="header-top second-header d-none d-md-block">
@@ -34,11 +56,13 @@
                                 <ul>                                   
                                     <li>
                                         <i class="icon dripicons-mail"></i>
-                                        <span>nsfg@gmail.com</span>
+                                        <span onclick="window.location.href='mailto:support@nsghbd.com'" style="cursor: pointer;">support@nsghbd.com</span>
                                     </li>
                                      <li>
                                         <i class="icon dripicons-phone"></i>
-                                        <span>+8801711902062</span>
+                                        <span onclick="window.location.href='tel:+8801711902062'" style="cursor: pointer;">
+                                            +8801711902062
+                                        </span>
                                     </li>
                                 </ul>
                             </div>
@@ -71,19 +95,25 @@
                                     <nav id="mobile-menu">
                                         <ul>
 											<li><a href="index.html">Home</a></li>
-                                            <li><a href="about.html">About Us</a></li>
                                             <li class="has-sub">
-                                                <a href="services.html">Services</a>
+                                                <a href="about.html">
+                                                    About Us
+                                                    <img src="img/icon/arrow-down.png" class="submenu-arrow" alt="arrow">
+                                                </a>
+                                                <ul class="submenu">
+                                                    <li><a href="message-md.html">Message From MD</a></li>
+                                                    <li><a href="history.html">Our History</a></li>
+                                                    <li><a href="team.html">Our Team</a></li>
+                                                    <li><a href="mission.html">Our Mission</a></li>
+                                                </ul>
                                             </li>
-                                            <li class="has-sub"> 
-                                                <a href="departments.html">Departments</a>
-                                            </li>
-                                                                                                                         
-											<li class="has-sub"><a href="doctors.html">Doctors</a></li>
+
+                                            <li><a href="services.html">Services</a></li>
+                                            <li><a href="departments.html">Departments</a></li>                                                                  
                                             <li><a href="machines.html">Machines</a></li>
-											<li class="has-sub"> 
-                                                <a href="gallery.html">Gallery</a>
-                                            </li>               
+											<li><a href="doctors.html">Doctors</a></li>
+											<li><a href="staffs.html">Staffs</a></li>
+											<li><a href="gallery.html">Gallery</a></li>               
                                         </ul>
                                     </nav>
                                 </div>
@@ -93,7 +123,7 @@
 
                                  
                             </div>
-                             <div class="col-12">
+                            <div class="col-12">
                             <div class="mobile-menu"></div>
                         </div>
                         </div>
@@ -420,65 +450,53 @@
             <!-- inner-blog-end -->
         </main>
          <!-- footer -->
-        <footer class="footer-bg footer-p" >
-            <div class="overly"><img src="img/an-bg/footer-bg.png" alt="rest"></div>
-            <div class="footer-top pb-30" style="background-color: #ECF1FA;">
+        <footer class="footer-bg footer-p">
+            
+            <!-- Footer Top -->
+            <div class="footer-top pb-30" style="background-color: #ECF1FA; padding-top: 50px">
                 <div class="container">
                     <div class="row justify-content-between">
-                        
+
+                        <!-- Logo & About -->
                         <div class="col-xl-3 col-lg-3 col-sm-6">
                             <div class="footer-widget mb-30">
                                 <div class="flog mb-35">
                                     <a href="#"><img src="img/logo/logo.png" alt="logo"></a>
                                 </div>
                                 <div class="footer-text mb-20">
-                                    <p>Sed ut perspiciatis unde om is nerror sit voluptatem accustium dolorem tium totam rem aperam eaque ipsa quae ab illose
-                                    inntore veritatis</p>
+                                    <p>Providing affordable healthcare solutions to keep you and your family safe and healthy.</p>
                                 </div>
                                 <div class="footer-social">
-                                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                                    <a href="#"><i class="fab fa-twitter"></i></a>
-                                    <a href="#"><i class="fab fa-instagram"></i></a>
-                                    <a href="#"><i class="fab fa-google-plus-g"></i></a>
+                                    <a href="https://www.facebook.com/SGhospital62/"><i class="fab fa-facebook-f"></i></a>
+                                    <a href="https://www.x.com/SGhospital62/"><i class="fab fa-twitter"></i></a>
+                                    <a href="https://www.instagram.com/SGhospital62/"><i class="fab fa-instagram"></i></a>
+                                    <a href="https://share.google/tjBaFWl9cYMEmTQD3"><i class="fab fa-google-plus-g"></i></a>
                                 </div>
                             </div>
                         </div>
-                        
-                        
-						<div class="col-xl-2 col-lg-2 col-sm-6">
+
+                        <!-- Quick Links -->
+                        <div class="col-xl-2 col-lg-2 col-sm-6">
                             <div class="footer-widget mb-30">
                                 <div class="f-widget-title">
                                     <h5>Our Links</h5>
                                 </div>
                                 <div class="footer-link">
-                                    <ul>                                        
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Partners</a></li>
-										<li><a href="#"><i class="fas fa-chevron-right"></i> About Us</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Career</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Reviews</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Terms & Conditions</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Help</a></li>
+                                    <ul>
+                                        <li><a href="index.html"><i class="fas fa-chevron-right"></i> Home</a></li>
+                                        <li><a href="about.html"><i class="fas fa-chevron-right"></i> About Us</a></li>
+                                        <li><a href="services.html"><i class="fas fa-chevron-right"></i> Services</a></li>
+                                        <li><a href="departments.html"><i class="fas fa-chevron-right"></i> Departments</a></li>
+                                        <li><a href="machines.html"><i class="fas fa-chevron-right"></i> Machines</a></li>
+                                        <li><a href="doctors.html"><i class="fas fa-chevron-right"></i> Doctors</a></li>
+                                        <li><a href="staffs.html"><i class="fas fa-chevron-right"></i> Staffs</a></li>
+                                        <li><a href="gallery.html"><i class="fas fa-chevron-right"></i> Gallery</a></li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-2 col-lg-2 col-sm-6">
-                            <div class="footer-widget mb-30">
-                                <div class="f-widget-title">
-                                    <h5>Other Links</h5>
-                                </div>
-                                <div class="footer-link">
-                                    <ul>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Home</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> About Us</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Services</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Project</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Our Team</a></li>
-                                        <li><a href="#"><i class="fas fa-chevron-right"></i> Latest Blog</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>  
+
+                        <!-- Contact Info -->
                         <div class="col-xl-3 col-lg-3 col-sm-6">
                             <div class="footer-widget mb-30">
                                 <div class="f-widget-title">
@@ -486,37 +504,39 @@
                                 </div>
                                 <div class="footer-link">
                                     <div class="f-contact">
-                                    <ul>
-                                    <li>
-                                        <i class="icon dripicons-phone"></i>
-                                        <span>1800-121-3637<br>+91 555 234-8765</span>
-                                    </li>
-                                    <li>
-                                        <i class="icon dripicons-mail"></i>
-                                         <span><a href="mailto:info@example.com">info@example.com</a><br><a href="mailto:sale@example.com">sale@example.com</a></span>
-                                    </li>
-                                    <li>
-                                      <i class="fal fa-map-marker-alt"></i>
-                                         <span>380 St Kilda Road, Melbourne<br>VIC 3004, Australia</span>
-                                    </li>
-                                </ul>
-                                    
+                                        <ul>
+                                            <li>
+                                                <i class="icon dripicons-phone"></i>
+                                                <span>+880 1711-902062<br>+880 1999-955062</span>
+                                            </li>
+                                            <li>
+                                                <i class="icon dripicons-mail"></i>
+                                                <span>
+                                                    <a href="mailto:info@nsgh.com">info@nsgh.com</a><br>
+                                                    <a href="mailto:support@nsgh.com">support@nsgh.com</a>
+                                                </span>
+                                            </li>
+                                            <li>
+                                                <i class="fal fa-map-marker-alt"></i>
+                                                <span>Shafipur Bazar, Kaliakair, Gazipur</span>
+                                            </li>
+                                        </ul>
                                     </div>
-                                   
-                                    
                                 </div>
                             </div>
                         </div>
-                        
+
                     </div>
                 </div>
             </div>
+
+            <!-- Copyright -->
             <div class="copyright-wrap">
                 <div class="container">
                     <div class="row">
                         <div class="col-12">
                             <div class="copyright-text text-center">
-                                <p>&copy; 2020 Mecare  All design Zcube.</p>
+                                <p>&copy; <span id="year"></span> NSGH. All Rights Reserved.</p>
                             </div>
                         </div>
                     </div>
@@ -563,6 +583,19 @@
         <script src="js/jquery.magnific-popup.min.js"></script>
         <script src="js/element-in-view.js"></script>
         <script src="js/main.js"></script>
+        <script src="https://unpkg.com/lenis@1.3.8/dist/lenis.min.js"></script> 
+        <script>
+            // Initialize Lenis
+            const lenis = new Lenis();
+
+            // Use requestAnimationFrame to continuously update the scroll
+            function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+            }
+
+            requestAnimationFrame(raf);
+        </script>
         <script>
         const modal = document.getElementById('appointmentModal');
         const form = document.getElementById('appointmentForm');

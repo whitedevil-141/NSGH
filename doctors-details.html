@@ -275,32 +275,18 @@
         <script src="js/doctors.js"></script>
         <script src="https://unpkg.com/lenis@1.3.8/dist/lenis.min.js"></script> 
         <script>
-            // Initialize Lenis
-            const lenis = new Lenis();
+            const lenis = new Lenis({
+                wrapper: document.body,
+                content: document.body,
+                smoothWheel: true,
+                smoothTouch: false
+            });
 
-            // Use requestAnimationFrame to continuously update the scroll
             function raf(time) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
+                lenis.raf(time);
+                requestAnimationFrame(raf);
             }
-
             requestAnimationFrame(raf);
         </script>
-        <!-- Preloader -->
-        <script>
-        window.addEventListener('load', function(){
-            const preloader = document.getElementById('preloader');
-            const minTime = 2000;
-            const startTime = performance.timing.navigationStart;
-            const elapsed = Date.now() - startTime;
-            const remaining = Math.max(minTime - elapsed, 0);
-
-            setTimeout(() => {
-                preloader.style.opacity = '0';
-                setTimeout(() => { preloader.style.display = 'none'; }, 500);
-            }, remaining);
-        });
-        </script>
-
     </body>
 </html>
