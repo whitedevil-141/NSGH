@@ -7,7 +7,7 @@ $('.main-menu nav ul').onePageNav({
 	currentClass: 'active',
 	scrollOffset: top_offset,
 });
-
+document.getElementById("year").textContent = new Date().getFullYear();
 // sticky
 $(window).on('scroll', function () {
 	var scroll = $(window).scrollTop();

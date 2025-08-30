@@ -7656,6 +7656,143 @@ form textarea {
 .dots span:nth-child(2) { animation-delay: 0.2s; }
 .dots span:nth-child(3) { animation-delay: 0.4s; }
 
+/* Doctor Card */
+.doctor-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: 0.3s;
+    margin-bottom: 50px;
+}
+
+.doctor-photo {
+    width: 100%;
+    max-width: 250px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.25);
+}
+
+.doctor-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0d6efd;
+}
+
+.doctor-speciality {
+    font-size: 18px;
+    font-weight: 600;
+    color: #444;
+}
+
+.info-list p {
+    margin: 5px 0;
+    font-size: 15px;
+}
+
+.info-list i {
+    color: #0d6efd;
+    margin-right: 8px;
+}
+
+/* Conditions Section */
+.conditions-section {
+    margin: 80px 0;
+}
+
+.section-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #222;
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.section-title::after {
+    content: "";
+    width: 60px;
+    height: 3px;
+    background: #0d6efd;
+    display: block;
+    margin: 12px auto 0 auto;
+    border-radius: 2px;
+}
+
+/* Condition Cards */
+.condition-card {
+    border-radius: 15px;
+    border: 1px solid rgba(0,0,0,0.07);
+    transition: 0.3s;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+    background: #fff;
+}
+
+.condition-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.condition-card h5 {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.condition-card p {
+    font-size: 14px;
+    color: #555;
+}
+
+/* Appointment Section */
+.appointment-section {
+    background: linear-gradient(135deg, #0d6efd, #0056b3);
+    padding: 60px 20px;
+    text-align: center;
+    border-radius: 20px;
+    color: white;
+    margin-top: 50px;
+}
+
+.appointment-section h3 {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.btn-custom {
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.btn-custom:hover {
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .doctor-name{
+        font-size: 24px;
+        padding-top: 40px;
+    }
+    .doctor-speciality{
+        font-size: 16px;
+    }
+    .doctor-card a{
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .condition-card {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+}
+
 @keyframes bounce {
     0%, 80%, 100% { transform: scale(0); }
     40% { transform: scale(1); }
