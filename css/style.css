@@ -1249,7 +1249,6 @@ label {
   content: "";
   width: 50%;
   height: 100%;
-  background: #b1abab;
   position: absolute;
   background: #1e0b9b 0% 0% no-repeat padding-box;
   opacity: 0.2;
@@ -7702,7 +7701,7 @@ form textarea {
     margin: 80px 0;
 }
 
-.section-title {
+.doctor-section-title {
     font-size: 28px;
     font-weight: 700;
     color: #222;
@@ -7711,7 +7710,7 @@ form textarea {
     position: relative;
 }
 
-.section-title::after {
+.doctor-section-title::after {
     content: "";
     width: 60px;
     height: 3px;
