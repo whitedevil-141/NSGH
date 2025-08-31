@@ -1,16 +1,38 @@
 # doctors_public.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from api.models import Doctor
 from api.database import get_db
-from api.schemas import DoctorPublic, DoctorsDataResponse
+from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut
 from api.limiter import limiter, Request
 import json
 
 router = APIRouter(
     tags=["Public"]
 )
+
+
+@router.get("/doctors/get/{doctor_id}", response_model=DoctorOut)
+async def get_doctor(doctor_id: int, db: Session = Depends(get_db)):
+    doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+
+    # Convert JSON strings -> Python lists/dicts
+    return {
+        "id": doctor.id,
+        "name": doctor.name,
+        "description": doctor.description,
+        "qualifications": json.loads(doctor.qualifications) if doctor.qualifications else [],
+        "conditions": json.loads(doctor.conditions) if doctor.conditions else [],
+        "phone": doctor.phone,
+        "specialization": json.loads(doctor.specialization) if doctor.specialization else [],
+        "hospital": doctor.hospital,
+        "room": doctor.room,
+        "timing": doctor.timing
+    }
+
 
 @router.get("/doctors/data", response_model=DoctorsDataResponse)
 @limiter.limit("15/minute")
@@ -42,7 +64,6 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
                 description=d.description,
                 category=category_list,           # now a proper list
                 phone=d.phone,
-                experience_yr=d.experience_yr,
                 photo_url=d.photo_url,
                 qualifications=qualifications,
                 conditions=conditions,

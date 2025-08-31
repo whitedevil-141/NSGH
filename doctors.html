@@ -324,7 +324,7 @@
             // Fetch data from API
             async function loadData() {
                 try {
-                    const res = await fetch('https://api.nsghbd.com/public/doctors/data');
+                    const res = await fetch('http://127.0.0.1:5000/public/doctors/data');
 
                 if (!res.ok) {
                     // Handle non-200 responses gracefully
@@ -367,28 +367,46 @@
 
                 setTimeout(() => {
                     container.innerHTML = "";
-                    const filtered = sampleDoctors.filter(doc => category === "all" || doc.category === category);
+
+                    // Filter properly: check if the category array includes the selected category
+                    const filtered = sampleDoctors.filter(doc => 
+                        category === "all" || (Array.isArray(doc.category) && doc.category.includes(category))
+                    );
+
                     const start = (page - 1) * perPage;
                     const paginatedDoctors = filtered.slice(start, start + perPage);
 
                     paginatedDoctors.forEach(doc => {
-                    container.innerHTML += `
-                        <div class="col-xl-3 col-lg-3 col-md-6 doctor-card">
-                        <div class="single-team mb-30" style="min-height: 380px;" data-id="${doc.id}">
-                            <div class="team-thumb">
-                            <img src="${doc.photo_url}" alt="${doc.name}" loading="lazy">
-                            </div>
-                            <div class="team-info">
-                            <h4>${doc.name}</h4>
-                            <span>${doc.specialization}</span>
-                            </div>
-                        </div>
-                        </div>`;
+                        // Convert specialization array to string for display
+                        let specs = [];
+                        try {
+                            specs = Array.isArray(doc.specialization)
+                                ? doc.specialization
+                                : JSON.parse(doc.specialization || '[]'); // parse JSON string
+                        } catch (err) {
+                            console.warn("Invalid specialization JSON:", doc.specialization);
+                            specs = [];
+                        }
+                        const specializationStr = specs.length ? specs.join(', ') : '-';
+                        container.innerHTML += `
+                            <div class="col-xl-3 col-lg-3 col-md-6 doctor-card">
+                                <div class="single-team mb-30" style="min-height: 380px;" data-id="${doc.id}">
+                                    <div class="team-thumb">
+                                        <img src="${doc.photo_url}" alt="Not Available" loading="lazy">
+                                    </div>
+                                    <div class="team-info">
+                                        <h6>${doc.name}</h6>
+                                        <p>${specializationStr}</p>
+                                    </div>
+                                </div>
+                            </div>`;
                     });
+
                     container.style.opacity = 1;
                     renderPagination(filtered.length, page);
                 }, 200);
             }
+
 
             /* ===================== Pagination ===================== */
             function renderPagination(totalDoctors, page) {
@@ -430,46 +448,16 @@
         </script>
 
         <script>
-            const modal = document.getElementById("doctorModal");
-            const modalBody = document.getElementById("modalBody");
-            const modalClose = document.getElementById("modalClose");
-
-            // Delegate click on doctor cards
             container.addEventListener("click", e => {
-                const card = e.target.closest(".single-team");
-                if (!card) return;
+            const card = e.target.closest(".single-team");
+            if (!card) return;
 
-                const docId = parseInt(card.dataset.id);
-                const doc = sampleDoctors.find(d => d.id === docId);
-                if (!doc) return;
+            const docId = parseInt(card.dataset.id);
+            if (!docId) return;
 
-                modalBody.innerHTML = `
-                    <div style="text-align:center; max-width:300px; margin:auto; font-family:Arial, sans-serif; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:15px;">
-                        <img src="${doc.photo_url}" alt="${doc.name}" 
-                            style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:15px;">
-
-                        <h3 style="margin-bottom:10px; font-size:1.4em; color:#333;">${doc.name}</h3>
-                        <h5 style="margin-bottom:15px; font-size:1.1em; color:#777;">${doc.description}</h5>
-                        <p style="margin-bottom:15px; font-size:0.95em; color:#555; line-height:1.4; ">
-                            
-                            <strong>Phone:</strong> ${doc.phone} <br> 
-                            <strong>Specialization:</strong> ${doc.specialization}<br>
-                            <strong>Experience:</strong> ${doc.experience_yr} years
-                        </p>
-                        <a href="tel:${doc.phone}" 
-                            style="display:inline-block; margin-top:10px; padding:10px 20px; background-color:#28a745; color:white; text-decoration:none; font-weight:bold; border-radius:8px; transition:0.3s;">
-                            Call Now
-                        </a>
-                    </div>
-
-                `;
-
-                modal.classList.add("show");
-            });
-
-            // Close modal
-            modalClose.addEventListener("click", () => modal.classList.remove("show"));
-            window.addEventListener("click", e => { if(e.target === modal) modal.classList.remove("show"); });
+            // Redirect to doctor details page with the ID
+            window.location.href = `/doctors-details.html?id=${docId}`;
+        });
 
 
         </script>

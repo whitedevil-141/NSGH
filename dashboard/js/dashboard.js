@@ -65,7 +65,7 @@ function renderDoctors() {
     paginated.forEach(d => {
         const div = document.createElement('div');
         div.className = 'col-md-3 doctor-card mb-3';
-        const imgSrc = d.photo_url || '../img/team/team02.png';
+        const imgSrc = d.photo_url;
         let specs = [];
         try {
             specs = Array.isArray(d.specialization)
@@ -77,10 +77,9 @@ function renderDoctors() {
         }
         const specializationStr = specs.length ? specs.join(', ') : '-';
         div.innerHTML = `
-            <img src="${imgSrc}" alt="${d.name}" onerror="this.src='../img/team/team02.png'" class="img-fluid rounded-circle mb-2">
+            <img src="${imgSrc}" alt="Not Available" class="img-fluid rounded-circle mb-2">
             <h5>${d.name}</h5>
             <p><strong>Specialties:</strong> ${specializationStr}<br>
-               <strong>Exp:</strong> ${d.experience_yr || '-'} yrs<br>
                <strong>Phone:</strong> ${d.phone || '-'}</p>
             <button class="btn btn-warning btn-sm me-1" onclick="editDoctor('${d.id}')">Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deleteDoctor('${d.id}')">Delete</button>
@@ -193,7 +192,6 @@ if (addForm) {
         uploadData.append('name', form.get('name') || '');
         uploadData.append('description', form.get('description') || '');
         uploadData.append('hospital', form.get('hospital') || '');
-        uploadData.append('experience_yr', form.get('experience_yr') || 0);
         uploadData.append('room', form.get('room') || '');
         uploadData.append('timing', form.get('timing') || '');
         uploadData.append('phone', form.get('phone') || '');
@@ -240,7 +238,6 @@ function editDoctor(id) {
 
     document.getElementById('editDoctorId').value = d.id;
     document.getElementById('editHospital').value = d.hospital;
-    document.getElementById('editExperience').value = d.experience_yr || 0;
     document.getElementById('editName').value = d.name;
     document.getElementById('editRoom').value = d.room || '';
     document.getElementById('editTiming').value = d.timing || '';
@@ -307,7 +304,6 @@ if (editForm) {
         const uploadData = new FormData();
         uploadData.append('name', form.get('editName') || '');
         uploadData.append('hospital', form.get('editHospital') || '');
-        uploadData.append('experience_yr', form.get('editExperience') || 0);
         uploadData.append('room', form.get('editRoom') || '');
         uploadData.append('timing', form.get('editTiming') || '');
         uploadData.append('phone', form.get('editPhone') || '');

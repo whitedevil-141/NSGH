@@ -17,7 +17,6 @@ class Doctor(Base):
     name = Column(String(100), nullable=False)
     description = Column(String(500), nullable=True)
     hospital = Column(String(100), nullable=False)
-    experience_yr = Column(Integer, default=0)
     room = Column(String(10), nullable=True)
     timing = Column(String(50), nullable=True)
     phone = Column(String(20), nullable=True)

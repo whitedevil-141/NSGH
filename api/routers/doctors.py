@@ -22,15 +22,6 @@ router = APIRouter(
 
 # -------------------- ROUTES --------------------
 
-@router.get("/get/{doctor_id}", response_model=DoctorOut)
-@limiter.limit("15/minute")
-def get_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db)):
-    doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
-    if not doctor:
-        raise HTTPException(status_code=404, detail="Doctor not found")
-    return doctor
-
-
 def upload_to_hosting(file: UploadFile):
     logger.info(f"Uploading file: {file.filename}")
     host = "94.130.22.223"
@@ -102,7 +93,6 @@ async def add_doctor(
     name: str = Form(...),
     description: str = Form(None),
     hospital: str = Form(...),
-    experience_yr: int = Form(...),
     room: str = Form(...),
     timing: str = Form(...),
     phone: str = Form(None),
@@ -136,7 +126,6 @@ async def add_doctor(
         name=name,
         description=description,
         hospital=hospital,
-        experience_yr=experience_yr,
         room=room,
         timing=timing,
         phone=phone,
@@ -164,7 +153,6 @@ async def update_doctor(
     name: str = Form(...),
     description: str = Form(None),
     hospital: str = Form(...),
-    experience_yr: int = Form(...),
     room: str = Form(...),
     timing: str = Form(...),
     phone: str = Form(None),
@@ -200,7 +188,6 @@ async def update_doctor(
     doctor.name = name
     doctor.description = description
     doctor.hospital = hospital
-    doctor.experience_yr = experience_yr
     doctor.room = room
     doctor.timing = timing
     doctor.phone = phone
@@ -218,7 +205,6 @@ async def update_doctor(
             "id": doctor.id,
             "name": doctor.name,
             "hospital": doctor.hospital,
-            "experience_yr": doctor.experience_yr,
             "room": doctor.room,
             "timing": doctor.timing,
             "phone": doctor.phone,

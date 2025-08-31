@@ -13,7 +13,6 @@ class DoctorBase(BaseModel):
     name: str
     description: Optional[str] = ""
     hospital: str
-    experience_yr: int
     room: str
     timing: str
     phone: Optional[str] = None
@@ -36,7 +35,6 @@ class DoctorPublic(BaseModel):
     description: Optional[str] = None
     category: List[str] = []           # <-- allow list
     phone: Optional[str] = None
-    experience_yr: Optional[int] = 0
     photo_url: Optional[str] = None
     qualifications: List[str] = []
     conditions: List[dict] = []
@@ -56,8 +54,17 @@ class GalleryBase(BaseModel):
     image_url: str
     caption: str
 
-class GalleryOut(GalleryBase):
+class DoctorOut(BaseModel):
     id: int
+    name: str
+    description: str
+    qualifications: List[str]
+    conditions: List[dict]
+    phone: str
+    specialization: List[str]
+    hospital: Optional[str] = None
+    room: Optional[str] = None
+    timing: Optional[str] = None
     class Config:
         orm_mode = True
 
