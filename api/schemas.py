@@ -62,6 +62,7 @@ class DoctorOut(BaseModel):
     conditions: List[dict]
     phone: str
     specialization: List[str]
+    photo_url: str
     hospital: Optional[str] = None
     room: Optional[str] = None
     timing: Optional[str] = None

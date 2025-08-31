@@ -28,6 +28,7 @@ async def get_doctor(doctor_id: int, db: Session = Depends(get_db)):
         "conditions": json.loads(doctor.conditions) if doctor.conditions else [],
         "phone": doctor.phone,
         "specialization": json.loads(doctor.specialization) if doctor.specialization else [],
+        "photo_url": doctor.photo_url,
         "hospital": doctor.hospital,
         "room": doctor.room,
         "timing": doctor.timing

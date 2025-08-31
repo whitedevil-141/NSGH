@@ -8,7 +8,7 @@ async function loadDoctor() {
 
     try {
         // fetch doctor info
-        const res = await fetch(`http://127.0.0.1:5000/public/doctors/get/${id}`);
+        const res = await fetch(`http://api.nsghbd.com/public/doctors/get/${id}`);
 
             if (!res.ok) {
                 const errText = await res.text();

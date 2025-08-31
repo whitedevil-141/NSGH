@@ -9,11 +9,12 @@ from api.schemas import DoctorBase, DoctorOut
 from api.utils.deps import get_current_user
 from api.limiter import limiter, Request
 import paramiko
-import logging
 import json
 
-logger = logging.getLogger("uvicorn")
-logger.setLevel(logging.INFO)
+HOST = "103.191.241.38"
+PORT = 22
+USERNAME = "nsghbdco"
+PASSWORD = "Mho.2V0eKC]91b"  # or use key authentication
 
 router = APIRouter(
     tags=["Doctors"],
@@ -23,17 +24,12 @@ router = APIRouter(
 # -------------------- ROUTES --------------------
 
 def upload_to_hosting(file: UploadFile):
-    logger.info(f"Uploading file: {file.filename}")
-    host = "94.130.22.223"
-    port = 22
-    username = "nsghbdco"
-    password = "r7T)Bth7dEC#16"  # or use key authentication
     ext = os.path.splitext(file.filename)[1]
     filename = f"{uuid.uuid4().hex}{ext}"
     remote_path = f"/home/nsghbdco/public_html/img/team/{filename}"
     try:
-        transport = paramiko.Transport((host, port))
-        transport.connect(username=username, password=password)
+        transport = paramiko.Transport((HOST, PORT))
+        transport.connect(username=USERNAME, password=PASSWORD)
         
         sftp = paramiko.SFTPClient.from_transport(transport)
 
@@ -52,23 +48,12 @@ def upload_to_hosting(file: UploadFile):
         raise HTTPException(status_code=500, detail=str(e))
     
 def delete_from_hosting(file_url: str):
-    """
-    Deletes a file from the remote server using SFTP.
-    Expects the full URL of the file (e.g., https://www.nsghbd.com/img/team/filename.jpg)
-    """
-    # Extract the path relative to the server root
-    # Example: https://www.nsghbd.com/img/team/filename.jpg -> /home/nsghbdco/public_html/img/team/filename.jpg
+    
     filename = file_url.split("/")[-1]
     remote_path = f"/home/nsghbdco/public_html/img/team/{filename}"
-
-    host = "94.130.22.223"
-    port = 22
-    username = "nsghbdco"
-    password = "r7T)Bth7dEC#16"
-
     try:
-        transport = paramiko.Transport((host, port))
-        transport.connect(username=username, password=password)
+        transport = paramiko.Transport((HOST, PORT))
+        transport.connect(username=USERNAME, password=PASSWORD)
         sftp = paramiko.SFTPClient.from_transport(transport)
 
         # Delete the file
@@ -104,7 +89,7 @@ async def add_doctor(
 ):
     try:
         # Example: upload logic
-        photo_url = "test_url"
+        photo_url = upload_to_hosting(photo)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Photo upload failed: {e}")
 
@@ -226,9 +211,8 @@ def delete_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
 
-    # Delete the file from server first
-    # if doctor.photo_url:
-    #     delete_from_hosting(doctor.photo_url)
+    if doctor.photo_url:
+        delete_from_hosting(doctor.photo_url)
 
     # Delete the database record
     db.delete(doctor)

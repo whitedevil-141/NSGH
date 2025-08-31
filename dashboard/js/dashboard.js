@@ -21,7 +21,7 @@ const editModal = new bootstrap.Modal(editModalEl);
 // ---------------- Load doctors from API ----------------
 async function loadDoctors() {
     try {
-        const res = await fetch('http://127.0.0.1:5000/public/doctors/data');
+        const res = await fetch('http://api.nsghbd.com/public/doctors/data');
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         doctors = data.doctors;
@@ -207,7 +207,7 @@ if (addForm) {
 
         // ---------------- Send to backend ----------------
         try {
-            const res = await fetch('http://127.0.0.1:5000/doctors/add', {
+            const res = await fetch('http://api.nsghbd.com/doctors/add', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }, // keep auth if needed
                 body: uploadData
@@ -320,7 +320,7 @@ if (editForm) {
 
         // ---------------- Send to backend ----------------
         try {
-            const res = await fetch(`http://127.0.0.1:5000/doctors/update/${id}`, {
+            const res = await fetch(`http://api.nsghbd.com/doctors/update/${id}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }, 
                 body: uploadData
@@ -347,7 +347,7 @@ if (editForm) {
 async function deleteDoctor(id) {
     if (!confirm("Delete this doctor?")) return;
     try {
-        await fetch(`http://127.0.0.1:5000/doctors/${id}`, {
+        await fetch(`http://api.nsghbd.com/doctors/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
