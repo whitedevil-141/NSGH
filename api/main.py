@@ -18,8 +18,12 @@ app.add_exception_handler(RateLimitExceeded, lambda request, exc: Response(
 ))
 
 origins = [
-    "https://nsghbd.com",  # allow your frontend
+    "https://nsghbd.com",
+    "https://www.nsghbd.com",
+    "http://nsghbd.com",     # optional, only if serving HTTP
+    "http://www.nsghbd.com", # optional
 ]
+
 
 app.add_middleware(
     CORSMiddleware,
