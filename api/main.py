@@ -17,17 +17,12 @@ app.add_exception_handler(RateLimitExceeded, lambda request, exc: Response(
     "Too Many Requests", status_code=429
 ))
 
-origins = [
-    "https://nsghbd.com",
-    "https://www.nsghbd.com",
-    "http://nsghbd.com",     # optional, only if serving HTTP
-    "http://www.nsghbd.com", # optional
-]
+
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],  # allow GET, POST, etc.
     allow_headers=["*"],  # allow all headers
