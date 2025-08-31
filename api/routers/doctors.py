@@ -2,7 +2,7 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from api.database import get_db
 from api.models import Doctor
 from api.schemas import DoctorBase, DoctorOut
@@ -10,7 +10,7 @@ from api.utils.deps import get_current_user
 from api.limiter import limiter, Request
 import paramiko
 import logging
-
+import json
 
 logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
@@ -95,83 +95,142 @@ def delete_from_hosting(file_url: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/add", response_model=DoctorOut, status_code=status.HTTP_201_CREATED)
-def create_doctor(
-    request: Request,
+from fastapi import Form
+
+@router.post("/add")
+async def add_doctor(
     name: str = Form(...),
-    specialization: str = Form(...),
-    category: str = Form(...),
-    experience: int = Form(...),
     description: str = Form(None),
+    hospital: str = Form(...),
+    experience_yr: int = Form(...),
+    room: str = Form(...),
+    timing: str = Form(...),
     phone: str = Form(None),
-    photo: UploadFile = File(...),
+    specialization: str = Form(...),  # comma-separated
+    qualifications: str = Form(...),  # JSON string
+    conditions: str = Form(...),      # JSON string
+    photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    # Save the uploaded file
     try:
-        photo_url = upload_to_hosting(photo)
-        print(photo_url)
+        # Example: upload logic
+        photo_url = "test_url"
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
-        
+        raise HTTPException(status_code=500, detail=f"Photo upload failed: {e}")
+
+    # Convert strings to Python objects
+    qualifications_list = []
+    conditions_list = []
+    specialization_list = [s.strip() for s in specialization.split(',') if s.strip()]
     try:
-        # Create DB entry
-        new_doc = Doctor(
-            name=name,
-            specialization=specialization,
-            category=category,
-            experience_yr=experience,
-            description=description,
-            phone=phone,
-            photo_url=photo_url  # relative path for frontend
-        )
+        qualifications_list = json.loads(qualifications)
+    except Exception:
+        qualifications_list = []
+
+    try:
+        conditions_list = json.loads(conditions)
+    except Exception:
+        conditions_list = []
+
+    new_doc = Doctor(
+        name=name,
+        description=description,
+        hospital=hospital,
+        experience_yr=experience_yr,
+        room=room,
+        timing=timing,
+        phone=phone,
+        specialization=json.dumps(specialization_list),
+        qualifications=json.dumps(qualifications_list),
+        conditions=json.dumps(conditions_list),
+        category=json.dumps(specialization_list),
+        photo_url=photo_url
+    )
+
+    try:
         db.add(new_doc)
         db.commit()
         db.refresh(new_doc)
-        return new_doc
+        return {"success": True, "doctor_id": new_doc.id}
     except Exception as e:
         db.rollback()
-        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/update/{doctor_id}", response_model=DoctorOut)
 @limiter.limit("5/minute")
-def update_doctor(
+async def update_doctor(
     request: Request,
     doctor_id: int,
     name: str = Form(...),
-    specialization: str = Form(...),
-    category: str = Form(...),
-    experience: int = Form(...),
     description: str = Form(None),
+    hospital: str = Form(...),
+    experience_yr: int = Form(...),
+    room: str = Form(...),
+    timing: str = Form(...),
     phone: str = Form(None),
-    photo: UploadFile = File(None),  # Optional
+    specialization: str = Form(...),       # comma-separated
+    qualifications: str = Form(...),       # JSON string
+    conditions: str = Form(...),           # JSON string
+    photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
+
+    # ---------------- Parse fields ----------------
+    specialization_list = [s.strip() for s in specialization.split(',') if s.strip()]
+
     try:
-        # Update fields
-        doctor.name = name
-        doctor.specialization = specialization
-        doctor.category = category
-        doctor.experience_yr = experience
-        doctor.description = description
-        doctor.phone = phone
+        qualifications_list = json.loads(qualifications)
+    except Exception:
+        qualifications_list = []
 
-        # Handle photo if provided
-        if photo:
-            photo_url = upload_to_hosting(photo)
-            doctor.photo_url = photo_url
+    try:
+        conditions_list = json.loads(conditions)
+    except Exception:
+        conditions_list = []
 
+    # ---------------- Handle photo ----------------
+    if photo:
+        photo_url = upload_to_hosting(photo)
+        doctor.photo_url = photo_url
 
+    # ---------------- Update doctor ----------------
+    doctor.name = name
+    doctor.description = description
+    doctor.hospital = hospital
+    doctor.experience_yr = experience_yr
+    doctor.room = room
+    doctor.timing = timing
+    doctor.phone = phone
+    doctor.specialization = json.dumps(specialization_list)
+    doctor.category = json.dumps(specialization_list)  # for filtering
+    doctor.qualifications = json.dumps(qualifications_list)
+    doctor.conditions = json.dumps(conditions_list)
+
+    try:
         db.commit()
         db.refresh(doctor)
-        return doctor
+
+        # Convert JSON strings back to Python lists for the response
+        return {
+            "id": doctor.id,
+            "name": doctor.name,
+            "hospital": doctor.hospital,
+            "experience_yr": doctor.experience_yr,
+            "room": doctor.room,
+            "timing": doctor.timing,
+            "phone": doctor.phone,
+            "description": doctor.description or "",
+            "specialization": json.loads(doctor.specialization) if doctor.specialization else [],
+            "category": json.loads(doctor.category) if doctor.category else [],
+            "qualifications": json.loads(doctor.qualifications) if doctor.qualifications else [],
+            "conditions": json.loads(doctor.conditions) if doctor.conditions else [],
+            "photo_url": doctor.photo_url,
+        }
     except Exception as e:
         db.rollback()
-        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{doctor_id}")
@@ -182,8 +241,8 @@ def delete_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Doctor not found")
 
     # Delete the file from server first
-    if doctor.photo_url:
-        delete_from_hosting(doctor.photo_url)
+    # if doctor.photo_url:
+    #     delete_from_hosting(doctor.photo_url)
 
     # Delete the database record
     db.delete(doctor)

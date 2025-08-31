@@ -8,18 +8,25 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     password = Column(String(255), nullable=False)
     role = Column(String(20), default="admin")  #
-    
+
+
 class Doctor(Base):
     __tablename__ = "doctors"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    specialization = Column(String(100), nullable=False)
-    category = Column(String(50), nullable=False)
-    experience_yr = Column(Integer, default=0)
-    photo_url = Column(String(255), nullable=True)
     description = Column(String(500), nullable=True)
+    hospital = Column(String(100), nullable=False)
+    experience_yr = Column(Integer, default=0)
+    room = Column(String(10), nullable=True)
+    timing = Column(String(50), nullable=True)
     phone = Column(String(20), nullable=True)
+    specialization = Column(Text, nullable=False)
+    qualifications = Column(Text, nullable=True)
+    conditions = Column(Text, nullable=True)
+    category = Column(Text, nullable=False)
+    photo_url = Column(String(255), nullable=True) 
+
 
 
 class Gallery(Base):

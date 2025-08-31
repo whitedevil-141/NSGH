@@ -1,3 +1,4 @@
+from typing import List, Optional
 from pydantic import BaseModel
 
 # Auth
@@ -10,25 +11,45 @@ class RegisterRequest(BaseModel):
 # Doctor
 class DoctorBase(BaseModel):
     name: str
-    specialization: str
-    category: str
+    description: Optional[str] = ""
+    hospital: str
     experience_yr: int
-    photo_url: str
-    description: str
-    phone: str
+    room: str
+    timing: str
+    phone: Optional[str] = None
+    specialization: List[str] = []
+    qualifications: List[str] = []
+    conditions: List[dict] = []
+    category: List[str] = [] 
+
 
 class DoctorOut(DoctorBase):
     id: int
     class Config:
         orm_mode = True
-        
+
+
 class DoctorPublic(BaseModel):
     id: int
     name: str
-    specialization: str
-    category: str
-    experience_yr: int
-    photo_url: str
+    specialization: Optional[str] = None
+    description: Optional[str] = None
+    category: List[str] = []           # <-- allow list
+    phone: Optional[str] = None
+    experience_yr: Optional[int] = 0
+    photo_url: Optional[str] = None
+    qualifications: List[str] = []
+    conditions: List[dict] = []
+    hospital: Optional[str] = None
+    room: Optional[str] = None
+    timing: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+class DoctorsDataResponse(BaseModel):
+    doctors: List[DoctorPublic]
+    categories: List[str]
     
 # Gallery
 class GalleryBase(BaseModel):
