@@ -133,37 +133,17 @@
         </header>
         <!-- header-end -->
         <div class="section-title text-center pl-40 pr-40 pt-40 mb-0">
-            <span>Our Doctors</span>
+            <span>Our Staffs</span>
         </div>
 
         <!-- main-area -->
         <main>
-
-            <div class="filter-box mb-4">
-                <select id="doctorFilter">
-                    <option value="all">All Departments</option>
-                </select>
-            </div>
-
-            <div id="doctorsWrapper" style="position: relative; min-height: 400px;">
-                <div id="loaderOverlay">
-                    <div id="loader"></div>
+            <div class="container">
+                <div id="staffsContainer" class="row align-items-center">
+                    <!-- Staffs will be injected here -->
                 </div>
-                <div id="doctorsContainer" class="row align-items-center">
-                    <!-- Doctors will be injected here -->
-                </div>
+                <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
             </div>
-            <!-- Doctor Quick View Modal -->
-            <div id="doctorModal">
-                <div class="modal-content">
-                    <span id="modalClose" style="position:absolute; top:10px; right:15px; cursor:pointer; font-size:20px;">&times;</span>
-                    <div id="modalBody"></div>
-                </div>
-            </div>
-            
-
-
-			
         </main>
         <!-- main-area-end -->
         <!-- footer -->
@@ -313,165 +293,76 @@
             requestAnimationFrame(raf);
         </script>
         <script>
-            const perPage = 8;
+            const container = document.getElementById("staffsContainer");
+            const paginationEl = document.getElementById("pagination");
+
+            const perPage = 8;  // staff per page
             let currentPage = 1;
-            let currentCategory = "all";
-            let sampleDepartments = [];
-            let sampleDoctors = [];
+            let staffs = [];
 
-            const container = document.getElementById("doctorsContainer");
-
-            // Fetch data from API
-            async function loadData() {
+            async function loadStaffs() {
                 try {
-                    const res = await fetch('/api/public/doctors/data');
+                    const res = await fetch('https://api.nsghbd.com/public/staffs/data');
+                    if (!res.ok) {
+                        container.innerHTML = `<p>Failed to load staff members.</p>`;
+                        return;
+                    }
 
-                if (!res.ok) {
-                    // Handle non-200 responses gracefully
-                    const text = await res.text();
-                    console.error(`Error fetching doctors: ${res.status} ${res.statusText}`, text);
-                    alert(`Failed to fetch doctors: ${res.status} ${res.statusText}. Please try again after few minutes`);
-                    return;
-                }
-                data = await res.json();
-                sampleDoctors = data.doctors
-                
-                sampleDepartments = data.categories;
-
-                loadDepartments();
-                loadDoctors();
-                } catch (error) {
-                    console.error("Error loading data:", error);
+                    const data = await res.json();
+                    staffs = data.staffs || [];
+                    renderStaffs();
+                    renderPagination();
+                } catch (err) {
+                    console.error(err);
+                    container.innerHTML = `<p>Error loading staff data.</p>`;
                 }
             }
 
+            function renderStaffs() {
+                container.innerHTML = "";
+                const start = (currentPage - 1) * perPage;
+                const paginated = staffs.slice(start, start + perPage);
 
-            /* ===================== Load Departments ===================== */
-            function loadDepartments() {
-                const select = document.getElementById("doctorFilter");
-                select.innerHTML = `<option value="all">All Departments</option>`;
-                sampleDepartments.forEach(dep => {
-                    const option = document.createElement("option");
-                    option.value = dep;
-                    option.textContent = dep;
-                    select.appendChild(option);
+                paginated.forEach(staff => {
+                    container.innerHTML += `
+                            <div class="col-xl-4 col-lg-3 col-md-6 doctor-card">
+                                <div class="single-team mb-30" style="min-height: 380px;" data-id="${staff.id}">
+                                    <div class="team-thumb">
+                                        <img src="${staff.photo_url}" alt="Not Available" loading="lazy">
+                                    </div>
+                                    <div class="team-info">
+                                        <h3>${staff.name}</h6>
+                                        <p>${staff.designation}</p>
+                                    </div>
+                                </div>
+                            </div>`;
                 });
             }
 
-            /* ===================== Load Doctors ===================== */
-            function loadDoctors(category = "all", page = 1) {
-                currentCategory = category;
-                currentPage = page;
-
-                container.style.opacity = 0;
-
-                setTimeout(() => {
-                    container.innerHTML = "";
-                    const filtered = sampleDoctors.filter(doc => category === "all" || doc.category === category);
-                    const start = (page - 1) * perPage;
-                    const paginatedDoctors = filtered.slice(start, start + perPage);
-
-                    paginatedDoctors.forEach(doc => {
-                    container.innerHTML += `
-                        <div class="col-xl-3 col-lg-3 col-md-6 doctor-card">
-                        <div class="single-team mb-30" style="min-height: 380px;" data-id="${doc.id}">
-                            <div class="team-thumb">
-                            <img src="${doc.photo_url}" alt="${doc.name}" loading="lazy">
-                            </div>
-                            <div class="team-info">
-                            <h4>${doc.name}</h4>
-                            <span>${doc.specialization}</span>
-                            </div>
-                        </div>
-                        </div>`;
-                    });
-                    container.style.opacity = 1;
-                    renderPagination(filtered.length, page);
-                }, 200);
-            }
-
-            /* ===================== Pagination ===================== */
-            function renderPagination(totalDoctors, page) {
-                const oldPagination = document.getElementById("pagination");
-                if (oldPagination) oldPagination.remove();
-
-                const totalPages = Math.ceil(totalDoctors / perPage);
+            function renderPagination() {
+                paginationEl.innerHTML = "";
+                const totalPages = Math.ceil(staffs.length / perPage);
                 if (totalPages <= 1) return;
-
-                const pagination = document.createElement("ul");
-                pagination.id = "pagination";
-                pagination.className = "pagination justify-content-center mt-4";
 
                 for (let i = 1; i <= totalPages; i++) {
                     const li = document.createElement("li");
-                    li.className = "page-item " + (i === page ? "active" : "");
-
+                    li.className = "page-item " + (i === currentPage ? "active" : "");
                     const a = document.createElement("a");
                     a.className = "page-link";
                     a.href = "#";
                     a.textContent = i;
                     a.addEventListener("click", e => {
                         e.preventDefault();
-                        loadDoctors(currentCategory, i);
+                        currentPage = i;
+                        renderStaffs();
+                        renderPagination();
                     });
-
                     li.appendChild(a);
-                    pagination.appendChild(li);
+                    paginationEl.appendChild(li);
                 }
-
-                container.parentNode.appendChild(pagination);
             }
 
-            /* ===================== Filter Listener ===================== */
-            document.getElementById("doctorFilter").addEventListener("change", e => loadDoctors(e.target.value, 1));
-
-            /* ===================== Initialize ===================== */
-            loadData();
-        </script>
-
-        <script>
-            const modal = document.getElementById("doctorModal");
-            const modalBody = document.getElementById("modalBody");
-            const modalClose = document.getElementById("modalClose");
-
-            // Delegate click on doctor cards
-            container.addEventListener("click", e => {
-                const card = e.target.closest(".single-team");
-                if (!card) return;
-
-                const docId = parseInt(card.dataset.id);
-                const doc = sampleDoctors.find(d => d.id === docId);
-                if (!doc) return;
-
-                modalBody.innerHTML = `
-                    <div style="text-align:center; max-width:300px; margin:auto; font-family:Arial, sans-serif; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:15px;">
-                        <img src="${doc.photo_url}" alt="${doc.name}" 
-                            style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:15px;">
-
-                        <h3 style="margin-bottom:10px; font-size:1.4em; color:#333;">${doc.name}</h3>
-                        <h5 style="margin-bottom:15px; font-size:1.1em; color:#777;">${doc.description}</h5>
-                        <p style="margin-bottom:15px; font-size:0.95em; color:#555; line-height:1.4; ">
-                            
-                            <strong>Phone:</strong> ${doc.phone} <br> 
-                            <strong>Specialization:</strong> ${doc.specialization}<br>
-                            <strong>Experience:</strong> ${doc.experience_yr} years
-                        </p>
-                        <a href="tel:${doc.phone}" 
-                            style="display:inline-block; margin-top:10px; padding:10px 20px; background-color:#28a745; color:white; text-decoration:none; font-weight:bold; border-radius:8px; transition:0.3s;">
-                            Call Now
-                        </a>
-                    </div>
-
-                `;
-
-                modal.classList.add("show");
-            });
-
-            // Close modal
-            modalClose.addEventListener("click", () => modal.classList.remove("show"));
-            window.addEventListener("click", e => { if(e.target === modal) modal.classList.remove("show"); });
-
-
+            loadStaffs();
         </script>
     </body>
 </html>

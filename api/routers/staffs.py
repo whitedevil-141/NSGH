@@ -58,8 +58,10 @@ async def update_staff(
         raise HTTPException(status_code=404, detail="Staff not found")
 
     # ---------------- Handle photo ----------------
+    
     if photo:
         photo_url = upload_to_hosting(photo)
+        print(photo_url)
         staff.photo_url = photo_url
 
     # ---------------- Update staff ----------------

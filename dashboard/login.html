@@ -37,8 +37,9 @@ document.getElementById('loginForm').addEventListener('submit', async e=>{
     });
     
     if(!res.ok){ 
-      alert('Login failed'); 
-      console.error(await res.text());
+      const text = await res.json();
+      alert('Login failed: '+ text.detail); 
+      console.error(text);
       return; 
     }
     

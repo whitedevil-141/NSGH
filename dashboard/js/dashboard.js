@@ -18,6 +18,19 @@ const filter = document.getElementById('doctorFilter');
 const editModalEl = document.getElementById('editDoctorModal');
 const editModal = new bootstrap.Modal(editModalEl);
 
+// ---------------- Staffs Tab ----------------
+const staffPerPage = 8;
+let staffCurrentPage = 1;
+let staffs = [];
+
+const staffContainer = document.getElementById('staffsContainer');
+const staffPagination = document.getElementById('staffsPagination');
+
+// Initialize modals
+const editStaffModalEl = document.getElementById('editStaffModal');
+const editStaffModal = new bootstrap.Modal(editStaffModalEl);
+
+
 // ---------------- Load doctors from API ----------------
 async function loadDoctors() {
     try {
@@ -31,6 +44,20 @@ async function loadDoctors() {
     } catch (err) {
         console.error("Fetch error:", err);
         alert("Failed to fetch doctors: Network or server error");
+    }
+}
+
+// ---------------- Load staffs from API ----------------
+async function loadStaffs() {
+    try {
+        const res = await fetch('https://api.nsghbd.com/public/staffs/data');
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        staffs = data.staffs || [];
+        renderStaffs();
+    } catch (err) {
+        console.error("Fetch error:", err);
+        alert("Failed to fetch staffs: Network or server error");
     }
 }
 
@@ -358,3 +385,137 @@ async function deleteDoctor(id) {
         alert("Failed to delete");
     }
 }
+
+// ---------------- Render staffs ----------------
+function renderStaffs() {
+    const start = (staffCurrentPage - 1) * staffPerPage;
+    const paginated = staffs.slice(start, start + staffPerPage);
+
+    staffContainer.innerHTML = '';
+    paginated.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'col-md-3 staff-card mb-3 text-center';
+        div.innerHTML = `
+            <img src="${s.photo_url || 'placeholder.png'}" alt="Not Available" class="img-fluid rounded-circle mb-2" style="width:100px;height:100px;">
+            <h5>${s.name}</h5>
+            <p><strong>Designation:</strong> ${s.designation || '-'}</p>
+            <button class="btn btn-warning btn-sm me-1" onclick="editStaff('${s.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStaff('${s.id}')">Delete</button>
+        `;
+        staffContainer.appendChild(div);
+    });
+
+    renderStaffPagination();
+}
+
+// ---------------- Staff Pagination ----------------
+function renderStaffPagination() {
+    const totalPages = Math.ceil(staffs.length / staffPerPage);
+    staffPagination.innerHTML = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === staffCurrentPage ? 'active' : ''}`;
+        li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
+        li.addEventListener('click', e => {
+            e.preventDefault();
+            staffCurrentPage = i;
+            renderStaffs();
+        });
+        staffPagination.appendChild(li);
+    }
+}
+
+// ---------------- Add Staff ----------------
+const addStaffForm = document.getElementById('addStaffForm');
+if (addStaffForm) {
+    addStaffForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const form = new FormData(addStaffForm);
+
+        try {
+            const res = await fetch('https://api.nsghbd.com/staffs/add', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: form
+            });
+            if (!res.ok) throw new Error(await res.text());
+
+            alert("Staff added!");
+            addStaffForm.reset();
+            bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
+            loadStaffs();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to add staff: " + err.message);
+        }
+    });
+}
+
+// ---------------- Edit Staff ----------------
+function editStaff(id) {
+    const s = staffs.find(x => x.id == id);
+    if (!s) return;
+
+    document.getElementById('editStaffId').value = s.id;
+    document.getElementById('editStaffName').value = s.name;
+    document.getElementById('editStaffDesignation').value = s.designation || '';
+
+    editStaffModal.show();
+}
+
+const editStaffForm = document.getElementById('editStaffForm');
+if (editStaffForm) {
+    editStaffForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const form = new FormData();
+
+        const id = document.getElementById('editStaffId').value;
+        const name = document.getElementById('editStaffName').value;
+        const designation = document.getElementById('editStaffDesignation').value;
+
+        form.append('name', name);
+        form.append('designation', designation);
+
+        // Only append photo if a file is selected
+        const photoInput = document.getElementById('editStaffPhoto'); // make sure your <input> has id="editStaffPhoto"
+        if (photoInput.files.length > 0) {
+            form.append('photo', photoInput.files[0]);
+        }
+
+        try {
+            const res = await fetch(`https://api.nsghbd.com/staffs/update/${id}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: form
+            });
+            if (!res.ok) throw new Error(await res.text());
+
+            alert("Staff updated!");
+            bootstrap.Modal.getInstance(document.getElementById('editStaffModal')).hide();
+            loadStaffs();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to update staff: " + err.message);
+        }
+    });
+
+}
+
+// ---------------- Delete Staff ----------------
+async function deleteStaff(id) {
+    if (!confirm("Delete this staff?")) return;
+    try {
+        await fetch(`https://api.nsghbd.com/staffs/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        alert("Deleted");
+        loadStaffs();
+    } catch (err) {
+        console.error(err);
+        alert("Failed to delete staff: " + err.message);
+    }
+}
+
+// ---------------- Initialize ----------------
+document.addEventListener('DOMContentLoaded', loadStaffs);

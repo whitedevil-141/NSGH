@@ -44,17 +44,9 @@
           <a class="nav-link active" id="doctors-tab" data-bs-toggle="tab" href="#doctors" role="tab">Doctors</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" id="services-tab" data-bs-toggle="tab" href="#services" role="tab">Services</a>
+          <a class="nav-link" id="staffs-tab" data-bs-toggle="tab" href="#staffs" role="tab">Staffs</a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" id="departments-tab" data-bs-toggle="tab" href="#departments" role="tab">Departments</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" id="machines-tab" data-bs-toggle="tab" href="#machines" role="tab">Machines</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" id="gallery-tab" data-bs-toggle="tab" href="#gallery" role="tab">Gallery</a>
-        </li>
+        
       </ul>
 
       <div class="tab-content mt-3">
@@ -77,11 +69,17 @@
           <ul id="pagination" class="pagination justify-content-center mt-3"></ul>
         </div>
 
-        <!-- Placeholder Tabs -->
-        <div class="tab-pane fade" id="services" role="tabpanel"><h4>Services Page - Placeholder</h4></div>
-        <div class="tab-pane fade" id="departments" role="tabpanel"><h4>Departments Page - Placeholder</h4></div>
-        <div class="tab-pane fade" id="machines" role="tabpanel"><h4>Machines Page - Placeholder</h4></div>
-        <div class="tab-pane fade" id="gallery" role="tabpanel"><h4>Gallery Page - Placeholder</h4></div>
+        <!-- Staffs Tab -->
+        <div class="tab-pane fade" id="staffs" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h4>Staffs</h4>
+            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+              Add New Staff
+            </button>
+          </div>
+          <div id="staffsContainer" class="row"></div>
+          <ul id="staffsPagination" class="pagination justify-content-center mt-3"></ul>
+        
       </div>
     </div>
 
@@ -236,6 +234,81 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Staff Modal -->
+    <div class="modal fade" id="addStaffModal" tabindex="-1" aria-labelledby="addStaffModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content p-3">
+          <form id="addStaffForm" enctype="multipart/form-data">
+            <div class="modal-header border-0">
+              <h5 class="modal-title" id="addStaffModalLabel">Add New Staff</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <!-- Name -->
+              <div class="mb-3">
+                <label class="form-label small">Name</label>
+                <input type="text" class="form-control form-control-sm" name="name" required>
+              </div>
+              <!-- Designation -->
+              <div class="mb-3">
+                <label class="form-label small">Designation</label>
+                <input type="text" class="form-control form-control-sm" name="designation" required>
+              </div>
+              <!-- Photo -->
+              <div class="mb-3">
+                <label class="form-label small">Photo</label>
+                <input type="file" class="form-control form-control-sm" name="photo" accept="image/*" required>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-success btn-sm">Add Staff</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Edit Staff Modal -->
+    <div class="modal fade" id="editStaffModal" tabindex="-1" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content p-3">
+          <form id="editStaffForm" enctype="multipart/form-data">
+            <div class="modal-header border-0">
+              <h5 class="modal-title" id="editStaffModalLabel">Edit Staff</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="editStaffId" name="editStaffId">
+              <!-- Name -->
+              <div class="mb-3">
+                <label class="form-label small">Name</label>
+                <input type="text" class="form-control form-control-sm" id="editStaffName" name="name" required>
+              </div>
+              <!-- Designation -->
+              <div class="mb-3">
+                <label class="form-label small">Designation</label>
+                <input type="text" class="form-control form-control-sm" id="editStaffDesignation" name="designation" required>
+              </div>
+              <!-- Photo -->
+              <div class="mb-3">
+                <label class="form-label small">Photo</label>
+                <input type="file" class="form-control form-control-sm" id="editStaffPhoto" name="photo" accept="image/*">
+                <small class="text-muted">Leave blank to keep existing photo</small>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary btn-sm">Update Staff</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+
 
 
     
