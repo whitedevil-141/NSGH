@@ -1,7 +1,7 @@
 import uuid
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from api import crud, models, database
@@ -13,12 +13,12 @@ from api.limiter import limiter, Request
 router = APIRouter()
 
 
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 # ==========================
 # LOGIN ENDPOINT
 # ==========================
 @limiter.limit("5/minute")
-@router.post("/login")
+@router.post("/login", tags=["Auth"])
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     with database.SessionLocal() as db:
         user = crud.get_user_by_username(db, form_data.username)
@@ -48,7 +48,7 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 # REGISTER ENDPOINT
 # ==========================
 @limiter.limit("3/minute")
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED, tags=["Auth"])
 def register_user(request: Request, data: RegisterRequest):
     with database.SessionLocal() as db:
         # check if username already exists
