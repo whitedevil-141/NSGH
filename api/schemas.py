@@ -25,7 +25,7 @@ class DoctorBase(BaseModel):
 class DoctorOut(DoctorBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class DoctorPublic(BaseModel):
@@ -43,12 +43,37 @@ class DoctorPublic(BaseModel):
     timing: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class DoctorsDataResponse(BaseModel):
     doctors: List[DoctorPublic]
     categories: List[str]
     
+
+# staff
+class StaffBase(BaseModel):
+    name: str
+    designation: str
+
+class StaffOut(StaffBase):
+    id: int
+    class Config:
+        from_attributes = True
+        
+class StaffPublic(BaseModel):
+    id: int
+    name: str
+    designation: Optional[str] = None
+    photo_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
+
+class StaffsDataResponse(BaseModel):
+    staffs: List[StaffPublic]
+
+
 # Gallery
 class GalleryBase(BaseModel):
     image_url: str
@@ -67,7 +92,7 @@ class DoctorOut(BaseModel):
     room: Optional[str] = None
     timing: Optional[str] = None
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Machinery
 class MachineryBase(BaseModel):
@@ -78,7 +103,7 @@ class MachineryBase(BaseModel):
 class MachineryOut(MachineryBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Department
 class DepartmentBase(BaseModel):
@@ -89,7 +114,7 @@ class DepartmentBase(BaseModel):
 class DepartmentOut(DepartmentBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # About
 class AboutBase(BaseModel):
@@ -100,4 +125,4 @@ class AboutBase(BaseModel):
 class AboutOut(AboutBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True

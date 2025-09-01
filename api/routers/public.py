@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.models import Doctor
+from api.models import Doctor, Staff
 from api.database import get_db
-from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut
+from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse
 from api.limiter import limiter, Request
 import json
 
@@ -77,4 +77,24 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     return DoctorsDataResponse(
         doctors=doctors_data,
         categories=sorted(all_categories)
+    )
+
+@router.get("/staffs/data", response_model=StaffsDataResponse)
+@limiter.limit("15/minute")
+def fetch_public_data(request: Request, db: Session = Depends(get_db)):
+    staffs = db.query(Staff).all()
+    staffs_data = []
+
+    for s in staffs:
+        staffs_data.append(
+            StaffPublic(
+                id=s.id,
+                name=s.name,
+                designation=s.designation,
+                photo_url=s.photo_url
+            )
+        )
+
+    return StaffsDataResponse(
+        staffs=staffs_data
     )

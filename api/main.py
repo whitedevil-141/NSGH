@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Response
 from api.database import engine, Base
-from api.routers import auth, public, doctors, gallery, machineries, departments, about
+from api.routers import auth, public, doctors, staffs
 from api.limiter import limiter, Request
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,6 +32,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth")
 app.include_router(public.router, prefix="/public")
 app.include_router(doctors.router, prefix="/doctors")
+app.include_router(staffs.router, prefix="/staffs")
 # app.include_router(gallery.router)
 # app.include_router(machineries.router)
 # app.include_router(departments.router)
