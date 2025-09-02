@@ -346,21 +346,16 @@
 }
  .menu-area::before {
     width: 32%;
-    height: 84px;
+    height: 75px;
     left: -34px;
 }
     .sticky-menu::before {
-    height: 84px;
+    height: 75px;
     top: 0;
     left: -29px;
 }
     .logo {
-    background: #fff;
-    height: auto;
-    margin-top: 0;
-    line-height: inherit;
-    padding: 0 10px;
-    width: 22%;
+    display: none;
 }
     
     
@@ -471,9 +466,7 @@
 .second-menu::before {
 	content: none;
 }
-.second-header {
-	padding: 10px 0;
-}
+
 .second-menu .main-menu ul li {
 	margin-left: 0;
 }
@@ -591,9 +584,7 @@
     top: 80px;
         width: 50px;
 }
-	.submenu-arrow {
-    display: none;
-}
+	
     .com-icon img{
         width: 100%;
 }
@@ -870,7 +861,7 @@ border-bottom: none;
 }
 .menu-area::before {
     width: 56%;
-    height: 82px;
+    height: 75px;
     top: 0;
     left: -40px;
 }
