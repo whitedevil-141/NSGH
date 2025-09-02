@@ -38,6 +38,7 @@ body {
   font-style: normal;
   line-height: 25px;
 }
+
 .img {
   max-width: 100%;
   transition: all 0.3s ease-out 0s;
@@ -7771,7 +7772,9 @@ form textarea {
     opacity: 1;
     transition: opacity 0.5s ease; /* Fade-out effect */
 }
-
+body.preloader-active {
+  overflow: hidden;
+}
 /* Dot loader */
 .dots {
     display: flex;

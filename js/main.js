@@ -1,18 +1,30 @@
 (function ($) {
 "use strict";
 // preloader
-window.addEventListener('load', function(){
-	const preloader = document.getElementById('preloader');
-	const minTime = 2000;
-	const startTime = performance.timing.navigationStart;
-	const elapsed = Date.now() - startTime;
-	const remaining = Math.max(minTime - elapsed, 0);
+window.addEventListener('load', function() {
+  const preloader = document.getElementById('preloader');
+  if (!preloader) return;
 
-	setTimeout(() => {
-		preloader.style.opacity = '0';
-		setTimeout(() => { preloader.style.display = 'none'; }, 500);
-	}, remaining);
+  const minTime = 2000; // minimum 2 seconds
+  const startTime = performance.timing.navigationStart || Date.now();
+  const elapsed = Date.now() - startTime;
+  const remaining = Math.max(minTime - elapsed, 0);
+
+  setTimeout(() => {
+    preloader.style.opacity = '0';
+    setTimeout(() => { preloader.style.display = 'none'; }, 500);
+  }, remaining);
 });
+
+// --- Fallback: hide preloader after 5 seconds even if load fails ---
+setTimeout(() => {
+  const preloader = document.getElementById('preloader');
+  if (!preloader) return;
+  preloader.style.opacity = '0';
+  setTimeout(() => { preloader.style.display = 'none'; }, 500);
+}, 5000);
+
+
 document.addEventListener("DOMContentLoaded", function () {
 const hamburger = document.getElementById("hamburger-new");
 const mobileMenu = document.getElementById("mobile-menu-new");
