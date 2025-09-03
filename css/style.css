@@ -4091,6 +4091,55 @@ div.single-cta:last-child {
   padding: 15px;
   margin: 0;
 }
+.product {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 40px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); /* subtle shadow */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.32); /* hover shadow */
+}
+
+.product__img {
+  position: relative;
+  width: 100%;
+  height: 250px; /* fixed height */
+}
+
+.product__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* fit entire image, may leave empty space */
+  background-color: #f8f8f8; /* optional, for empty space */
+}
+
+.product__img img.secondary {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+}
+.product__img:hover img.secondary {
+  opacity: 1;
+}
+
+.product__content {
+  text-align: center;
+  padding: 20px 15px;
+}
+
+.product__content .pro-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
 .gallery-image figcaption {
   position: absolute;
   bottom: -50px;
