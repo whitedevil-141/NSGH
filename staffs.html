@@ -151,7 +151,13 @@
 
         <!-- main-area -->
         <main>
+            <div class="filter-box mb-4">
+                    <select id="staffFilter">
+                        <option value="all">All Departments</option>
+                    </select>
+            </div>
             <div class="container">
+                
                 <div id="staffsContainer" class="row align-items-center">
                     <!-- Staffs will be injected here -->
                 </div>
@@ -309,11 +315,14 @@
         <script>
             const container = document.getElementById("staffsContainer");
             const paginationEl = document.getElementById("pagination");
+            const staffFilter = document.getElementById("staffFilter");
 
-            const perPage = 8;  // staff per page
+            const perPage = 6;  // staff per page
             let currentPage = 1;
             let staffs = [];
+            let filteredStaffs = [];
 
+            // Load staff data
             async function loadStaffs() {
                 try {
                     const res = await fetch('https://api.nsghbd.com/public/staffs/data');
@@ -324,6 +333,9 @@
 
                     const data = await res.json();
                     staffs = data.staffs || [];
+                    filteredStaffs = staffs;
+
+                    populateFilter();  // Build the dropdown
                     renderStaffs();
                     renderPagination();
                 } catch (err) {
@@ -332,30 +344,60 @@
                 }
             }
 
-            function renderStaffs() {
-                container.innerHTML = "";
-                const start = (currentPage - 1) * perPage;
-                const paginated = staffs.slice(start, start + perPage);
+            // Populate filter dropdown
+            function populateFilter() {
+                const designations = [...new Set(staffs.map(s => s.designation))];
 
-                paginated.forEach(staff => {
-                    container.innerHTML += `
-                            <div class="col-xl-4 col-lg-3 col-md-6 doctor-card">
-                                <div class="single-team mb-30" style="min-height: 380px;" data-id="${staff.id}">
-                                    <div class="team-thumb">
-                                        <img src="${staff.photo_url}" alt="Not Available" loading="lazy">
-                                    </div>
-                                    <div class="team-info">
-                                        <h3>${staff.name}</h6>
-                                        <p>${staff.designation}</p>
-                                    </div>
-                                </div>
-                            </div>`;
+                designations.forEach(des => {
+                    const option = document.createElement("option");
+                    option.value = des;
+                    option.textContent = des;
+                    staffFilter.appendChild(option);
+                });
+
+                // Filter change event
+                staffFilter.addEventListener("change", e => {
+                    const value = e.target.value;
+                    currentPage = 1;
+                    filteredStaffs = (value === "all") 
+                        ? staffs 
+                        : staffs.filter(s => s.designation === value);
+                    renderStaffs();
+                    renderPagination();
                 });
             }
 
+            // Render staff cards
+            function renderStaffs() {
+                container.innerHTML = "";
+                const start = (currentPage - 1) * perPage;
+                const paginated = filteredStaffs.slice(start, start + perPage);
+
+                if (paginated.length === 0) {
+                    container.innerHTML = `<p class="text-center">No staff found.</p>`;
+                    return;
+                }
+
+                paginated.forEach(staff => {
+                    container.innerHTML += `
+                        <div class="col-xl-4 col-lg-3 col-md-6">
+                            <div class="single-team h-100 d-flex flex-column align-items-center text-center">
+                                <div class="team-thumb mb-3" style="width:100%;">
+                                    <img src="${staff.photo_url}" alt="${staff.name}" class="img-fluid rounded" loading="lazy">
+                                </div>
+                                <div class="team-info">
+                                    <h5 class="staff-name">${staff.name}</h5>
+                                    <p class="staff-designation mb-0">${staff.designation}</p>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            // Render pagination
             function renderPagination() {
                 paginationEl.innerHTML = "";
-                const totalPages = Math.ceil(staffs.length / perPage);
+                const totalPages = Math.ceil(filteredStaffs.length / perPage);
                 if (totalPages <= 1) return;
 
                 for (let i = 1; i <= totalPages; i++) {
@@ -377,6 +419,6 @@
             }
 
             loadStaffs();
-        </script>
+            </script>
     </body>
 </html>
