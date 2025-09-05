@@ -4140,36 +4140,88 @@ div.single-cta:last-child {
   color: #333;
 }
 .filter-container {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
 
-    .filter-label {
-        font-weight: 600;
-        font-size: 16px;
-        color: #333;
-    }
+.filter-label {
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+}
 
-    #categoryFilter {
-        max-width: 250px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        background-color: #fff;
-        transition: all 0.3s ease;
-    }
+#categoryFilter {
+    max-width: 250px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
 
-    #categoryFilter:focus {
-        outline: none;
-        border-color: #007bff;
-        box-shadow: 0 0 6px rgba(0, 123, 255, 0.3);
-    }
+#categoryFilter:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.3);
+}
 
-    #categoryFilter option {
-        padding: 10px;
-    }
+#categoryFilter option {
+    padding: 10px;
+}
+
+/* Modern Card Hover Effect with corner fill */
+.service-card {
+    position: relative;
+    overflow: hidden; /* needed for pseudo-element animation */
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.service-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;   /* vertical centering */
+    justify-content: center; /* horizontal centering */
+    margin: 0 auto;         /* ensure it's centered in the card */
+    border-radius: 50%;      /* circular icon */
+}
+/* Diagonal fill effect using ::before */
+.service-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    background: #f0f4ff; /* hover color */
+    z-index: 0;
+    transform-origin: top left;
+    transition: all 0.5s ease;
+}
+
+/* Hover state: expand fill from top-left corner */
+.service-card:hover::before {
+    width: 200%;
+    height: 200%;
+}
+
+/* Make content appear above the pseudo-element */
+.service-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Optional shadow on hover */
+.service-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+}
+
 .gallery-image figcaption {
   position: absolute;
   bottom: -50px;

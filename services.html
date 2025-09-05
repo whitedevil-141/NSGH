@@ -35,59 +35,6 @@
         <link rel="stylesheet" href="css/meanmenu.css">
         <link rel="stylesheet" href="css/style.css?v=1.2">
         <link rel="stylesheet" href="css/responsive.css?v=1.2">
-        <style>
-        /* Modern Card Hover Effect with corner fill */
-        .service-card {
-            position: relative;
-            overflow: hidden; /* needed for pseudo-element animation */
-            transition: all 0.3s ease;
-            border: none;
-            border-radius: 10px;
-            background-color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .service-icon {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;   /* vertical centering */
-            justify-content: center; /* horizontal centering */
-            margin: 0 auto;         /* ensure it's centered in the card */
-            border-radius: 50%;      /* circular icon */
-        }
-        /* Diagonal fill effect using ::before */
-        .service-card::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 0;
-            background: #f0f4ff; /* hover color */
-            z-index: 0;
-            transform-origin: top left;
-            transition: all 0.5s ease;
-        }
-
-        /* Hover state: expand fill from top-left corner */
-        .service-card:hover::before {
-            width: 200%;
-            height: 200%;
-        }
-
-        /* Make content appear above the pseudo-element */
-        .service-card > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Optional shadow on hover */
-        .service-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
-        }
-
-        </style>
     </head>
     <body>
         <!-- Preloader -->
