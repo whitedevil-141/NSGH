@@ -4188,7 +4188,8 @@ div.single-cta:last-child {
     align-items: center;   /* vertical centering */
     justify-content: center; /* horizontal centering */
     margin: 0 auto;         /* ensure it's centered in the card */
-    border-radius: 50%;      /* circular icon */
+    border-radius: 50%;
+    color: #1e0b9b;
 }
 /* Diagonal fill effect using ::before */
 .service-card::before {
@@ -4221,7 +4222,39 @@ div.single-cta:last-child {
     transform: translateY(-10px);
     box-shadow: 0 20px 40px rgba(0,0,0,0.12);
 }
-
+.department-card {
+    background: #fff;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+.department-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #ffffff, #f0f4ff);
+}
+.dept-icon {
+    width: 70px;
+    height: 70px;
+    background: #1e0b9b0d;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+.dept-icon {
+    width: 70px;
+    height: 70px;
+    background: #1e0b9b0d;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 28px;
+    color: #1e0b9b;
+}
 .gallery-image figcaption {
   position: absolute;
   bottom: -50px;
