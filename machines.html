@@ -158,6 +158,12 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Dropdown -->
+                    <div class="filter-container mb-4">
+                        <select id="categoryFilter" class="form-select">
+                            <option value="all">All Categories</option>
+                        </select>
+                    </div>
 
                     <!-- Equipment Cards -->
                     <div class="row" id="equipment-container">
@@ -353,114 +359,73 @@
         </script>
         <script>
             const equipmentData = [
-                                {
-                                    name: "Samsung Ultrasonography Machine",
-                                    images: ["img/equipment/samsung-ultrasonography-machine.png"]
-                                },
-                                {
-                                    name: "Autoclave Machine",
-                                    images: ["img/equipment/autoclave-machine.png"]
-                                },
-                                {
-                                    name: "Anesthesia Machine",
-                                    images: ["img/equipment/anesthesia-machine.png"]
-                                },
-                                {
-                                    name: "C-Arm Controller",
-                                    images: ["img/equipment/c-arm-controller.png"]
-                                },
-                                {
-                                    name: "C-Arm Machine",
-                                    images: ["img/equipment/c-arm-machine.png"]
-                                },
-                                {
-                                    name: "Full Auto Erba Analyzer",
-                                    images: ["img/equipment/full-auto-erba-analyzer.png"]
-                                },
-                                {
-                                    name: "Full Auto ESR Machine",
-                                    images: ["img/equipment/full-auto-esr-machine.png"]
-                                },
-                                {
-                                    name: "High End Primo From Zess",
-                                    images: ["img/equipment/high-end-primo-from-zess.png"]
-                                },
-                                {
-                                    name: "Full Auto Hormone Analyzer",
-                                    images: ["img/equipment/full-auto-hormone-analyzer.png"]
-                                },
-                                {
-                                    name: "Full Auto Sysmex Blood Analyzer",
-                                    images: ["img/equipment/full-auto-sysmex-blood-analyzer.png"]
-                                },
-                                {
-                                    name: "24/7 Our Pharmacy Opened",
-                                    images: ["img/equipment/24-7-our-pharmacy-opened.png"]
-                                },
-                                {
-                                    name: "24/7 Emergency Service",
-                                    images: ["img/equipment/24-7-emergency-service.png"]
-                                },
-                                {
-                                    name: "Our Labour Room",
-                                    images: ["img/equipment/our-labour-room.png"]
-                                },
-                                {
-                                    name: "Our Waiting And Changing Room",
-                                    images: ["img/equipment/our-doctor-waiting-and-changing-room.png"]
-                                },
-                                {
-                                    name: "Warmer Machine",
-                                    images: ["img/equipment/warmer-machine.png"]
-                                },
-                                {
-                                    name: "Post Operative Room",
-                                    images: ["img/equipment/post-operative-room.png"]
-                                },
-                                {
-                                    name: "Our Dual OT Room",
-                                    images: ["img/equipment/our-dual-ot-room.png"]
-                                },
-                                {
-                                    name: "High End Server",
-                                    images: ["img/equipment/high-end-server.png"]
-                                },
-                                {
-                                    name: "Our Full Digital X-Ray Machine",
-                                    images: ["img/equipment/our-full-digital-x-ray-machine.png"]
-                                },
-                                {
-                                    name: "Our X-Ray FCR",
-                                    images: ["img/equipment/our-x-ray-fcr.png"]
-                                },
-                                {
-                                    name: "Fujifilm Dry Pixx 6000",
-                                    images: ["img/equipment/fujifilm-dry-pixx-6000.png"]
-                                }
-                                ];
+                { name: "Samsung Ultrasonography Machine", category: "Diagnostic Imaging", images: ["img/equipment/samsung-ultrasonography-machine.png"] },
+                { name: "Autoclave Machine", category: "Sterilization", images: ["img/equipment/autoclave-machine.png"] },
+                { name: "Anesthesia Machine", category: "Surgery", images: ["img/equipment/anesthesia-machine.png"] },
+                { name: "C-Arm Controller", category: "Surgery", images: ["img/equipment/c-arm-controller.png"] },
+                { name: "C-Arm Machine", category: "Surgery", images: ["img/equipment/c-arm-machine.png"] },
+                { name: "Full Auto Erba Analyzer", category: "Laboratory", images: ["img/equipment/full-auto-erba-analyzer.png"] },
+                { name: "Full Auto ESR Machine", category: "Laboratory", images: ["img/equipment/full-auto-esr-machine.png"] },
+                { name: "High End Primo From Zess", category: "Laboratory", images: ["img/equipment/high-end-primo-from-zess.png"] },
+                { name: "Full Auto Hormone Analyzer", category: "Laboratory", images: ["img/equipment/full-auto-hormone-analyzer.png"] },
+                { name: "Full Auto Sysmex Blood Analyzer", category: "Laboratory", images: ["img/equipment/full-auto-sysmex-blood-analyzer.png"] },
+                { name: "24/7 Our Pharmacy Opened", category: "Facility", images: ["img/equipment/24-7-our-pharmacy-opened.png"] },
+                { name: "24/7 Emergency Service", category: "Facility", images: ["img/equipment/24-7-emergency-service.png"] },
+                { name: "Our Labour Room", category: "Facility", images: ["img/equipment/our-labour-room.png"] },
+                { name: "Our Waiting And Changing Room", category: "Facility", images: ["img/equipment/our-doctor-waiting-and-changing-room.png"] },
+                { name: "Warmer Machine", category: "Neonatal", images: ["img/equipment/warmer-machine.png"] },
+                { name: "Post Operative Room", category: "Facility", images: ["img/equipment/post-operative-room.png"] },
+                { name: "Our Dual OT Room", category: "Facility", images: ["img/equipment/our-dual-ot-room.png"] },
+                { name: "High End Server", category: "IT & Digital", images: ["img/equipment/high-end-server.png"] },
+                { name: "Our Full Digital X-Ray Machine", category: "Diagnostic Imaging", images: ["img/equipment/our-full-digital-x-ray-machine.png"] },
+                { name: "Our X-Ray FCR", category: "Diagnostic Imaging", images: ["img/equipment/our-x-ray-fcr.png"] },
+                { name: "Fujifilm Dry Pixx 6000", category: "Diagnostic Imaging", images: ["img/equipment/fujifilm-dry-pixx-6000.png"] }
+            ];
 
             const container = document.getElementById('equipment-container');
+            const categoryFilter = document.getElementById('categoryFilter');
 
-            equipmentData.forEach(eq => {
-            const col = document.createElement('div');
-            col.className = "col-lg-4 col-md-6";
+            // Extract unique categories
+            const categories = [...new Set(equipmentData.map(eq => eq.category))];
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categoryFilter.appendChild(option);
+            });
 
-            const imagesHtml = eq.images.map((img, idx) => 
-                `<img src="${img}" class="${idx === 0 ? '' : 'secondary'}" alt="${eq.name}">`
-            ).join('');
+            // Render function
+            function renderEquipment(filter = "all") {
+                container.innerHTML = ""; // clear
+                equipmentData
+                    .filter(eq => filter === "all" || eq.category === filter)
+                    .forEach(eq => {
+                        const col = document.createElement('div');
+                        col.className = "col-lg-4 col-md-6";
 
-            col.innerHTML = `
-                <div class="product mb-40">
-                <div class="product__img">
-                    ${imagesHtml}
-                </div>
-                <div class="product__content pt-30">
-                    <h3 class="pro-title">${eq.name}</h3>
-                </div>
-                </div>
-            `;
+                        const imagesHtml = eq.images.map((img, idx) =>
+                            `<img src="${img}" class="${idx === 0 ? '' : 'secondary'}" alt="${eq.name}">`
+                        ).join('');
 
-            container.appendChild(col);
+                        col.innerHTML = `
+                            <div class="product mb-40">
+                                <div class="product__img">${imagesHtml}</div>
+                                <div class="product__content pt-30">
+                                    <h3 class="pro-title">${eq.name}</h3>
+                                    <p class="pro-category">${eq.category}</p>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(col);
+                    });
+            }
+
+            // Initial render
+            renderEquipment();
+
+            // Dropdown event
+            categoryFilter.addEventListener('change', (e) => {
+                renderEquipment(e.target.value);
             });
         </script>
 
