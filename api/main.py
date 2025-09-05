@@ -22,7 +22,7 @@ app.add_exception_handler(RateLimitExceeded, lambda request, exc: Response(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://nsghbd.com"],
     allow_credentials=True,
     allow_methods=["*"],  # allow GET, POST, etc.
     allow_headers=["*"],  # allow all headers
