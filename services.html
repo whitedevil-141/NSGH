@@ -35,6 +35,59 @@
         <link rel="stylesheet" href="css/meanmenu.css">
         <link rel="stylesheet" href="css/style.css?v=1.2">
         <link rel="stylesheet" href="css/responsive.css?v=1.2">
+        <style>
+        /* Modern Card Hover Effect with corner fill */
+        .service-card {
+            position: relative;
+            overflow: hidden; /* needed for pseudo-element animation */
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 10px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .service-icon {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;   /* vertical centering */
+            justify-content: center; /* horizontal centering */
+            margin: 0 auto;         /* ensure it's centered in the card */
+            border-radius: 50%;      /* circular icon */
+        }
+        /* Diagonal fill effect using ::before */
+        .service-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
+            background: #f0f4ff; /* hover color */
+            z-index: 0;
+            transform-origin: top left;
+            transition: all 0.5s ease;
+        }
+
+        /* Hover state: expand fill from top-left corner */
+        .service-card:hover::before {
+            width: 200%;
+            height: 200%;
+        }
+
+        /* Make content appear above the pseudo-element */
+        .service-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Optional shadow on hover */
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+        }
+
+        </style>
     </head>
     <body>
         <!-- Preloader -->
@@ -126,14 +179,14 @@
                                  
                             </div>
                             <div class="mobile-header d-lg-none d-flex w-100">
-                            <div class="logo-mobile">
-                                <a href="index.html"><img src="img/logo/logo.png" alt="logo"></a>
-                            </div>
-                            <div id="hamburger-new" class="hamburger">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
+                                <div class="logo-mobile">
+                                    <a href="index.html"><img src="img/logo/logo.png" alt="logo"></a>
+                                </div>
+                                <div id="hamburger-new" class="hamburger">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
                             </div>
 
                             <!-- Mobile Menu -->
@@ -147,180 +200,80 @@
         <!-- header-end -->
         <!-- main-area -->
         <main>
-            <!-- breadcrumb-area -->
-            <section class="breadcrumb-area d-flex align-items-center" style="background-image:url(img/testimonial/test-bg.jpg)">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-xl-6 offset-xl-3 col-lg-8 offset-lg-2">
-                            <div class="breadcrumb-wrap text-center">
-                                <div class="breadcrumb-title mb-30">
-                                    <h2>Services</h2>                                    
+			<!-- services-area -->
+            <section id="services" class="services-area pt-100 pb-70" style="background: #f8f9fa;">
+                <div class="container" style="padding:0 30px; max-width:1200px;">
+                    <!-- Section Title -->
+                    <div class="section-title text-center mb-70">
+                        <span>Our Services</span>
+                        <h2 class="fw-bold">Comprehensive Healthcare Solutions</h2>
+                        <p class="text-muted">Delivering patient-centered care with advanced technology and compassionate staff.</p>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Service Card Example -->
+                        <div class="col-lg-4 mb-2 col-md-6">
+                            <div class="service-card h-100 p-5">
+                                <div class="service-icon mb-4 text-primary">
+                                    <i class="fas fa-ambulance fa-2x"></i>
                                 </div>
-                                <nav aria-label="breadcrumb">
-                                    <ol class="breadcrumb">
-                                        <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                                        <li class="breadcrumb-item active" aria-current="page">News</li>
-                                    </ol>
-                                </nav>
+                                <h5 class="fw-bold mb-3">Emergency & Trauma Care</h5>
+                                <p class="text-muted">24/7 emergency services for accidents, trauma, and critical medical conditions with rapid response teams and modern equipment.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 mb-2 col-md-6">
+                            <div class="service-card h-100 p-5">
+                                <div class="service-icon mb-4 text-primary">
+                                    <i class="fas fa-user-md fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold mb-3">Outpatient & Consultation</h5>
+                                <p class="text-muted">Expert consultations across multiple specialties including cardiology, neurology, orthopedics, and pediatrics with easy scheduling.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 mb-2 col-md-6">
+                            <div class="service-card h-100 p-5">
+                                <div class="service-icon mb-4 text-primary">
+                                    <i class="fas fa-procedures fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold mb-3">Surgery & Operation Theater</h5>
+                                <p class="text-muted">State-of-the-art operation theaters for general and specialized surgeries with advanced sterilization and monitoring systems.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 mb-2 col-md-6">
+                            <div class="service-card h-100 p-5">
+                                <div class="service-icon mb-4 text-primary">
+                                    <i class="fas fa-vials fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold mb-3">Diagnostics & Laboratory</h5>
+                                <p class="text-muted">Comprehensive diagnostics including blood tests, imaging (X-ray, MRI, CT scan), ultrasound, and pathology for accurate results.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 mb-2 col-md-6">
+                            <div class="service-card h-100 p-5">
+                                <div class="service-icon mb-4 text-primary">
+                                    <i class="fas fa-pills fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold mb-3">Pharmacy & Medication</h5>
+                                <p class="text-muted">Well-stocked pharmacy offering prescription medicines, emergency drugs, and health supplements for quick patient access.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4 mb-2 col-md-6">
+                            <div class="service-card h-100 p-5">
+                                <div class="service-icon mb-4 text-primary">
+                                    <i class="fas fa-heartbeat fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold mb-3">Health & Wellness Programs</h5>
+                                <p class="text-muted">Preventive health checkups, vaccination drives, and wellness programs to promote long-term health for all age groups.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-            <!-- breadcrumb-area-end -->
-			 <!-- services-area -->
-            <section id="services" class="services-area services-bg services-two pt-100 pb-70"  style="background-image:url(img/bg/services_aliment_bg.png); background-size: contain; background-repeat: no-repeat;background-position: center center;">
-                <div class="container">
-          
-                    <div class="row sr-line">
-                        <div class="col-lg-4 col-md-12">
-                            <div class="s-single-services text-center active" >
-                                <div class="services-icon">
-                                    <img src="img/icon/sr-icon01.png" alt="img">
-                                </div>
-                                <div class="second-services-content">
-                                    <h5><a href="services-detail.html">Online Emergency</a></h5>       
-                                    <p>Mauris nunc felis, congue eu convallis in, bibendum vitae nisl. Duis vestibulum eget orci maximus pretium.</p>
-                                </div>
-								
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-12">
-                             <div class="s-single-services text-center" >
-                                <div class="services-icon">
-                                   <img src="img/icon/sr-icon02.png" alt="img">
-                                </div>
-                                <div class="second-services-content">
-                                    <h5><a href="services-detail.html">Medication Service</a></h5>       
-                                    <p>Mauris nunc felis, congue eu convallis in, bibendum vitae nisl. Duis vestibulum eget orci maximus pretium.</p>
-                                </div>
-								
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-12">
-                            <div class="s-single-services text-center" >
-                                <div class="services-icon">
-                                  <img src="img/icon/sr-icon03.png" alt="img">
-                                </div>
-                                <div class="second-services-content">
-                                    <h5><a href="services-detail.html">24hr Health Program</a></h5>       
-                                    <p>Mauris nunc felis, congue eu convallis in, bibendum vitae nisl. Duis vestibulum eget orci maximus pretium.</p>
-                                </div>
-								
-                            </div>
-                        </div>
-                        
-                    </div>
-                    
-                </div>
-            </section>
-            <!-- services-area-end -->
-             <!-- newslater-area -->
-            <section class="newslater-area pb-50" style="background-image: url(img/an-bg/an-bg06.png);background-position: center bottom; background-repeat: no-repeat;" >
-                <div class="container">
-                    <div class="row align-items-end">
-                        <div class="col-xl-4 col-lg-4 col-lg-4">
-                            <div class="section-title mb-100">
-                                <span>NEWSLETTER</span>          
-                                <h2>Subscribe To Our Newsletter</h2>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-4">
-                            <form name="ajax-form" id="contact-form4" action="#" method="post" class="contact-form newslater pb-130">
-                               <div class="form-group">
-                                  <input class="form-control" id="email2" name="email" type="email" placeholder="Email Address..." value="" required=""> 
-                                  <button type="submit" class="btn btn-custom" id="send2">Subscribe <i class="fas fa-chevron-right"></i></button>
-                               </div>
-                               <!-- /Form-email -->	
-                            </form>
-                        </div>
-                        <div class="col-xl-4 col-lg-4">
-                            <img src="img/bg/news-illustration.png">
-                        </div>
-                    </div>
-                   
-                </div>
-            </section>
-            <!-- newslater-aread-end -->
-             <!-- faq-area -->
-            <section class="faq-area pt-50 pb-50 fix" style="background-image: url(img/shape/header-sape6.png); background-position: right center; background-size: auto;background-repeat: no-repeat;">
-                <div class="container">
-                    <div class="row align-items-end">                        
-                      
-                       
-                          <div class="col-lg-6">                            
-                             <div class="contact-img">
-                                <img src="img/bg/touch-illustration.png" alt="touch-illustration">
-                            </div>
-                        </div>
-                        
-                         <div class="col-lg-6">
-                            <div class="section-title left-align mb-50">                               
-                                <h2>Frequently Asked Questions</h2>
-                                <p>Duis non aliquet tellus, in mollis leo. Phasellus quis posuere dui. Nulla mauris purus, mattis eget sagittis at, accumsan sed leo.</p>
-                            </div>
-                            <div class="faq-wrap">
-                                <div class="accordion" id="accordionExample">
-                                    <div class="card">
-                                        <div class="card-header" id="headingThree">
-                                            <h2 class="mb-0">
-                                                <button class="faq-btn" type="button" data-toggle="collapse"
-                                                    data-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree">
-                                                    Aliquam varius ligula nec leo tempus porta.
-                                                </button>
-                                            </h2>
-                                        </div>
-                                        <div id="collapseThree" class="collapse show" aria-labelledby="headingThree"
-                                            data-parent="#accordionExample">
-                                            <div class="card-body">
-                                                Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-                                                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card">
-                                        <div class="card-header" id="headingOne">
-                                            <h2 class="mb-0">
-                                                <button class="faq-btn collapsed" type="button" data-toggle="collapse"
-                                                    data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                                   Suspendisse vitae varius diam, a vulputate urna.
-                                                </button>
-                                            </h2>
-                                        </div>
-                                        <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
-                                            <div class="card-body">
-                                                Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-                                                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="card">
-                                        <div class="card-header" id="headingTwo">
-                                            <h2 class="mb-0">
-                                                <button class="faq-btn collapsed" type="button" data-toggle="collapse"
-                                                    data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                                   Aliquam aliquet purus eget lacus pretium.
-                                                </button>
-                                            </h2>
-                                        </div>
-                                        <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
-                                            <div class="card-body">
-                                                Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
-                                                aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                  
-                                </div>
-                            </div>
-                        </div>
-                        
-                        
-                    </div>
-                </div>
-            </section>
-            <!-- faq-aread-end -->
 			 
         </main>
         <!-- main-area-end -->
