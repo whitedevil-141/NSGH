@@ -21,6 +21,7 @@
         <link rel="stylesheet" href="css/magnific-popup.css">
         <link rel="stylesheet" href="fontawesome/css/all.min.css">
         <link rel="stylesheet" href="css/dripicons.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
         <!-- Slick Carousel -->
         <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
@@ -189,6 +190,52 @@
                 </div>
 
             </section>
+
+            <!-- Today's Doctors Section -->
+            <section id="todays-doctors" class="py-100" style="background:#fff;">
+                <div class="container" style="max-width:1200px; padding:0 20px;">
+
+                    <!-- Section Title -->
+                    <div class="section-title text-center mb-70">
+                    <span>Today's Doctors</span>
+                    <h2 class="fw-bold">Available Specialists</h2>
+                    </div>
+
+                    <!-- Section Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                    <div>
+                        <h3 id="dayHeading" class="fw-bold mb-0">
+                        Doctors Available on <span id="todayName"></span>
+                        </h3>
+                    </div>
+
+                    <div id="dayDropdownContainer" class="custom-dropdown">
+                        <div id="dropdownHeader" class="dropdown-header">
+                            <span>Today</span> <i class="fa fa-chevron-down"></i>
+                        </div>
+                        <ul id="dayDropdown" class="dropdown-list">
+                            <li>Saturday</li>
+                            <li>Sunday</li>
+                            <li>Monday</li>
+                            <li>Tuesday</li>
+                            <li>Wednesday</li>
+                            <li>Thursday</li>
+                            <li>Friday</li>
+                            
+                        </ul>
+                    </div>
+                    </div>
+
+                    <!-- Doctors Slider Container -->
+                    <div id="doctorsContainer" style="min-height:220px; border:1px solid #ddd; border-radius:12px; padding:15px; background:#fff; box-shadow:0 4px 8px rgba(0,0,0,0.05);">
+                    <p id="noDoctorsMessage" style="display:none; text-align:center; color:#888; margin-top:80px;">
+                        No doctors available for this day.
+                    </p>
+                    </div>
+
+                </div>
+            </section>
+
             <!-- Services Area -->
             <section id="services" class="services-area services-bg services-two pt-100" style="background-image: url('img/an-bg/an-bg02.png'); background-size: contain; background-repeat: no-repeat; background-position: center center;">
                 <div class="container">
@@ -443,44 +490,8 @@
                     </div>
 
                     <!-- Team Carousel -->
-                    <div class="owl-carousel team-active">
-                        <!-- Team Member 1 -->
-                        <div class="single-team text-center">
-                            <div class="team-thumb brd">
-                                <img src="img/team/team01.png" alt="Dr. Minhaz Uddin" />
-                            </div>
-                            <div class="team-info">
-                                <h4>Dr. Minhaz Uddin</h4>
-                                <span>MBBS, BCS (Health), MS (Ortho)</span>
-                                <p>Dhaka Medical College Hospital</p>
-                            </div>
-                        </div>
-
-                        <!-- Team Member 2 -->
-                        <div class="single-team text-center">
-                            <div class="team-thumb brd">
-                                <img src="img/team/team02.png" alt="Dr. MD. Imran Al-Alamin" />
-                            </div>
-                            <div class="team-info">
-                                <h4>Dr. MD. Imran Al-Alamin</h4>
-                                <span>MBBS, BCS (Health), CCD, FCPS</span>
-                                <p>Dhaka Medical College Hospital</p>
-                            </div>
-                        </div>
-
-                        <!-- Team Member 3 -->
-                        <div class="single-team text-center">
-                            <div class="team-thumb brd">
-                                <img src="img/team/team03.png" alt="Dr. Norman Colins" />
-                            </div>
-                            <div class="team-info">
-                                <h4>Dr. Norman Colins</h4>
-                                <span>SALES MANAGER</span>
-                                <p>Working Since 2004</p>
-                            </div>
-                        </div>
-
-                        <!-- Additional members can be added here -->
+                    <div class="owl-carousel team-active" id="team-carousel">
+                        <!-- Dynamic doctors will be injected here -->
                     </div>
                 </div>
             </section>
@@ -1100,7 +1111,163 @@
         <!-- Slick & Owl Carousel -->
         <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
-        <script src="https://unpkg.com/lenis@1.3.8/dist/lenis.min.js"></script> 
+        <script src="https://unpkg.com/lenis@1.3.8/dist/lenis.min.js"></script>
+        <script>
+            // Make doctorsData global
+            window.doctorsData = [];
+
+            $(document).ready(function() {
+                const doctorsContainer = $('#doctorsContainer');
+                const noDoctorsMessage = $('#noDoctorsMessage');
+                const dropdown = $('#dayDropdownContainer');
+                const dropdownHeader = $('#dropdownHeader');
+                const dayDropdown = $('#dayDropdown');
+
+                const daysOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+                const todayName = daysOfWeek[new Date().getDay()];
+
+                // Set today's name on load
+                $('#todayName').text(todayName);
+                dropdownHeader.find('span').text(todayName);
+
+                // Toggle dropdown
+                dropdown.find('.dropdown-header').on('click', function(){
+                    dropdown.toggleClass('open');
+                });
+
+                // Fetch doctors from API
+                fetch('https://api.nsghbd.com/public/doctors/data')
+                    .then(res => res.json())
+                    .then(data => {
+                        window.doctorsData = data.doctors || [];
+
+                        // Render doctors for today
+                        renderDoctorsForDay(todayName);
+
+                        // Also render highlight doctors
+                        renderHighlightDoctors();
+                    })
+                    .catch(err => console.error('Error fetching doctors:', err));
+
+                // Handle day selection
+                dayDropdown.on('click', 'li', function(){
+                    const selectedDay = $(this).text();
+                    dropdownHeader.find('span').text(selectedDay);
+                    $('#todayName').text(selectedDay);
+                    dropdown.removeClass('open');
+                    renderDoctorsForDay(selectedDay);
+                });
+
+                // Filter doctors by day keyword in timing field
+                function getDoctorsByDay(day) {
+                    return window.doctorsData.filter(doc => {
+                        if(!doc.timing) return false;
+                        return doc.timing.toLowerCase().includes(day.toLowerCase());
+                    });
+                }
+
+                // Render doctors in Slick
+                function renderDoctorsForDay(day) {
+                    const filteredDoctors = getDoctorsByDay(day);
+
+                    if(doctorsContainer.hasClass('slick-initialized')){
+                        doctorsContainer.slick('unslick');
+                    }
+                    doctorsContainer.empty();
+
+                    if(!filteredDoctors.length){
+                        noDoctorsMessage.show();
+                        return;
+                    } else {
+                        noDoctorsMessage.hide();
+                    }
+
+                    filteredDoctors.forEach(doc => {
+                        doctorsContainer.append(`
+                            <a href="/doctors-details.html?id=${doc.id}" class="doctor-card-link">
+                                <div class="doctor-card m-2">
+                                    <img src="${doc.photo_url}" alt="${doc.name}">
+                                    <h5>${doc.name}</h5>
+                                    <p class="text-muted">${doc.specialization ? JSON.parse(doc.specialization).join(', ') : doc.designation}</p>
+                                </div>
+                            </a>
+                        `);
+                    });
+
+                    doctorsContainer.slick({
+                        swipeToSlide: true,
+                        touchThreshold: 10,
+                        slidesToShow: 4,
+                        slidesToScroll: 1,
+                        arrows: true,
+                        autoplay: true,
+                        autoplaySpeed: 1000,
+                        cssEase: 'ease',
+                        responsive: [
+                            { breakpoint: 1200, settings: { slidesToShow: 4 } },
+                            { breakpoint: 992,  settings: { slidesToShow: 3 } },
+                            { breakpoint: 768,  settings: { slidesToShow: 2 } },
+                            { breakpoint: 576,  settings: { slidesToShow: 1 } }
+                        ]
+                    });
+                }
+
+            });
+
+            // Highlight doctors rendering
+            const selectedDoctorIds = [28,35,29,36,4,27,23,20,33,3,16,37,34]; // IDs to show
+
+            function renderHighlightDoctors() {
+                const container = document.getElementById('team-carousel');
+                container.innerHTML = '';
+
+                if (!window.doctorsData || window.doctorsData.length === 0) return;
+
+                const filteredDoctors = window.doctorsData.filter(doc => selectedDoctorIds.includes(doc.id));
+
+                filteredDoctors.forEach(doc => {
+                    let specialization = '';
+                    try {
+                        specialization = doc.specialization ? JSON.parse(doc.specialization).join(', ') : '';
+                    } catch (e) {
+                        specialization = Array.isArray(doc.specialization) ? doc.specialization.join(', ') : '';
+                    }
+
+                    const doctorHTML = `
+                        <a href="/doctors-details.html?id=${doc.id}" class="doctor-link">
+                            <div class="single-team text-center">
+                                <div class="team-thumb brd">
+                                    <img src="${doc.photo_url}" alt="${doc.name}" />
+                                </div>
+                                <div class="team-info">
+                                    <h4>${doc.name}</h4>
+                                    <p>${specialization}</p>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                    container.insertAdjacentHTML('beforeend', doctorHTML);
+                });
+
+                if ($('.team-active').hasClass('owl-loaded')) {
+                    $('.team-active').trigger('destroy.owl.carousel');
+                }
+                $('.team-active').owlCarousel({
+                    items: 3,
+                    margin: 30,
+                    dots: false,
+                    autoplay: true,
+                    autoplaySpeed: 500,
+                    cssEase: 'ease',
+                    responsive: {
+                        0: { items: 1 },
+                        600: { items: 2 },
+                        1000: { items: 3 }
+                    }
+                });
+            }
+        </script>
+
 
         <script>
             // Initialize Lenis

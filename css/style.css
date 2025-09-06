@@ -4171,6 +4171,157 @@ div.single-cta:last-child {
     padding: 10px;
 }
 
+/* Container box for todays doctors */
+#doctorsContainer {
+    min-height: 350px;            /* Fixed container height */
+    border: 1px solid #ddd;       /* Thin solid border */
+    border-radius: 12px;
+    padding: 15px;
+    position: relative;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.10); /* subtle shadow */
+}
+#todayName {
+    color: #1e0b9b; /* primary color */
+}
+
+/* Doctor card */
+#doctorsContainer .doctor-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 20px 15px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+/* Name styling */
+#doctorsContainer .doctor-card h5 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #1e0b9b; /* primary color */
+}
+
+/* Designation styling */
+#doctorsContainer .doctor-card p.text-muted {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 0;
+}
+
+/* Doctor photo */
+#doctorsContainer .doctor-card img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 12px;
+}
+#doctorsContainer .doctor-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block; /* take full slide width */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+/* Hover effect */
+#doctorsContainer .doctor-card-link:hover .doctor-card {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+}
+/* Slick spacing */
+#doctorsContainer .slick-slide {
+    margin-right: 15px;
+}
+
+/* No doctors message */
+#noDoctorsMessage {
+    text-align: center;
+    font-size: 16px;
+    color: #888;
+    width: 100%;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Modern dropdown styling scoped */
+#todays-doctors .custom-dropdown {
+    width: 220px;
+    position: relative;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1000;
+}
+
+#todays-doctors .custom-dropdown .dropdown-header {
+    padding: 12px 15px;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#todays-doctors .custom-dropdown .dropdown-header i {
+    transition: transform 0.3s ease;
+}
+
+/* Rotate arrow when open */
+#todays-doctors .custom-dropdown.open .dropdown-header i {
+    transform: rotate(180deg);
+}
+
+/* Dropdown list (absolute, doesn't push content) */
+#todays-doctors .custom-dropdown .dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    z-index: 999; /* above slider */
+}
+
+/* Open state */
+#todays-doctors .custom-dropdown.open .dropdown-list {
+    max-height: 400px;
+    opacity: 1;
+}
+
+/* Dropdown list items */
+#todays-doctors .custom-dropdown .dropdown-list li {
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+#todays-doctors .custom-dropdown .dropdown-list li:hover {
+    background: #f7f7f7;
+}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .doctor-card {
+        padding: 15px 10px;
+        min-height: 200px;
+    }
+    .doctor-card img {
+        width: 80px;
+        height: 80px;
+    }
+}
 /* Modern Card Hover Effect with corner fill */
 .service-card {
     position: relative;
