@@ -439,11 +439,15 @@ if (addStaffForm) {
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: form
             });
-            if (!res.ok) throw new Error(await res.text());
+
+            if (!res.ok) {
+                const errMsg = await res.text();
+                throw new Error(errMsg || "Failed to add staff");
+            }
 
             alert("Staff added!");
             addStaffForm.reset();
-            bootstrap.Modal.getInstance(document.getElementById('addStaffModal')).hide();
+            addStaffModal.hide();
             loadStaffs();
         } catch (err) {
             console.error(err);
@@ -460,6 +464,7 @@ function editStaff(id) {
     document.getElementById('editStaffId').value = s.id;
     document.getElementById('editStaffName').value = s.name;
     document.getElementById('editStaffDesignation').value = s.designation || '';
+    document.getElementById('editStaffPhone').value = s.phone || '';
 
     editStaffModal.show();
 }
@@ -480,7 +485,7 @@ if (editStaffForm) {
         form.append('phone', phone);
 
         // Only append photo if a file is selected
-        const photoInput = document.getElementById('editStaffPhoto'); // make sure your <input> has id="editStaffPhoto"
+        const photoInput = document.getElementById('editStaffPhoto');
         if (photoInput.files.length > 0) {
             form.append('photo', photoInput.files[0]);
         }
@@ -491,17 +496,21 @@ if (editStaffForm) {
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: form
             });
-            if (!res.ok) throw new Error(await res.text());
+
+            if (!res.ok) {
+                const errMsg = await res.text();
+                throw new Error(errMsg || "Failed to update staff");
+            }
 
             alert("Staff updated!");
-            bootstrap.Modal.getInstance(document.getElementById('editStaffModal')).hide();
+            editStaffForm.reset();
+            editStaffModal.hide();
             loadStaffs();
         } catch (err) {
             console.error(err);
             alert("Failed to update staff: " + err.message);
         }
     });
-
 }
 
 // ---------------- Delete Staff ----------------

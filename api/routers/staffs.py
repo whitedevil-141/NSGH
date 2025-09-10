@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from api.database import get_db
 from api.models import Staff
-from api.schemas import StaffOut
+from api.schemas import StaffPublic
 from api.utils.deps import get_current_user
 from api.limiter import limiter, Request
 from api.utils.image_handler import upload_to_hosting, delete_from_hosting
@@ -45,7 +45,7 @@ async def add_staff(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/update/{staff_id}", response_model=StaffOut)
+@router.put("/update/{staff_id}", response_model=StaffPublic)
 @limiter.limit("5/minute")
 async def update_staff(
     request: Request,
