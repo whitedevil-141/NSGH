@@ -19,6 +19,7 @@ router = APIRouter(
 async def add_staff(
     name: str = Form(...),
     designation: str = Form(None),
+    phone: str = Form(None),
     photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
@@ -31,6 +32,7 @@ async def add_staff(
     new_staff = Staff(
         name=name,
         designation=designation,
+        phone=phone,
         photo_url=photo_url
     )
 
@@ -50,6 +52,7 @@ async def update_staff(
     staff_id: int,
     name: str = Form(...),
     designation: str = Form(None),
+    phone: str = Form(None),
     photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
@@ -67,6 +70,7 @@ async def update_staff(
     # ---------------- Update staff ----------------
     staff.name = name
     staff.designation = designation
+    staff.phone = phone
 
     try:
         db.commit()

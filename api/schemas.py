@@ -54,6 +54,7 @@ class DoctorsDataResponse(BaseModel):
 class StaffBase(BaseModel):
     name: str
     designation: str
+    phone: str
 
 class StaffOut(StaffBase):
     id: int
@@ -65,6 +66,7 @@ class StaffPublic(BaseModel):
     name: str
     designation: Optional[str] = None
     photo_url: Optional[str] = None
+    phone: Optional[str] = None
 
     class Config:
         from_attributes = True

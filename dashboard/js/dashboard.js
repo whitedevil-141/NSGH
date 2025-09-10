@@ -399,6 +399,7 @@ function renderStaffs() {
             <img src="${s.photo_url || 'placeholder.png'}" alt="Not Available" class="img-fluid rounded-circle mb-2" style="width:100px;height:100px;">
             <h5>${s.name}</h5>
             <p><strong>Designation:</strong> ${s.designation || '-'}</p>
+            <p><strong>Phone:</strong> ${s.phone || '-'}</p>
             <button class="btn btn-warning btn-sm me-1" onclick="editStaff('${s.id}')">Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deleteStaff('${s.id}')">Delete</button>
         `;
@@ -472,9 +473,11 @@ if (editStaffForm) {
         const id = document.getElementById('editStaffId').value;
         const name = document.getElementById('editStaffName').value;
         const designation = document.getElementById('editStaffDesignation').value;
+        const phone = document.getElementById('editStaffPhone').value;
 
         form.append('name', name);
         form.append('designation', designation);
+        form.append('phone', phone);
 
         // Only append photo if a file is selected
         const photoInput = document.getElementById('editStaffPhoto'); // make sure your <input> has id="editStaffPhoto"
