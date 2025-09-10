@@ -66,7 +66,6 @@ async def update_staff(
         photo_url = upload_to_hosting(photo)
         print(photo_url)
         staff.photo_url = photo_url
-
     # ---------------- Update staff ----------------
     staff.name = name
     staff.designation = designation
