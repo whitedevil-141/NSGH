@@ -91,7 +91,8 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
                 id=s.id,
                 name=s.name,
                 designation=s.designation,
-                photo_url=s.photo_url
+                photo_url=s.photo_url,
+                phone=s.phone
             )
         )
 
