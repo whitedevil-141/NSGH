@@ -18,7 +18,7 @@ class Doctor(Base):
     description = Column(String(500), nullable=True)
     hospital = Column(String(100), nullable=False)
     room = Column(String(10), nullable=True)
-    timing = Column(String(50), nullable=True)
+    timing = Column(String(500), nullable=True)
     phone = Column(String(20), nullable=True)
     specialization = Column(Text, nullable=False)
     qualifications = Column(Text, nullable=True)
