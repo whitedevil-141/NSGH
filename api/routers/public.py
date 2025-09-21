@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from api.models import Doctor, Staff
 from api.database import get_db
-from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse
+from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, Contact
 from api.limiter import limiter, Request
 import json
 
@@ -14,7 +14,8 @@ router = APIRouter(
 
 
 @router.get("/doctors/get/{doctor_id}", response_model=DoctorOut)
-async def get_doctor(doctor_id: int, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+async def get_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db)):
     doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
@@ -36,7 +37,7 @@ async def get_doctor(doctor_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/doctors/data", response_model=DoctorsDataResponse)
-@limiter.limit("50/minute")
+@limiter.limit("30/minute")
 def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     doctors = db.query(Doctor).all()
     doctors_data = []
@@ -80,7 +81,7 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     )
 
 @router.get("/staffs/data", response_model=StaffsDataResponse)
-@limiter.limit("50/minute")
+@limiter.limit("30/minute")
 def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     staffs = db.query(Staff).all()
     staffs_data = []
@@ -99,3 +100,23 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     return StaffsDataResponse(
         staffs=staffs_data
     )
+    
+
+@router.post("/contact")
+@limiter.limit("2/minute")
+def save_contact(request: Request, contact: Contact, db: Session = Depends(get_db)):
+    new_contact = Contact(
+        name=contact.name,
+        phone=contact.phone,
+        subject=contact.subject,
+        message=contact.message
+    )
+    
+    try:
+        db.add(new_contact)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
+    
+    return {"status": "success", "message": "Contact saved!"}

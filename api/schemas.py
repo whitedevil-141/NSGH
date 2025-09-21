@@ -128,3 +128,10 @@ class AboutOut(AboutBase):
     id: int
     class Config:
         from_attributes = True
+
+
+class Contact(BaseModel):
+    name: str
+    phone: str
+    subject: str
+    message: str

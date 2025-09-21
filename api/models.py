@@ -26,6 +26,16 @@ class Doctor(Base):
     category = Column(Text, nullable=False)
     photo_url = Column(String(255), nullable=True) 
 
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=False)
+    subject = Column(String(100), nullable=False)
+    message = Column(Text, nullable=False)
+    
+
 class Staff(Base):
     __tablename__ = "staffs"
 
