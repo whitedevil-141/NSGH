@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.models import Doctor, Staff
+from api.models import Doctor, Staff, Message
 from api.database import get_db
-from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, Contact
+from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
 from api.limiter import limiter, Request
 import json
 
@@ -104,14 +104,14 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/contact")
 @limiter.limit("2/minute")
-def save_contact(request: Request, contact: Contact, db: Session = Depends(get_db)):
-    new_contact = Contact(
+def save_contact(request: Request, contact: ContactBase, db: Session = Depends(get_db)):
+
+    new_contact = Message(
         name=contact.name,
         phone=contact.phone,
         subject=contact.subject,
         message=contact.message
     )
-    
     try:
         db.add(new_contact)
         db.commit()
