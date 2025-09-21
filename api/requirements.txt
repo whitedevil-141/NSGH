@@ -11,3 +11,4 @@ pymysql
 PyJWT
 mangum
 paramiko
+aiosmtplib

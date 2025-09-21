@@ -7,6 +7,8 @@ from api.database import get_db
 from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
 from api.limiter import limiter, Request
 import json
+import aiosmtplib
+from email.message import EmailMessage
 
 router = APIRouter(
     tags=["Public"]
@@ -102,21 +104,42 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     )
     
 
+# 📌 SMTP settings (you can load from env vars in production)
+SMTP_HOST = "mail.nsghbd.com"
+SMTP_PORT = 465
+SMTP_USER = "contactuser@nsghbd.com"
+SMTP_PASS = "84w[IQxXYp#RQAT$"  # ⚠️ move to env var for security!
+TO_EMAIL  = "support@nsghbd.com"
+
 @router.post("/contact")
 @limiter.limit("2/minute")
-def save_contact(request: Request, contact: ContactBase, db: Session = Depends(get_db)):
+async def send_contact(contact: ContactBase, request: Request):
+    # Build email
+    email = EmailMessage()
+    email["From"] = SMTP_USER
+    email["To"] = TO_EMAIL
+    email["Subject"] = f"New Contact Form: {contact.subject}"
+    email.set_content(f"""
+    📩 New website message:
 
-    new_contact = Message(
-        name=contact.name,
-        phone=contact.phone,
-        subject=contact.subject,
-        message=contact.message
-    )
+    Name: {contact.name}
+    Phone: {contact.phone}
+    Subject: {contact.subject}
+
+    Message:
+    {contact.message}
+    """)
+
     try:
-        db.add(new_contact)
-        db.commit()
+        await aiosmtplib.send(
+            email,
+            hostname=SMTP_HOST,
+            port=SMTP_PORT,
+            username=SMTP_USER,
+            password=SMTP_PASS,
+            use_tls=True if SMTP_PORT == 465 else False,
+            start_tls=True if SMTP_PORT == 587 else False,
+        )
+        return {"status": "success", "message": "Message sent via email!"}
     except Exception as e:
-        db.rollback()
         return {"status": "error", "message": str(e)}
-    
-    return {"status": "success", "message": "Contact saved!"}
