@@ -31,8 +31,18 @@ const mobileMenu = document.getElementById("mobile-menu-new");
 
 // ✅ Clone desktop menu into mobile once
 const desktopMenu = document.querySelector("#mobile-menu ul");
+
 if (desktopMenu && mobileMenu.innerHTML.trim() === "") {
-	mobileMenu.innerHTML = desktopMenu.outerHTML;
+  // clone the ul
+  const clonedMenu = desktopMenu.cloneNode(true);
+
+  // add complain link as an <li> inside the cloned ul
+  const complainLink = document.createElement("li");
+  complainLink.innerHTML = '<a href="index.html#contact">Give a Complain</a>';
+  clonedMenu.appendChild(complainLink);
+
+  // insert the cloned ul into the mobile menu container
+  mobileMenu.appendChild(clonedMenu);
 }
 
 // ✅ Toggle mobile menu open/close
