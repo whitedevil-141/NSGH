@@ -1,10 +1,11 @@
 ---
 deployment:
   tasks:
-    - /bin/cp -R css /home/nsghbdco/public_html/
-    - /bin/cp -R dashboard /home/nsghbdco/public_html/
-    - /bin/cp -R fontawesome /home/nsghbdco/public_html/
-    - /bin/cp -R fonts /home/nsghbdco/public_html/
-    - /bin/cp -R img /home/nsghbdco/public_html/
-    - /bin/cp -R js /home/nsghbdco/public_html/
-    - /bin/cp *.html /home/nsghbdco/public_html/
+    - export DEPLOYPATH=/home/nsghbdco/public_html/
+    - /bin/cp -R css $DEPLOYPATH
+    - /bin/cp -R dashboard $DEPLOYPATH
+    - /bin/cp -R fontawesome $DEPLOYPATH
+    - /bin/cp -R fonts $DEPLOYPATH
+    - /bin/cp -R img $DEPLOYPATH
+    - /bin/cp -R js $DEPLOYPATH
+    - /bin/cp *.html $DEPLOYPATH
