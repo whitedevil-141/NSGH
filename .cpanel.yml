@@ -8,4 +8,3 @@ deployment:
     - /bin/cp -R img /home/nsghbdco/public_html/
     - /bin/cp -R js /home/nsghbdco/public_html/
     - /bin/cp *.html /home/nsghbdco/public_html/
-    - /bin/cp data.json /home/nsghbdco/public_html/
