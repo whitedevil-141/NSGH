@@ -34,8 +34,8 @@
         <!-- Custom CSS -->
         <link rel="stylesheet" href="css/default.css">
         <link rel="stylesheet" href="css/meanmenu.css">
-        <link rel="stylesheet" href="css/style.css?v=1.8">
-        <link rel="stylesheet" href="css/responsive.css?v=1.8">
+        <link rel="stylesheet" href="css/style.css?v=1.9">
+        <link rel="stylesheet" href="css/responsive.css?v=1.9">
     </head>
     <body>
         <!-- Preloader -->
@@ -192,7 +192,7 @@
             </section>
 
             <!-- Today's Doctors Section -->
-            <section id="todays-doctors" class="py-100" style="background:#fff;">
+            <section id="todays-doctors" class="py-100" style="background:#fff; padding-top:50px;">
                 <div class="container" style="max-width:1200px; padding:0 20px;">
 
                     <!-- Section Title -->
@@ -236,6 +236,53 @@
                 </div>
             </section>
 
+            <!-- Pricing Area -->
+            <section id="pricing" class="pricing-area pb-70"
+                style="background-image: url('img/an-bg/an-bg08.png'); background-position: center; background-repeat: no-repeat; background-size: cover; padding: 100px 0;">
+                <div class="container">
+
+                    <!-- Section Title -->
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="section-title text-center mb-60">
+                                <span>OUR PRICING</span>
+                                <p>Stay healthy with our budget-friendly healthcare tests.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test Search Box -->
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <div class="section-title text-center mb-20">
+                                <input type="text" id="testSearch" class="modern-search" 
+                                    placeholder="Search by Test Name..." 
+                                    aria-label="Search by Test Name" aria-describedby="button-addon2">
+                                    <p id="showingTestNumber" class="fw-semibold text-muted" style="padding-top: 10px;"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Test Container Scrollable -->
+                    <div class="row justify-content-center">
+                        <div class="col-lg-10">
+                            <div id="testsContainer"
+                                style="min-height: 220px; border: 1px solid #ddd; border-radius: 12px; padding: 20px; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+
+                                <div class="test-container-scrollable"
+                                    style="max-height: 600px; overflow-y: auto; padding-right: 8px;">
+                                    <div id="testList" class="list-group">
+                                        <!-- Tests will be loaded here -->
+                                    </div>
+                                </div>
+
+                                <p id="noResults" class="text-center text-muted mt-4" style="display:none;">No tests found.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+            <!-- Pricing Area End -->
             <!-- Services Area -->
             <section id="services" class="services-area services-bg services-two pt-100" style="background-image: url('img/an-bg/an-bg02.png'); background-size: contain; background-repeat: no-repeat; background-position: center center;">
                 <div class="container">
@@ -627,105 +674,6 @@
                 </div>
             </section>
             <!-- Testimonial Area End -->
-
-            <!-- Pricing Area -->
-            <section id="pricing" class="pricing-area pb-70"
-                style="background-image: url(img/an-bg/an-bg08.png); background-position: center; background-repeat: no-repeat;">
-                <div class="container">
-
-                    <!-- Section Title -->
-                    <div class="row justify-content-center">
-                        <div class="col-lg-8">
-                            <div class="section-title text-center mb-60">
-                                <span>OUR PACKAGES</span>
-                                <h2>Affordable Healthcare Packages</h2>
-                                <p>Stay healthy with our budget-friendly healthcare packages.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pricing Cards -->
-                    <div class="row">
-
-                        <!-- Silver Plan -->
-                        <div class="col-lg-4 col-md-12">
-                            <div class="pricing-box text-center mb-60">
-                                <div class="pricing-head">
-                                    <h4>Silver Plan</h4>
-                                    <div class="price-count mb-30">
-                                        <h2>3,000 BDT</h2>
-                                    </div>
-                                    <img src="img/icon/pr-icon01.png" alt="Silver Plan Icon">
-                                </div>
-                                <div class="pricing-body mb-40 text-left">
-                                    <p>Comprehensive health check for men under 45 years.</p>
-                                    <ul>
-                                        <li>CBC (Complete Blood Count)</li>
-                                        <li>RBS (Random Blood Sugar)</li>
-                                        <li>Creatinine Test</li>
-                                        <li>Lipid Profile</li>
-                                    </ul>
-                                </div>
-                                <div class="pricing-btn">
-                                    <a href="#pricing" class="btn">Choose Plan <i class="fas fa-chevron-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Gold Plan -->
-                        <div class="col-lg-4 col-md-12">
-                            <div class="pricing-box text-center mb-60">
-                                <div class="pricing-head">
-                                    <h4>Gold Plan</h4>
-                                    <div class="price-count mb-30">
-                                        <h2>5,000 BDT</h2>
-                                    </div>
-                                    <img src="img/icon/pr-icon02.png" alt="Gold Plan Icon">
-                                </div>
-                                <div class="pricing-body mb-40 text-left">
-                                    <p>Advanced health check for men and women under 50 years.</p>
-                                    <ul>
-                                        <li>All Silver Plan Tests</li>
-                                        <li>Thyroid Profile</li>
-                                        <li>Vitamin D Test</li>
-                                        <li>Iron & Ferritin Test</li>
-                                    </ul>
-                                </div>
-                                <div class="pricing-btn">
-                                    <a href="#pricing" class="btn">Choose Plan <i class="fas fa-chevron-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Platinum Plan -->
-                        <div class="col-lg-4 col-md-12">
-                            <div class="pricing-box text-center mb-60">
-                                <div class="pricing-head">
-                                    <h4>Platinum Plan</h4>
-                                    <div class="price-count mb-30">
-                                        <h2>7,000 BDT</h2>
-                                    </div>
-                                    <img src="img/icon/pr-icon03.png" alt="Platinum Plan Icon">
-                                </div>
-                                <div class="pricing-body mb-40 text-left">
-                                    <p>Complete health check for all ages with premium tests.</p>
-                                    <ul>
-                                        <li>All Gold Plan Tests</li>
-                                        <li>Advanced Cardiac Profile</li>
-                                        <li>Advanced Liver & Kidney Panel</li>
-                                        <li>Vitamin B12 Test</li>
-                                    </ul>
-                                </div>
-                                <div class="pricing-btn">
-                                    <a href="#pricing" class="btn">Choose Plan <i class="fas fa-chevron-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </section>
-            <!-- Pricing Area End -->
 
             <!-- Appointment / Call Area -->
             <section class="call-area pb-50"
@@ -1119,7 +1067,7 @@
         <script src="js/parallax-scroll.js"></script>
         <script src="js/jquery.magnific-popup.min.js"></script>
         <script src="js/element-in-view.js"></script>
-        <script src="js/main.js?v=1.8"></script>
+        <script src="js/main.js?v=1.9"></script>
 
         <!-- Slick & Owl Carousel -->
         <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
@@ -1423,5 +1371,48 @@
                 });
             });
         </script>
+        <script src="js/test_data.js"></script>
+            <script>
+                const listContainer = document.getElementById('testList');
+                const searchInput = document.getElementById('testSearch');
+                const noResults = document.getElementById('noResults');
+                const showingTestNumber = document.getElementById('showingTestNumber');
+
+                // Render tests
+                function renderTests(data) {
+                    listContainer.innerHTML = '';
+                    if (data.length === 0) {
+                        noResults.style.display = 'block';
+                        showingTestNumber.textContent = '';
+                        return;
+                    }
+
+                    noResults.style.display = 'none';
+                    showingTestNumber.textContent = `Showing ${data.length} test(s)`;
+
+                    data.forEach(test => {
+                        const item = document.createElement('div');
+                        item.className = 'list-group-item';
+                        item.innerHTML = `
+                            <span class="test-name">${test.name}</span>
+                            <span class="test-price">৳${test.price}</span>
+                        `;
+                        listContainer.appendChild(item);
+                    });
+                }
+
+                // Filter tests
+                function filterTests() {
+                    const term = searchInput.value.toLowerCase().trim();
+                    const filtered = testData.filter(t => t.name.toLowerCase().includes(term));
+                    renderTests(filtered);
+                }
+
+                searchInput.addEventListener('input', filterTests);
+
+                // Initialize on load
+                window.addEventListener('load', () => renderTests(testData));
+                
+            </script>
     </body>
 </html>

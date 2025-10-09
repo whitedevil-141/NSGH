@@ -8519,7 +8519,69 @@ body.preloader-active {
     padding: 0px 250px;
   }
 }
+/* Modern Search Box */
+.modern-search {
+    width: 100%;
+    border-radius: 50px;
+    padding: 14px 22px;
+    font-size: 1.1rem;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
 
+.modern-search:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.25);
+}
+
+/* Scrollbar styling */
+.test-container-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.test-container-scrollable::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 8px;
+}
+
+.test-container-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* Test List Items */
+.list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    transition: all 0.25s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f9fafb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.test-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.test-price {
+    font-weight: 600;
+    color: #1696e7;
+}
+/* Prevent body scroll when hovering test list */
+.test-container-scrollable:hover {
+    overscroll-behavior: contain;
+}
 /* ===== UTILITY CLASSES FOR RESPONSIVENESS ===== */
 
 /* Hide elements on specific screen sizes if needed */
