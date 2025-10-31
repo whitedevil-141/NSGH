@@ -9,3 +9,4 @@ deployment:
     - /bin/cp -R img $DEPLOYPATH
     - /bin/cp -R js $DEPLOYPATH
     - /bin/cp *.html $DEPLOYPATH
+    - /bin/cp *.json $DEPLOYPATH
