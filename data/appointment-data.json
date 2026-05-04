@@ -1,0 +1,156 @@
+{
+  "users": [
+    {
+      "id": "usr_admin",
+      "name": "System Admin",
+      "phone": "admin",
+      "password": "admin123",
+      "email": "admin@nsghcare.com",
+      "role": "admin"
+    },
+    {
+      "id": "usr_001",
+      "name": "John Smith",
+      "phone": "1112223333",
+      "password": "password123",
+      "age": 32,
+      "gender": "Male",
+      "bloodGroup": "O+",
+      "email": "john.smith@email.com",
+      "role": "user"
+    },
+    {
+      "id": "usr_002",
+      "name": "Sarah Johnson",
+      "phone": "4445556666",
+      "password": "password123",
+      "age": 28,
+      "gender": "Female",
+      "bloodGroup": "A+",
+      "email": "sarah.j@email.com",
+      "role": "user"
+    },
+    {
+      "id": "usr_003",
+      "name": "Michael Chen",
+      "phone": "7778889999",
+      "password": "password123",
+      "age": 45,
+      "gender": "Male",
+      "bloodGroup": "B-",
+      "email": "michael.chen@email.com",
+      "role": "user"
+    },
+    {
+      "id": "usr_004",
+      "name": "Dr. Sarah Jenkins",
+      "phone": "9999999991",
+      "password": "doctor123",
+      "email": "sarah.jenkins@hospital.com",
+      "role": "doctor",
+      "specialty": "Cardiologist"
+    },
+    {
+      "id": "usr_005",
+      "name": "Dr. Robert Frost",
+      "phone": "9999999992",
+      "password": "doctor123",
+      "email": "robert.frost@hospital.com",
+      "role": "doctor",
+      "specialty": "Dermatologist"
+    },
+    {
+      "id": "usr_006",
+      "name": "Dr. Michael Chen",
+      "phone": "9999999993",
+      "password": "doctor123",
+      "email": "michael.chen@hospital.com",
+      "role": "doctor",
+      "specialty": "Neurologist"
+    },
+    {
+      "id": "usr_007",
+      "name": "Dr. Emily Carter",
+      "phone": "9999999994",
+      "password": "doctor123",
+      "email": "emily.carter@hospital.com",
+      "role": "doctor",
+      "specialty": "Pediatrician"
+    },
+    {
+      "id": "usr_008",
+      "name": "Dr. William Turner",
+      "phone": "9999999995",
+      "password": "doctor123",
+      "email": "william.turner@hospital.com",
+      "role": "doctor",
+      "specialty": "General Physician"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "name": "Dr. Sarah Jenkins",
+      "phone": "9999999991",
+      "category": "Cardiologist",
+      "startTime": "09:00",
+      "endTime": "14:00",
+      "time": "09:00 AM - 02:00 PM",
+      "room": "A-102"
+    },
+    {
+      "id": 2,
+      "name": "Dr. Michael Chen",
+      "phone": "9999999993",
+      "category": "Neurologist",
+      "startTime": "10:00",
+      "endTime": "16:00",
+      "time": "10:00 AM - 04:00 PM",
+      "room": "B-305"
+    },
+    {
+      "id": 3,
+      "name": "Dr. Emily Carter",
+      "phone": "9999999994",
+      "category": "Pediatrician",
+      "startTime": "08:00",
+      "endTime": "12:00",
+      "time": "08:00 AM - 12:00 PM",
+      "room": "C-201"
+    },
+    {
+      "id": 4,
+      "name": "Dr. Robert Frost",
+      "phone": "9999999992",
+      "category": "Dermatologist",
+      "startTime": "13:00",
+      "endTime": "18:00",
+      "time": "01:00 PM - 06:00 PM",
+      "room": "A-105"
+    },
+    {
+      "id": 5,
+      "name": "Dr. William Turner",
+      "phone": "9999999995",
+      "category": "General Physician",
+      "startTime": "09:00",
+      "endTime": "17:00",
+      "time": "09:00 AM - 05:00 PM",
+      "room": "G-100"
+    }
+  ],
+  "appointments": [
+    {
+      "id": 101,
+      "patientName": "John Smith",
+      "patientPhone": "1112223333",
+      "docId": 1,
+      "docName": "Dr. Sarah Jenkins",
+      "date": "2026-06-15",
+      "time": "10:00",
+      "room": "A-102",
+      "status": "Booked",
+      "reason": "Follow-up consultation"
+    }
+  ]
+}

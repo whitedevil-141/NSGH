@@ -2,8 +2,11 @@ import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
 
-JWT_SECRET = "7d583f0d18174c08b4abdd311e5558c8"   # load from env in production
-JWT_ALGORITHM = "HS256"
+from utils.config import get_env
+
+
+JWT_SECRET = get_env("JWT_SECRET")
+JWT_ALGORITHM = get_env("JWT_ALGORITHM", "HS256")
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=1)):
     to_encode = data.copy()

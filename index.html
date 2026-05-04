@@ -122,7 +122,7 @@
                                 </div>
                             </div>    
                              <div class="col-xl-2 col-lg-2 d-none d-lg-block">
-                                 <button class="top-btn" onclick="openPopup()">Appointment <i class="fas fa-chevron-right"></i></button>
+                                 <a class="top-btn" href="/appointment.html">Appointment <i class="fas fa-chevron-right"></i></a>
 
                                  
                             </div>
@@ -1245,33 +1245,6 @@
             requestAnimationFrame(raf);
         </script>
         
-        <!-- Appointment Modal -->
-        <script>
-            const modal = document.getElementById('appointmentModal');
-            const form = document.getElementById('appointmentForm');
-
-            function openPopup() {
-                modal.style.display = 'flex';
-                modal.setAttribute('aria-hidden', 'false');
-                form.querySelector('input').focus();
-            }
-
-            function closePopup() {
-                modal.style.display = 'none';
-                modal.setAttribute('aria-hidden', 'true');
-            }
-
-            modal.addEventListener('click', e => { if(e.target === modal) closePopup(); });
-            form.addEventListener('submit', e => { 
-                e.preventDefault();
-                alert('Appointment submitted successfully!');
-                closePopup();
-                form.reset();
-            });
-            document.addEventListener('keydown', e => { if(e.key === 'Escape' && modal.style.display === 'flex') closePopup(); });
-
-        </script>
-
         <!-- Slick Testimonial Carousel -->
         <script>
             $(document).ready(function(){

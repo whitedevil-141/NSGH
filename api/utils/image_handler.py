@@ -3,10 +3,13 @@ import uuid
 from fastapi import HTTPException, UploadFile
 import paramiko
 
-HOST = "103.191.241.38"
-PORT = 22
-USERNAME = "nsghbdco"
-PASSWORD = "Mho.2V0eKC]91b"  # or use key authentication
+from utils.config import get_env, get_int_env
+
+
+HOST = get_env("SFTP_HOST")
+PORT = get_int_env("SFTP_PORT", 22)
+USERNAME = get_env("SFTP_USERNAME")
+PASSWORD = get_env("SFTP_PASSWORD")
 
 # -------------------- ROUTES --------------------
 

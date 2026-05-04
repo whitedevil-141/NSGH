@@ -2,13 +2,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.models import Doctor, Staff, Message
-from api.database import get_db
-from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
-from api.limiter import limiter, Request
+from models import Doctor, Staff, Message
+from database import get_db
+from schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
+from limiter import limiter, Request
 import json
 import aiosmtplib
 from email.message import EmailMessage
+from utils.config import get_env, get_int_env
 
 router = APIRouter(
     tags=["Public"]
@@ -104,12 +105,11 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     )
     
 
-# 📌 SMTP settings (you can load from env vars in production)
-SMTP_HOST = "mail.nsghbd.com"
-SMTP_PORT = 465
-SMTP_USER = "contactuser@nsghbd.com"
-SMTP_PASS = "84w[IQxXYp#RQAT$"  # ⚠️ move to env var for security!
-TO_EMAIL  = "support@nsghbd.com"
+SMTP_HOST = get_env("SMTP_HOST")
+SMTP_PORT = get_int_env("SMTP_PORT", 465)
+SMTP_USER = get_env("SMTP_USER")
+SMTP_PASS = get_env("SMTP_PASS")
+TO_EMAIL = get_env("TO_EMAIL")
 
 @router.post("/contact")
 @limiter.limit("2/minute")

@@ -20,6 +20,7 @@ class DoctorBase(BaseModel):
     qualifications: List[str] = []
     conditions: List[dict] = []
     category: List[str] = [] 
+    photo_url: Optional[str] = None
 
 
 class DoctorOut(DoctorBase):
@@ -81,21 +82,6 @@ class GalleryBase(BaseModel):
     image_url: str
     caption: str
 
-class DoctorOut(BaseModel):
-    id: int
-    name: str
-    description: str
-    qualifications: List[str]
-    conditions: List[dict]
-    phone: str
-    specialization: List[str]
-    photo_url: str
-    hospital: Optional[str] = None
-    room: Optional[str] = None
-    timing: Optional[str] = None
-    class Config:
-        from_attributes = True
-
 # Machinery
 class MachineryBase(BaseModel):
     name: str
@@ -140,3 +126,144 @@ class ContactOut(ContactBase):
     id: int
     class Config:
         from_attributes = True
+
+
+# Appointment portal
+class AppointmentLoginRequest(BaseModel):
+    phone: str
+    password: str
+
+
+class AppointmentUserBase(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    bloodGroup: Optional[str] = None
+    role: str = "user"
+    specialty: Optional[str] = None
+    createdById: Optional[str] = None
+    createdByName: Optional[str] = None
+
+
+class AppointmentUserCreate(AppointmentUserBase):
+    password: str
+
+
+class AppointmentUserUpdate(BaseModel):
+    name: str
+    email: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    bloodGroup: Optional[str] = None
+
+
+class AppointmentUserPasswordReset(BaseModel):
+    phone: str
+    newPassword: str
+
+
+class AppointmentUserPasswordChange(BaseModel):
+    currentPassword: str
+    newPassword: str
+
+
+class AppointmentStaffCreate(BaseModel):
+    name: str
+    phone: str
+    password: str
+    email: Optional[str] = None
+    specialty: Optional[str] = None
+
+
+class OtpSendRequest(BaseModel):
+    phone: str
+
+
+class OtpVerifyRequest(BaseModel):
+    phone: str
+    otp: str
+
+
+class AppointmentUserOut(AppointmentUserBase):
+    id: str
+
+
+class AppointmentDoctorBase(BaseModel):
+    name: str
+    phone: str
+    category: str
+    startTime: str
+    endTime: str
+    room: str
+    email: Optional[str] = None
+
+
+class AppointmentDoctorCreate(AppointmentDoctorBase):
+    password: str
+
+
+class AppointmentDoctorUpdate(BaseModel):
+    name: str
+    category: str
+    startTime: str
+    endTime: str
+    room: str
+    email: Optional[str] = None
+
+
+class AppointmentDoctorOut(AppointmentDoctorBase):
+    id: int
+    time: str
+    is_available: Optional[int] = 1
+
+
+class AppointmentCreate(BaseModel):
+    docId: int
+    date: str
+    patientName: Optional[str] = None
+    patientPhone: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class AppointmentStatusUpdate(BaseModel):
+    status: str
+
+
+class AppointmentOut(BaseModel):
+    id: int
+    patientName: str
+    patientPhone: str
+    docId: int
+    docName: str
+    date: str
+    time: Optional[str] = None
+    room: Optional[str] = None
+    status: str
+    reason: Optional[str] = None
+    serial_number: Optional[int] = None
+    bookedById: Optional[str] = None
+    bookedByName: Optional[str] = None
+    bookedByRole: Optional[str] = None
+    marketingOfficerId: Optional[str] = None
+    marketingOfficerName: Optional[str] = None
+    commissionDoctorId: Optional[str] = None
+    commissionDoctorName: Optional[str] = None
+
+
+class AppointmentSuccessResponse(BaseModel):
+    message: str
+    details: AppointmentOut
+    serial_number: int
+    queue_position: str
+
+class AppointmentSlotOut(BaseModel):
+    value: str
+    label: str
+
+
+class AppointmentDataResponse(BaseModel):
+    users: List[AppointmentUserOut]
+    doctors: List[AppointmentDoctorOut]
+    appointments: List[AppointmentOut]
