@@ -544,14 +544,28 @@ def _get_next_serial_number(db: Session, doctor_id: int, appointment_date: str) 
     )
     return int(max_serial or 0) + 1
 
-
+def is_number_already_registered(db: Session, phone: str) -> bool:
+    """Check if a phone number is already registered as a user or doctor."""
+    normalized_phone = _normalize_phone(phone)
+    if normalized_phone == "admin":
+        return True
+    return db.query(AppointmentUser).filter(AppointmentUser.phone == normalized_phone).first() is not None or \
+           db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == normalized_phone).first() is not None
+              
 @router.post("/otp/send")
 @limiter.limit("5/minute")
 def send_otp(request: Request, data: OtpSendRequest):
     phone = _require_phone(data.phone)
     now = datetime.utcnow()
     today = now.date()
-
+    
+    # check for phone number existence is intentionally skipped to avoid user enumeration and to allow OTP for new users
+    if phone == "admin":
+        raise HTTPException(status_code=400, detail="OTP cannot be sent to this number")
+    
+    if is_number_already_registered(request.state.db, phone):
+        raise HTTPException(status_code=400, detail="This phone number is already registered")
+    
     with _otp_lock:
         _cleanup_expired_otps(now)
         _cleanup_daily_limits(today)
