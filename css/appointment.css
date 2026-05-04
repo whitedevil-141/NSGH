@@ -120,7 +120,10 @@ select,
 textarea {
     font: inherit;
 }
-
+.password-wrapper { position: relative; display: flex; align-items: center; width: 100%; }
+.password-wrapper input { padding-right: 40px !important; width: 100%; margin: 0; }
+.password-toggle { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #6b7280; display: flex; align-items: center; justify-content: center; padding: 0; outline: none; }
+.password-toggle:hover { color: #111827; }
 .hidden {
     display: none !important;
 }
@@ -334,6 +337,78 @@ textarea:focus-visible,
     margin-bottom: 1.1rem;
 }
 
+.weekday-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.5rem;
+}
+
+.weekday-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.6rem;
+    background: var(--surface);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.weekday-chip input {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+}
+
+.schedule-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.schedule-editor-head,
+.schedule-row {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.2fr) minmax(110px, 1fr) minmax(110px, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.schedule-editor-head {
+    padding: 0 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.schedule-row {
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.schedule-day {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.schedule-day input {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+}
+
+.schedule-row select {
+    min-height: 2.4rem;
+}
+
 label {
     font-size: 0.875rem;
     font-weight: 700;
@@ -349,6 +424,146 @@ label {
 .form-hint {
     display: block;
     font-size: 0.78rem;
+}
+
+.custom-date-picker {
+    position: relative;
+}
+
+.booking-date-intro {
+    margin: 0 0 0.45rem;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.date-picker-trigger {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.72rem 0.875rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
+}
+
+.date-picker-trigger:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-muted);
+}
+
+.date-picker-panel {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    width: min(22rem, 100%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    padding: 0.85rem;
+}
+
+.custom-date-picker.is-open .date-picker-panel {
+    display: block;
+}
+
+.custom-date-picker.is-open .date-picker-trigger {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.date-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.date-picker-month {
+    text-align: center;
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.date-picker-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.date-picker-day {
+    min-height: 4rem;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.date-picker-day:hover:not(:disabled) {
+    background: var(--primary-soft);
+    border-color: rgba(37, 99, 235, 0.25);
+}
+
+.date-picker-day.is-outside {
+    color: #c2c9d4;
+    cursor: default;
+}
+
+.date-picker-day.is-disabled {
+    color: #c2c9d4;
+    background: #f7f9fc;
+    cursor: not-allowed;
+}
+
+.date-picker-day.is-selected {
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+.date-picker-single {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(16, 185, 129, 0.08));
+    border-color: rgba(37, 99, 235, 0.16);
+}
+
+.date-picker-single strong {
+    font-size: 0.94rem;
+}
+
+.date-picker-single span,
+.date-picker-single small {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: inherit;
+    opacity: 0.92;
+}
+
+.date-picker-single small {
+    opacity: 0.75;
+}
+
+.date-picker-day.is-today {
+    border-color: rgba(37, 99, 235, 0.28);
 }
 
 input,
@@ -390,11 +605,10 @@ input:disabled {
 }
 
 .navbar {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: #ffffff;
     padding: 0.85rem 2rem;
-    border-bottom: 1px solid rgba(217, 226, 236, 0.9);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -415,6 +629,20 @@ input:disabled {
     flex: 0 0 auto;
 }
 
+.nav-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
 .logo svg {
     width: 1.5rem;
     height: 1.5rem;
@@ -427,14 +655,36 @@ input:disabled {
     justify-content: flex-end;
     flex-wrap: wrap;
     min-width: 0;
+    flex: 1;
 }
 
 #nav-user-name {
-    color: var(--text-muted);
-    font-size: 0.875rem;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 18rem;
+}
+
+.user-profile-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.85rem 0.35rem 0.35rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-main);
+    font-size: 0.875rem;
+}
+
+.user-avatar {
+    width: 2rem;
+    height: 2rem;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .container {
@@ -748,15 +998,6 @@ tbody tr:hover td {
     align-items: flex-start;
 }
 
-.admin-sidebar {
-    width: 240px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    position: sticky;
-    top: 5.5rem;
-}
-
 .admin-content {
     flex: 1;
     width: 100%;
@@ -770,27 +1011,36 @@ tbody tr:hover td {
     box-shadow: none;
 }
 
+#admin-nav-tabs {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-right: auto;
+    margin-left: 1rem;
+}
+
 .sidebar-item {
-    padding: 0.8rem 1rem;
-    border-radius: var(--radius-md);
+    padding: 0.5rem 0;
+    border-radius: 0;
     cursor: pointer;
-    font-weight: 800;
-    transition: background-color var(--transition), color var(--transition), border-color var(--transition), box-shadow var(--transition);
+    font-weight: 600;
+    transition: color var(--transition), border-color var(--transition);
     color: var(--text-muted);
-    border: 1px solid transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 0.95rem;
+    white-space: nowrap;
 }
 
 .sidebar-item:hover {
-    background: var(--surface);
+    background: transparent;
     color: var(--text-main);
-    border-color: var(--border);
 }
 
 .sidebar-item.active {
-    background: var(--surface);
+    background: transparent;
     color: var(--primary);
-    border-color: var(--border);
-    box-shadow: var(--shadow-sm);
+    border-bottom-color: var(--primary);
 }
 
 .modal-overlay {
@@ -978,18 +1228,6 @@ tbody tr:hover td {
         gap: 1rem;
         align-items: stretch;
     }
-
-    .admin-sidebar {
-        width: 100%;
-        position: static;
-        flex-direction: row;
-        overflow-x: auto;
-        padding-bottom: 0.25rem;
-    }
-
-    .sidebar-item {
-        white-space: nowrap;
-    }
 }
 
 @media (max-width: 720px) {
@@ -1002,19 +1240,78 @@ tbody tr:hover td {
     }
 
     .navbar {
-        align-items: flex-start;
+        align-items: stretch;
         padding: 0.8rem 1rem;
         flex-direction: column;
     }
 
-    .nav-links {
+    .nav-brand {
         width: 100%;
-        justify-content: flex-start;
+    }
+
+    .hamburger-btn {
+        display: block;
+    }
+
+    .nav-links {
+        display: flex;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        box-shadow: var(--shadow-md);
+        border-bottom: 1px solid rgba(217, 226, 236, 0.9);
+        flex-direction: column;
+        align-items: stretch;
+        margin-top: 0;
+        padding: 0 1rem;
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+        flex-wrap: nowrap;
+    }
+
+    .nav-links.active {
+        max-height: 400px;
+        opacity: 1;
+        padding: 1rem;
+    }
+
+    #admin-nav-tabs {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.75rem;
+        margin-left: 0;
+        gap: 0.25rem;
+    }
+
+    .sidebar-item {
+        padding: 0.75rem 1rem;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        white-space: normal;
+    }
+
+    .sidebar-item.active {
+        border-bottom-color: transparent;
+        border-left-color: var(--primary);
+        background: var(--primary-soft);
+    }
+
+    .user-profile-badge {
+        background: transparent;
+        border: none;
+        padding: 0.5rem 0.25rem;
+        border-radius: 0;
     }
 
     #nav-user-name {
-        width: 100%;
-        max-width: 100%;
+        max-width: none;
     }
 
     .card,
@@ -1038,6 +1335,14 @@ tbody tr:hover td {
 
     .dashboard-grid,
     .doctor-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .schedule-editor-head {
+        display: none;
+    }
+
+    .schedule-row {
         grid-template-columns: 1fr;
     }
 
@@ -1138,12 +1443,6 @@ tbody tr:hover td {
 
     .pdf-frame {
         height: 62vh;
-    }
-
-    .admin-sidebar {
-        display: grid;
-        grid-template-columns: 1fr;
-        overflow-x: visible;
     }
 
     .admin-sidebar .sidebar-item {

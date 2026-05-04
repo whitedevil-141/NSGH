@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NSGH Care | Hospital Appointment System</title>
+    <title>NSGH | Appointment</title>
     <!-- Premium Font: Inter -->
+    <meta name="description" content="New Shafipur General Hospital – Quality healthcare with modern facilities.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
+    <link rel="icon" type="image/svg+xml" href="/img/favicon/favicon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/img/favicon/site.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,14 +28,34 @@
 
     <!-- Navigation -->
     <nav class="navbar hidden" id="main-nav">
-        <div class="logo" onclick="goHome()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            NSGH Care
+        <div class="nav-brand">
+            <div class="logo" onclick="goHome()">
+                <!-- <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> -->
+                <img width="70px" src="img/logo/logo.png" alt="NSGH Logo">
+                Appointment Portal
+            </div>
+            <button class="hamburger-btn" onclick="toggleNav()" aria-label="Toggle navigation">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
         </div>
-        <div class="nav-links">
-            <span id="nav-user-name" class="font-medium"></span>
-            <button class="btn btn-outline" id="admin-nav-btn" onclick="navigate('admin')" style="display:none;">Admin Panel</button>
-            <button class="btn btn-primary" onclick="logout()">Logout</button>
+        <div class="nav-links" id="nav-links">
+            <div id="admin-nav-tabs" class="hidden">
+                <div class="sidebar-item active" onclick="switchAdminTab('admin-users')" id="tab-admin-users">Manage Users</div>
+                <div class="sidebar-item" onclick="switchAdminTab('admin-doctors')" id="tab-admin-doctors">Manage Doctors</div>
+                <div class="sidebar-item" onclick="switchAdminTab('admin-marketing')" id="tab-admin-marketing">Marketing Officers</div>
+                <div class="sidebar-item" onclick="switchAdminTab('admin-appointments')" id="tab-admin-appointments">All Appointments</div>
+                <div class="sidebar-item" onclick="switchAdminTab('admin-today-serials')" id="tab-admin-today-serials">Today's Serials</div>
+            </div>
+            <div class="user-profile-badge">
+                <div class="user-avatar">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <span id="nav-user-name" class="font-medium"></span>
+            </div>
+            <button class="btn btn-outline btn-compact" onclick="logout()">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Logout
+            </button>
         </div>
     </nav>
 
@@ -35,9 +65,9 @@
         <!-- View 1: Authentication -->
         <section id="auth-view" class="card">
             <div class="auth-logo">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto; display: block;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                NSGH Care
-                <span>Hospital Appointment Portal</span>
+                <img width="120px" src="img/logo/logo.png" alt="NSGH Logo">
+                <!-- NSGH -->
+                <span>Appointment Portal</span>
             </div>
 
             <div class="auth-tabs">
@@ -48,17 +78,22 @@
             <!-- LOGIN TAB -->
             <div id="login-content">
                 <h2 class="text-center mb-4">Welcome Back</h2>
-                <div class="input-group">
-                    <label>Phone Number</label>
-                    <input type="tel" id="login-phone" placeholder="e.g. 1112223333" autocomplete="username">
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password">
-                </div>
-                <button class="btn btn-primary" style="width:100%" onclick="loginWithPassword()" id="btn-login">Login</button>
+                <form id="login-form" onsubmit="event.preventDefault(); loginWithPassword();">
+                    <div class="input-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="login-phone" placeholder="e.g. 1112223333" autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password">
+                        <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('login-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%" id="btn-login">Login</button>
+                </form>
                 <div class="text-center mt-2 text-sm">
-                    <span class="auth-link" onclick="switchAuthTab('forgot')">Forgot password?</span>
+                    <span class="auth-link" onclick="">Forgot password?</span>
                 </div>
                 <div class="auth-demo-box" style="display:none;">
                     <strong>Demo accounts:</strong><br>
@@ -73,21 +108,27 @@
                 <h2 class="text-center mb-4">Create Account</h2>
 
                 <!-- Step 1: phone + password -->
-                <div id="register-step-1">
+                <form id="register-step-1" onsubmit="event.preventDefault(); startRegistration();">
                     <div class="input-group">
                         <label>Phone Number</label>
-                        <input type="tel" id="reg-phone" placeholder="e.g. 1234567890">
+                        <input type="tel" id="reg-phone" placeholder="e.g. 1234567890" autocomplete="username">
                     </div>
                     <div class="input-group">
                         <label>Password</label>
-                        <input type="password" id="reg-password" placeholder="At least 6 characters">
+                    <div class="password-wrapper">
+                        <input type="password" id="reg-password" placeholder="At least 6 characters" autocomplete="new-password">
+                        <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('reg-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
                     </div>
                     <div class="input-group">
                         <label>Confirm Password</label>
-                        <input type="password" id="reg-confirm-password" placeholder="Re-enter password">
+                    <div class="password-wrapper">
+                        <input type="password" id="reg-confirm-password" placeholder="Re-enter password" autocomplete="new-password">
+                        <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('reg-confirm-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                     </div>
-                    <button class="btn btn-primary" style="width:100%" onclick="startRegistration()" id="btn-start-reg">Send OTP</button>
-                </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%" id="btn-start-reg">Send OTP</button>
+                </form>
 
                 <!-- Step 2: OTP -->
                 <div id="register-step-2" class="hidden">
@@ -99,6 +140,9 @@
                     <div class="flex gap-2">
                         <button class="btn btn-outline" style="flex:1" onclick="showRegStep(1)">Back</button>
                         <button class="btn btn-primary" style="flex:2" onclick="verifyRegistrationOTP()" id="btn-verify-reg-otp">Verify OTP</button>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-outline btn-compact" onclick="resendRegistrationOTP()" id="btn-resend-reg-otp">Resend OTP</button>
                     </div>
                 </div>
 
@@ -152,16 +196,16 @@
             <div id="forgot-content" class="hidden">
                 <h2 class="text-center mb-4">Reset Password</h2>
 
-                <div id="forgot-step-1">
+                <form id="forgot-step-1" onsubmit="event.preventDefault(); sendForgotOTP();">
                     <div class="input-group">
                         <label>Registered Phone Number</label>
-                        <input type="tel" id="forgot-phone" placeholder="Enter your phone number">
+                        <input type="tel" id="forgot-phone" placeholder="Enter your phone number" autocomplete="username">
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn btn-outline" style="flex:1" onclick="switchAuthTab('login')">Back to Login</button>
-                        <button class="btn btn-primary" style="flex:2" onclick="sendForgotOTP()" id="btn-forgot-otp">Send OTP</button>
+                        <button type="button" class="btn btn-outline" style="flex:1" onclick="switchAuthTab('login')">Back to Login</button>
+                        <button type="submit" class="btn btn-primary" style="flex:2" id="btn-forgot-otp">Send OTP</button>
                     </div>
-                </div>
+                </form>
 
                 <div id="forgot-step-2" class="hidden">
                     <p class="text-center mb-4 text-sm">OTP sent to <strong id="forgot-display-phone"></strong></p>
@@ -173,20 +217,30 @@
                         <button class="btn btn-outline" style="flex:1" onclick="showForgotStep(1)">Back</button>
                         <button class="btn btn-primary" style="flex:2" onclick="verifyForgotOTP()" id="btn-verify-forgot-otp">Verify OTP</button>
                     </div>
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-outline btn-compact" onclick="resendForgotOTP()" id="btn-resend-forgot-otp">Resend OTP</button>
+                    </div>
                 </div>
 
-                <div id="forgot-step-3" class="hidden">
+                <form id="forgot-step-3" class="hidden" onsubmit="event.preventDefault(); resetPassword();">
                     <p class="text-center mb-4 text-sm">Set a new password</p>
+                    <input type="text" id="forgot-username-hidden" autocomplete="username" style="display:none;" aria-hidden="true" value="reset_user">
                     <div class="input-group">
                         <label>New Password</label>
-                        <input type="password" id="forgot-new-password" placeholder="At least 6 characters">
+                    <div class="password-wrapper">
+                        <input type="password" id="forgot-new-password" placeholder="At least 6 characters" autocomplete="new-password">
+                        <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('forgot-new-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
                     </div>
                     <div class="input-group">
                         <label>Confirm New Password</label>
-                        <input type="password" id="forgot-confirm-password" placeholder="Re-enter new password">
+                    <div class="password-wrapper">
+                        <input type="password" id="forgot-confirm-password" placeholder="Re-enter new password" autocomplete="new-password">
+                        <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('forgot-confirm-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                     </div>
-                    <button class="btn btn-primary" style="width:100%" onclick="resetPassword()" id="btn-reset-password">Reset Password</button>
-                </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%" id="btn-reset-password">Reset Password</button>
+                </form>
             </div>
         </section>
 
@@ -277,7 +331,7 @@
         <!-- View 3: Doctor Listing -->
         <section id="doctors-view" class="hidden">
             <div class="flex justify-between items-center mb-4">
-                <h2>Find a Doctor</h2>
+                <h2 class="mb-4">Find a Doctor</h2>
                 <button class="btn btn-outline" id="doctors-back-btn" onclick="navigate('dashboard')">Back to Dashboard</button>
             </div>
 
@@ -311,19 +365,19 @@
         <!-- View 4: Appointments -->
         <section id="appointments-view" class="hidden">
             <div class="flex justify-between items-center mb-4">
-                <h2 id="appointments-heading">My Appointments</h2>
+                <h2 id="appointments-heading" class="mb-4">My Appointments</h2>
                 <div class="flex gap-2">
-                    <button class="btn btn-outline" id="appointments-export-btn" onclick="exportMyAppointments()">Export CSV</button>
                     <button class="btn btn-outline" id="appointments-back-btn" onclick="navigate('dashboard')">Back to Dashboard</button>
+                    <button class="btn btn-outline" id="appointments-export-btn" onclick="exportMyAppointments()">Export CSV</button>
                 </div>
             </div>
 
             <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
                 <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                    <input type="date" id="filter-my-app-date" onchange="renderAppointments()">
+                    <input type="date" id="filter-my-app-date" onchange="renderAppointments('reset')">
                 </div>
                 <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                    <select id="filter-my-app-status" onchange="renderAppointments()">
+                    <select id="filter-my-app-status" onchange="renderAppointments('reset')">
                         <option value="">All Statuses</option>
                         <option value="Booked">Booked</option>
                         <option value="Completed">Completed</option>
@@ -331,7 +385,7 @@
                     </select>
                 </div>
                 <div class="input-group" style="margin:0; flex:1; min-width:150px;" id="filter-my-app-doctor-group">
-                    <select id="filter-my-app-doctor" onchange="renderAppointments()">
+                    <select id="filter-my-app-doctor" onchange="renderAppointments('reset')">
                         <option value="">All Doctors</option>
                     </select>
                 </div>
@@ -355,6 +409,7 @@
                     </tbody>
                 </table>
             </div>
+            <div id="my-app-pagination" class="flex justify-between items-center mt-4"></div>
             <div id="appointments-empty" class="empty-state hidden">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <h3>No appointments yet</h3>
@@ -370,14 +425,6 @@
             </div>
 
             <div class="admin-layout">
-                <aside class="admin-sidebar">
-                    <div class="sidebar-item active" onclick="switchAdminTab('admin-users')" id="tab-admin-users">Manage Users</div>
-                    <div class="sidebar-item" onclick="switchAdminTab('admin-doctors')" id="tab-admin-doctors">Manage Doctors</div>
-                    <div class="sidebar-item" onclick="switchAdminTab('admin-marketing')" id="tab-admin-marketing">Marketing Officers</div>
-                    <div class="sidebar-item" onclick="switchAdminTab('admin-appointments')" id="tab-admin-appointments">All Appointments</div>
-                    <div class="sidebar-item" onclick="switchAdminTab('admin-today-serials')" id="tab-admin-today-serials">Today's Serials</div>
-                </aside>
-
                 <div class="admin-content card">
                     <!-- Admin Users Sub-view -->
                     <div id="admin-users-content">
@@ -407,7 +454,7 @@
                     <!-- Admin Doctors Sub-view -->
                     <div id="admin-doctors-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
-                            <h3>Doctors Directory</h3>
+                            <h3 class="mb-4">Doctors Directory</h3>
                             <button class="btn btn-primary" onclick="openAdminDoctorModal()">+ Add Doctor</button>
                         </div>
                         <div class="table-container">
@@ -417,6 +464,7 @@
                                         <th>Name</th>
                                         <th>Phone</th>
                                         <th>Category</th>
+                                        <th>Working Schedule</th>
                                         <th>Time</th>
                                         <th>Room</th>
                                         <th>Status</th>
@@ -433,7 +481,7 @@
                     <!-- Admin Marketing Officers Sub-view -->
                     <div id="admin-marketing-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
-                            <h3>Marketing Officers</h3>
+                            <h3 class="mb-4">Marketing Officers</h3>
                             <button class="btn btn-primary" onclick="openAdminMarketingModal()">+ Add Marketing Officer</button>
                         </div>
                         <div class="table-container">
@@ -456,16 +504,16 @@
                     <!-- Admin Appointments Sub-view -->
                     <div id="admin-appointments-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
-                            <h3>System Appointments</h3>
+                            <h3 class="mb-4">System Appointments</h3>
                             <button class="btn btn-outline" onclick="exportAdminAppointments()">Export CSV</button>
                         </div>
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                                <input type="date" id="filter-admin-app-date" onchange="renderAdminAppointments()">
+                                <input type="date" id="filter-admin-app-date" onchange="renderAdminAppointments('reset')">
                             </div>
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                                <select id="filter-admin-app-status" onchange="renderAdminAppointments()">
+                                <select id="filter-admin-app-status" onchange="renderAdminAppointments('reset')">
                                     <option value="">All Statuses</option>
                                     <option value="Booked">Booked</option>
                                     <option value="Completed">Completed</option>
@@ -473,7 +521,7 @@
                                 </select>
                             </div>
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                                <select id="filter-admin-app-doctor" onchange="renderAdminAppointments()">
+                                <select id="filter-admin-app-doctor" onchange="renderAdminAppointments('reset')">
                                     <option value="">All Doctors</option>
                                 </select>
                             </div>
@@ -496,18 +544,19 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div id="admin-app-pagination" class="flex justify-between items-center mt-4"></div>
                     </div>
 
                     <!-- Admin Today's Serials Sub-view -->
                     <div id="admin-today-serials-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
-                            <h3>Today's Serials</h3>
+                            <h3 class="mb-4">Today's Serials</h3>
                             <button class="btn btn-outline" onclick="exportTodaySerials()">Export CSV</button>
                         </div>
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                                <select id="filter-admin-today-status" onchange="renderAdminTodaySerials()">
+                                <select id="filter-admin-today-status" onchange="renderAdminTodaySerials('reset')">
                                     <option value="">All Statuses</option>
                                     <option value="Booked">Booked</option>
                                     <option value="Completed">Completed</option>
@@ -515,7 +564,7 @@
                                 </select>
                             </div>
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
-                                <select id="filter-admin-today-doctor" onchange="renderAdminTodaySerials()">
+                                <select id="filter-admin-today-doctor" onchange="renderAdminTodaySerials('reset')">
                                     <option value="">All Doctors</option>
                                 </select>
                             </div>
@@ -538,6 +587,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div id="today-serials-pagination" class="flex justify-between items-center mt-4"></div>
                     </div>
                 </div>
             </div>
@@ -559,7 +609,8 @@
                         <p id="modal-doc-cat" class="text-sm">Category</p>
                     </div>
                 </div>
-                <p class="text-sm"><strong>Available:</strong> <span id="modal-doc-time"></span> | <strong>Room:</strong> <span id="modal-doc-room"></span></p>
+                <p class="text-sm"><strong>Room:</strong> <span id="modal-doc-room"></span> <br><strong>Available:</strong> <span id="modal-doc-time"></span></p>
+                <!-- <p class="text-sm"><strong>Working Days:</strong> <span id="modal-doc-days"></span></p> -->
             </div>
 
             <form id="booking-form" onsubmit="event.preventDefault(); confirmBooking();">
@@ -576,7 +627,21 @@
                 </div>
                 <div class="input-group">
                     <label>Select Date</label>
-                    <input type="date" id="booking-date" required>
+                    <p class="booking-date-intro">Next available appointment is automatically set for the doctor's upcoming schedule.</p>
+                    <input type="hidden" id="booking-date" required>
+                    <div class="custom-date-picker" id="booking-date-picker">
+                        <button type="button" class="date-picker-trigger" id="booking-date-trigger" aria-haspopup="dialog" aria-expanded="false">
+                            <span id="booking-date-trigger-label">Choose a date</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+                        </button>
+                        <div class="date-picker-panel" id="booking-date-panel" aria-label="Appointment date picker">
+                            <div class="date-picker-header">
+                                <div id="booking-date-month-label" class="date-picker-month"></div>
+                            </div>
+                            <div class="date-picker-grid" id="booking-date-grid"></div>
+                        </div>
+                    </div>
+                    <small id="booking-date-helper" class="form-hint">The next available date is selected automatically.</small>
                 </div>
                 
                 <div class="input-group">
@@ -611,7 +676,10 @@
                     </div>
                     <div class="input-group" style="flex:1" id="admin-doc-password-group">
                         <label>Password</label>
-                        <input type="text" id="admin-doc-password" placeholder="Initial password">
+                    <div class="password-wrapper">
+                        <input type="password" id="admin-doc-password" placeholder="Initial password">
+                        <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('admin-doc-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
                     </div>
                 </div>
                 <div class="input-group">
@@ -629,27 +697,20 @@
                         <option value="Orthopedic">Orthopedic</option>
                     </select>
                 </div>
-                <div class="flex gap-4">
-                    <div class="input-group" style="flex:1">
-                        <label>Start Time</label>
-                        <select id="admin-doc-start-time" required>
-                            <option value="">Select</option>
-                            <!-- Generate via JS -->
-                        </select>
+                <div class="input-group">
+                    <label>Working Schedule</label>
+                    <div id="admin-doc-working-schedule" class="schedule-editor">
+                        <div class="schedule-editor-head">
+                            <span>Day</span>
+                            <span>From</span>
+                            <span>To</span>
+                        </div>
+                        <div id="admin-doc-schedule-rows" class="schedule-editor-body"></div>
                     </div>
-
-                    <div class="input-group" style="flex:1">
-                        <label>End Time</label>
-                        <select id="admin-doc-end-time" required>
-                            <option value="">Select</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group" style="flex:1">
-                        <label>Room No.</label>
-                        <input type="text" id="admin-doc-room" required placeholder="e.g. 101">
-                    </div>
-
+                </div>
+                <div class="input-group">
+                    <label>Room No.</label>
+                    <input type="text" id="admin-doc-room" required placeholder="e.g. 101">
                 </div>
                 <div class="input-group">
                     <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0;">
@@ -714,7 +775,7 @@
     <div id="admin-marketing-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add Marketing Officer</h3>
+                <h3 class="mb-4">Add Marketing Officer</h3>
                 <button class="close-btn" onclick="closeModal('admin-marketing-modal')">&times;</button>
             </div>
             <form id="admin-marketing-form" onsubmit="event.preventDefault(); saveMarketingOfficer();">
@@ -732,7 +793,10 @@
                 </div>
                 <div class="input-group">
                     <label>Password</label>
-                    <input type="text" id="admin-marketing-password" required placeholder="Initial password">
+                <div class="password-wrapper">
+                    <input type="password" id="admin-marketing-password" required placeholder="Initial password">
+                    <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('admin-marketing-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
                 </div>
                 <div class="flex gap-2 mt-4">
                     <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-marketing-modal')">Cancel</button>
@@ -750,17 +814,27 @@
                 <button class="close-btn" onclick="closeModal('marketing-password-modal')">&times;</button>
             </div>
             <form id="marketing-password-form" onsubmit="event.preventDefault(); changeMarketingPassword();">
+                <input type="text" autocomplete="username" value="marketing_user" style="display:none;" aria-hidden="true">
                 <div class="input-group">
                     <label>Current Password</label>
+                <div class="password-wrapper">
                     <input type="password" id="marketing-current-password" required autocomplete="current-password">
+                    <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('marketing-current-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
                 </div>
                 <div class="input-group">
                     <label>New Password</label>
+                <div class="password-wrapper">
                     <input type="password" id="marketing-new-password" required placeholder="At least 6 characters" autocomplete="new-password">
+                    <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('marketing-new-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
                 </div>
                 <div class="input-group">
                     <label>Confirm New Password</label>
+                <div class="password-wrapper">
                     <input type="password" id="marketing-confirm-password" required autocomplete="new-password">
+                    <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('marketing-confirm-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
                 </div>
                 <div class="flex gap-2 mt-4">
                     <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('marketing-password-modal')">Cancel</button>
@@ -782,6 +856,32 @@
                 <button type="button" class="btn btn-primary btn-compact" id="btn-download-current-pdf" onclick="downloadCurrentAppointmentPdf()">Download PDF</button>
             </div>
             <iframe id="appointment-pdf-frame" class="pdf-frame" title="Appointment PDF preview"></iframe>
+        </div>
+    </div>
+
+    <!-- Modal: Appointment Success -->
+    <div id="appointment-success-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Appointment Confirmed</h3>
+                <button class="close-btn" onclick="closeSuccessModal()">&times;</button>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center gap-4 mb-4" style="flex-direction: column;">
+                    <div style="background: #e8f5e9; color: #2e7d32; border-radius: 50%; padding: 15px; margin-bottom: 10px;">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <h4 class="text-center">Booking Successful!</h4>
+                </div>
+                <div class="card" style="background-color: #f8f9fa;">
+                    <p class="mb-2"><strong>Hospital:</strong> New Shafipur General Hospital</p>
+                    <p class="mb-2"><strong>Patient:</strong> <span id="success-patient-name"></span></p>
+                    <p class="mb-2"><strong>Doctor:</strong> <span id="success-doctor-name"></span></p>
+                    <p class="mb-2"><strong>Date:</strong> <span id="success-date"></span></p>
+                    <p class="mb-0"><strong>Serial:</strong> <span id="success-serial"></span></p>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" style="width:100%" onclick="closeSuccessModal()">OK</button>
         </div>
     </div>
 

@@ -99,6 +99,8 @@ class AppointmentDoctor(Base):
     name = Column(String(100), nullable=False)
     phone = Column(String(20), unique=True, index=True, nullable=False)
     category = Column(String(100), nullable=False)
+    working_days = Column(String(120), nullable=False, default="Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday")
+    working_schedule = Column(String(2000), nullable=False, default="[]")
     start_time = Column(String(5), nullable=False)
     end_time = Column(String(5), nullable=False)
     room = Column(String(20), nullable=False)

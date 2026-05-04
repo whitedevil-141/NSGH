@@ -30,6 +30,8 @@ def ensure_appointment_schema() -> None:
         },
         "appointment_doctors": {
             "is_available": "INT NOT NULL DEFAULT 1",
+            "working_days": "VARCHAR(120) NOT NULL DEFAULT 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'",
+            "working_schedule": "VARCHAR(2000) NOT NULL DEFAULT '[]'",
         },
     }
     inspector = inspect(engine)

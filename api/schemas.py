@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Auth
 class RegisterRequest(BaseModel):
@@ -190,12 +190,20 @@ class AppointmentUserOut(AppointmentUserBase):
     id: str
 
 
+class AppointmentDoctorScheduleItem(BaseModel):
+    day: str
+    startTime: str
+    endTime: str
+
+
 class AppointmentDoctorBase(BaseModel):
     name: str
     phone: str
     category: str
-    startTime: str
-    endTime: str
+    workingDays: List[str] = Field(default_factory=list)
+    workingSchedule: List[AppointmentDoctorScheduleItem] = Field(default_factory=list)
+    startTime: Optional[str] = None
+    endTime: Optional[str] = None
     room: str
     email: Optional[str] = None
 
@@ -207,8 +215,10 @@ class AppointmentDoctorCreate(AppointmentDoctorBase):
 class AppointmentDoctorUpdate(BaseModel):
     name: str
     category: str
-    startTime: str
-    endTime: str
+    workingDays: List[str] = Field(default_factory=list)
+    workingSchedule: List[AppointmentDoctorScheduleItem] = Field(default_factory=list)
+    startTime: Optional[str] = None
+    endTime: Optional[str] = None
     room: str
     email: Optional[str] = None
 

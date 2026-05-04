@@ -51,15 +51,36 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="appointment/login")
 VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor"}
 VALID_STATUSES = {"Booked", "Completed", "Cancelled"}
 SLOT_INTERVAL_MINUTES = 30
-BOOKING_WINDOW_DAYS = 90
+BOOKING_WINDOW_DAYS = 1
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 PHONE_RE = re.compile(r"^\+?\d{7,15}$|^admin$")
+WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_ALIASES = {
+    "mon": "Monday",
+    "monday": "Monday",
+    "tue": "Tuesday",
+    "tues": "Tuesday",
+    "tuesday": "Tuesday",
+    "wed": "Wednesday",
+    "wednesday": "Wednesday",
+    "thu": "Thursday",
+    "thur": "Thursday",
+    "thurs": "Thursday",
+    "thursday": "Thursday",
+    "fri": "Friday",
+    "friday": "Friday",
+    "sat": "Saturday",
+    "saturday": "Saturday",
+    "sun": "Sunday",
+    "sunday": "Sunday",
+}
 OTP_TTL_SECONDS = 300
 OTP_RESEND_COOLDOWN_SECONDS = 60
 OTP_MAX_VERIFY_ATTEMPTS = 3
 OTP_VERIFIED_TTL_SECONDS = 600
 _otp_store: dict[str, dict] = {}
 _otp_verified_store: dict[str, datetime] = {}
+_otp_daily_limits: dict[str, dict] = {}
 _otp_lock = Lock()
 
 
@@ -109,6 +130,16 @@ def _cleanup_verified_otps(now: datetime) -> None:
         _otp_verified_store.pop(phone, None)
 
 
+def _cleanup_daily_limits(today: date) -> None:
+    expired = [
+        phone
+        for phone, record in _otp_daily_limits.items()
+        if record["date"] != today
+    ]
+    for phone in expired:
+        _otp_daily_limits.pop(phone, None)
+
+
 def _hash_otp(otp: str) -> str:
     return hashlib.sha256(otp.encode("utf-8")).hexdigest()
 
@@ -133,6 +164,148 @@ def _format_time(total_minutes: int) -> str:
     return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
 
 
+def _normalize_working_days(days: Optional[list[str]]) -> list[str]:
+    if not days:
+        return WEEKDAY_NAMES.copy()
+
+    normalized: list[str] = []
+    seen = set()
+    for raw_day in days:
+        key = re.sub(r"[^a-z]", "", str(raw_day or "").strip().lower())
+        day_name = DAY_ALIASES.get(key)
+        if not day_name:
+            raise HTTPException(status_code=400, detail=f"Invalid working day: {raw_day}")
+        if day_name not in seen:
+            normalized.append(day_name)
+            seen.add(day_name)
+
+    if not normalized:
+        raise HTTPException(status_code=400, detail="At least one working day is required")
+
+    order = {name: index for index, name in enumerate(WEEKDAY_NAMES)}
+    normalized.sort(key=lambda name: order[name])
+    return normalized
+
+
+def _normalize_working_schedule(
+    schedule: Optional[list],
+    fallback_days: Optional[list[str]] = None,
+    fallback_start: Optional[str] = None,
+    fallback_end: Optional[str] = None,
+) -> list[dict]:
+    if not schedule:
+        days = _normalize_working_days(fallback_days)
+        if not days or not fallback_start or not fallback_end:
+            raise HTTPException(status_code=400, detail="At least one working day and time range is required")
+        return [
+            {"day": day, "startTime": fallback_start, "endTime": fallback_end}
+            for day in days
+        ]
+
+    normalized: list[dict] = []
+    seen = set()
+    for raw_item in schedule:
+        day_value = None
+        start_value = None
+        end_value = None
+        if isinstance(raw_item, dict):
+            day_value = raw_item.get("day")
+            start_value = raw_item.get("startTime")
+            end_value = raw_item.get("endTime")
+        else:
+            day_value = getattr(raw_item, "day", None)
+            start_value = getattr(raw_item, "startTime", None)
+            end_value = getattr(raw_item, "endTime", None)
+
+        key = re.sub(r"[^a-z]", "", str(day_value or "").strip().lower())
+        day_name = DAY_ALIASES.get(key)
+        if not day_name:
+            raise HTTPException(status_code=400, detail=f"Invalid working day: {day_value}")
+        if day_name in seen:
+            continue
+        if not start_value or not end_value:
+            raise HTTPException(status_code=400, detail=f"Working time is required for {day_name}")
+        _validate_schedule(str(start_value), str(end_value))
+        seen.add(day_name)
+        normalized.append({"day": day_name, "startTime": str(start_value), "endTime": str(end_value)})
+
+    order = {name: index for index, name in enumerate(WEEKDAY_NAMES)}
+    normalized.sort(key=lambda item: order[item["day"]])
+    if not normalized:
+        raise HTTPException(status_code=400, detail="At least one working day and time range is required")
+    return normalized
+
+
+def _doctor_working_days(doctor: AppointmentDoctor) -> list[str]:
+    raw_days = getattr(doctor, "working_days", None)
+    if not raw_days:
+        return WEEKDAY_NAMES.copy()
+
+    raw_days = str(raw_days).strip()
+    if raw_days.startswith("["):
+        try:
+            parsed = json.loads(raw_days)
+            if isinstance(parsed, list):
+                return _normalize_working_days(parsed)
+        except Exception:
+            pass
+
+    parsed_days = [item.strip() for item in raw_days.split(",") if item.strip()]
+    return _normalize_working_days(parsed_days)
+
+
+def _doctor_schedule_items(doctor: AppointmentDoctor) -> list[dict]:
+    raw_schedule = getattr(doctor, "working_schedule", None)
+    if raw_schedule:
+        raw_schedule = str(raw_schedule).strip()
+        try:
+            parsed = json.loads(raw_schedule)
+            if isinstance(parsed, list) and parsed:
+                return _normalize_working_schedule(parsed)
+        except Exception:
+            pass
+
+    days = _doctor_working_days(doctor)
+    if days:
+        return _normalize_working_schedule(
+            None,
+            fallback_days=days,
+            fallback_start=getattr(doctor, "start_time", None),
+            fallback_end=getattr(doctor, "end_time", None),
+        )
+    return []
+
+
+def _doctor_schedule_for_date(doctor: AppointmentDoctor, selected_date: date) -> Optional[dict]:
+    weekday_name = WEEKDAY_NAMES[selected_date.weekday()]
+    for item in _doctor_schedule_items(doctor):
+        if item["day"] == weekday_name:
+            return item
+    return None
+
+
+def _previous_weekday_name(day_name: str) -> str:
+    index = WEEKDAY_NAMES.index(day_name)
+    return WEEKDAY_NAMES[(index - 1) % len(WEEKDAY_NAMES)]
+
+
+def _is_allowed_booking_day(doctor: AppointmentDoctor, selected_date: date) -> bool:
+    weekday_name = WEEKDAY_NAMES[selected_date.weekday()]
+    working_days = {item["day"] for item in _doctor_schedule_items(doctor)}
+    previous_days = {_previous_weekday_name(day) for day in working_days}
+    return weekday_name in working_days or weekday_name in previous_days
+
+
+def _doctor_schedule_summary(doctor: AppointmentDoctor) -> str:
+    items = _doctor_schedule_items(doctor)
+    if not items:
+        return "Schedule not set"
+    return ", ".join(
+        f"{item['day'][:3]} {_display_time(item['startTime'])} - {_display_time(item['endTime'])}"
+        for item in items
+    )
+
+
 def _display_time(value: str) -> str:
     minutes = _parse_time(value)
     suffix = "AM" if minutes < 720 else "PM"
@@ -153,11 +326,11 @@ def _validate_schedule(start_time: str, end_time: str) -> None:
 def _validate_booking_date(value: str) -> None:
     selected = _parse_date(value)
     today = date.today()
-    if selected < today or selected > today + timedelta(days=BOOKING_WINDOW_DAYS):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Appointment date must be within the next {BOOKING_WINDOW_DAYS} days",
-        )
+    max_day = today + timedelta(days=7)
+    if selected < today:
+        raise HTTPException(status_code=400, detail="Appointment date cannot be in the past")
+    if selected > max_day:
+        raise HTTPException(status_code=400, detail="Appointment date cannot be more than 7 days in advance")
 
 
 def _user_out(user: AppointmentUser) -> AppointmentUserOut:
@@ -177,14 +350,19 @@ def _user_out(user: AppointmentUser) -> AppointmentUserOut:
 
 
 def _doctor_out(doctor: AppointmentDoctor, email: Optional[str] = None) -> AppointmentDoctorOut:
+    schedule_items = _doctor_schedule_items(doctor)
+    working_days = [item["day"] for item in schedule_items] or WEEKDAY_NAMES.copy()
+    first_item = schedule_items[0] if schedule_items else None
     return AppointmentDoctorOut(
         id=doctor.id,
         name=doctor.name,
         phone=doctor.phone,
         category=doctor.category,
-        startTime=doctor.start_time,
-        endTime=doctor.end_time,
-        time=_schedule_label(doctor.start_time, doctor.end_time),
+        workingDays=working_days,
+        workingSchedule=schedule_items,
+        startTime=first_item["startTime"] if first_item else doctor.start_time,
+        endTime=first_item["endTime"] if first_item else doctor.end_time,
+        time=_doctor_schedule_summary(doctor),
         room=doctor.room,
         email=email,
         is_available=doctor.is_available,
@@ -267,12 +445,20 @@ def _seed_if_empty(db: Session) -> None:
         )
 
     for item in seed.get("doctors", []):
+        seed_working_schedule = _normalize_working_schedule(
+            item.get("workingSchedule"),
+            fallback_days=item.get("workingDays") or WEEKDAY_NAMES,
+            fallback_start=item.get("startTime"),
+            fallback_end=item.get("endTime"),
+        )
         db.add(
             AppointmentDoctor(
                 id=int(item["id"]),
                 name=item["name"],
                 phone=_normalize_phone(item["phone"]),
                 category=item["category"],
+                working_days=",".join([slot["day"] for slot in seed_working_schedule]) if seed_working_schedule else ",".join(_normalize_working_days(item.get("workingDays") or WEEKDAY_NAMES)),
+                working_schedule=json.dumps(seed_working_schedule),
                 start_time=item["startTime"],
                 end_time=item["endTime"],
                 room=item["room"],
@@ -364,12 +550,24 @@ def _get_next_serial_number(db: Session, doctor_id: int, appointment_date: str) 
 def send_otp(request: Request, data: OtpSendRequest):
     phone = _require_phone(data.phone)
     now = datetime.utcnow()
+    today = now.date()
 
     with _otp_lock:
         _cleanup_expired_otps(now)
+        _cleanup_daily_limits(today)
+
+        record = _otp_daily_limits.get(phone)
+        if record and record["count"] >= 2:
+            raise HTTPException(status_code=429, detail="Daily OTP limit reached for this number (Max 2 per day)")
+
         existing = _otp_store.get(phone)
         if existing and existing["last_sent_at"] + timedelta(seconds=OTP_RESEND_COOLDOWN_SECONDS) > now:
             raise HTTPException(status_code=429, detail="Please wait before requesting another OTP")
+
+        if not record:
+            _otp_daily_limits[phone] = {"date": today, "count": 1}
+        else:
+            record["count"] += 1
 
         otp = f"{random.SystemRandom().randint(0, 999999):06d}"
         _otp_store[phone] = {
@@ -384,8 +582,11 @@ def send_otp(request: Request, data: OtpSendRequest):
             number=_sms_phone_number(phone),
             message=f"Your NSGH verification code is {otp}. It expires in 5 minutes.",
         )
-    except HTTPException:
+    except Exception:
         with _otp_lock:
+            rec = _otp_daily_limits.get(phone)
+            if rec and rec["date"] == today and rec["count"] > 0:
+                rec["count"] -= 1
             existing = _otp_store.get(phone)
             if existing and hmac.compare_digest(existing["otp_hash"], _hash_otp(otp)):
                 _otp_store.pop(phone, None)
@@ -473,7 +674,7 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
     return AppointmentDataResponse(
         users=users,
         doctors=doctors,
-        appointments=[_appointment_out(appointment) for appointment in appointments_query.all()],
+        appointments=[],
     )
 
 
@@ -615,7 +816,12 @@ def create_doctor(
 ):
     _require_role(current_user, "admin")
     phone = _require_phone(data.phone)
-    _validate_schedule(data.startTime, data.endTime)
+    working_schedule = _normalize_working_schedule(
+        data.workingSchedule,
+        fallback_days=data.workingDays,
+        fallback_start=data.startTime,
+        fallback_end=data.endTime,
+    )
     if len(data.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
     if db.query(AppointmentUser).filter(AppointmentUser.phone == phone).first():
@@ -625,8 +831,10 @@ def create_doctor(
         name=data.name.strip(),
         phone=phone,
         category=data.category,
-        start_time=data.startTime,
-        end_time=data.endTime,
+        working_days=",".join([slot["day"] for slot in working_schedule]),
+        working_schedule=json.dumps(working_schedule),
+        start_time=working_schedule[0]["startTime"] if working_schedule else (data.startTime or "09:00"),
+        end_time=working_schedule[0]["endTime"] if working_schedule else (data.endTime or "17:00"),
         room=data.room.strip(),
         is_available=1,  # Default to available
     )
@@ -659,15 +867,22 @@ def update_doctor(
     current_user: AppointmentUser = Depends(_current_user),
 ):
     _require_role(current_user, "admin")
-    _validate_schedule(data.startTime, data.endTime)
+    working_schedule = _normalize_working_schedule(
+        data.workingSchedule,
+        fallback_days=data.workingDays,
+        fallback_start=data.startTime,
+        fallback_end=data.endTime,
+    )
     doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
 
     doctor.name = data.name.strip()
     doctor.category = data.category
-    doctor.start_time = data.startTime
-    doctor.end_time = data.endTime
+    doctor.working_days = ",".join([slot["day"] for slot in working_schedule])
+    doctor.working_schedule = json.dumps(working_schedule)
+    doctor.start_time = working_schedule[0]["startTime"] if working_schedule else (data.startTime or doctor.start_time)
+    doctor.end_time = working_schedule[0]["endTime"] if working_schedule else (data.endTime or doctor.end_time)
     doctor.room = data.room.strip()
     linked_user = (
         db.query(AppointmentUser)
@@ -732,6 +947,9 @@ def toggle_doctor_availability(
 def list_appointments(
     date: Optional[str] = None,
     doctor_id: Optional[int] = None,
+    status: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db), 
     current_user: AppointmentUser = Depends(_current_user)
 ):
@@ -758,13 +976,15 @@ def list_appointments(
         query = query.filter(AppointmentBooking.date == date)
     if doctor_id:
         query = query.filter(AppointmentBooking.doctor_id == doctor_id)
+    if status:
+        query = query.filter(AppointmentBooking.status == status)
 
     if date:
         query = query.order_by(AppointmentBooking.serial_number.asc())
     else:
         query = query.order_by(AppointmentBooking.date.desc(), AppointmentBooking.serial_number.asc())
 
-    return [_appointment_out(appointment) for appointment in query.all()]
+    return [_appointment_out(appointment) for appointment in query.offset(skip).limit(limit).all()]
 
 
 @router.post("/appointments", response_model=AppointmentSuccessResponse)
@@ -776,6 +996,7 @@ def create_appointment(
     """Create a new appointment using queue system"""
     _require_role(current_user, "user", "admin", "marketing", "commission_doctor")
     _validate_booking_date(data.date)
+    selected_date = _parse_date(data.date)
     
     doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.id == data.docId).first()
     if not doctor:
@@ -783,6 +1004,21 @@ def create_appointment(
     
     if not doctor.is_available:
         raise HTTPException(status_code=400, detail="This doctor is currently unavailable")
+
+    schedule_item = _doctor_schedule_for_date(doctor, selected_date)
+    weekday_name = WEEKDAY_NAMES[selected_date.weekday()]
+    if not _is_allowed_booking_day(doctor, selected_date):
+        raise HTTPException(status_code=400, detail=f"Doctor does not take appointments on {weekday_name}")
+
+    if schedule_item and selected_date == date.today():
+        now = datetime.now()
+        now_minutes = now.hour * 60 + now.minute
+        start_minutes = _parse_time(schedule_item["startTime"])
+        if now_minutes >= start_minutes:
+            raise HTTPException(
+                status_code=400,
+                detail="Booking for today is closed. You can book only before the doctor's start time",
+            )
 
     if current_user.role == "user":
         patient_name = current_user.name
@@ -848,6 +1084,19 @@ def create_appointment(
     
     appointment_out = _appointment_out(appointment)
     
+    try:
+        sms_message = (
+            f"NSGH Appointment Confirmed.\n"
+            f"Patient: {patient_name}\n"
+            f"Dr: {doctor.name}\n"
+            f"Date: {data.date}\n"
+            f"Serial: #{serial_number}"
+        )
+        send_sms(number=_sms_phone_number(patient_phone), message=sms_message)
+    except Exception as e:
+        # Log the SMS failure so it can be debugged, but don't fail the booking
+        print(f"Failed to send booking SMS to {patient_phone}: {str(e)}")
+
     return AppointmentSuccessResponse(
         message=f"Appointment booked successfully for {patient_name}",
         details=appointment_out,
@@ -918,13 +1167,13 @@ def generate_appointment_pdf(
     width, height = A4
 
     c.setFont("Helvetica-Bold", 24)
-    c.setFillColor(colors.HexColor("#1e0b9b"))
-    c.drawCentredString(width / 2.0, height - 50, "NSGH Care")
+    c.setFillColor(colors.HexColor("#241d4e"))
+    c.drawCentredString(width / 2.0, height - 50, "New Shafipur General Hospital")
     
     c.setFont("Helvetica", 10)
     c.setFillColor(colors.darkgray)
-    c.drawCentredString(width / 2.0, height - 65, "123 Health Avenue, Medical District, City, Country")
-    c.drawCentredString(width / 2.0, height - 77, "Phone: +880 123 456 789 | Email: info@nsghcare.com")
+    c.drawCentredString(width / 2.0, height - 65, "Shafipur Bazar, Kaliakair, Gazipur-1751")
+    c.drawCentredString(width / 2.0, height - 77, "Phone: +880 1711-902062 | Email: support@nsgh.com")
     
     c.setLineWidth(1)
     c.setStrokeColor(colors.lightgrey)
@@ -934,59 +1183,73 @@ def generate_appointment_pdf(
     c.setFillColor(colors.black)
     c.drawCentredString(width / 2.0, height - 120, "APPOINTMENT SLIP")
 
-    text_obj = c.beginText(50, height - 160)
-    text_obj.setLeading(22)
+    start_y = height - 160
+    col1_x = 50
+    col2_x = width / 2.0 + 10
+    line_height = 25
     
-    def add_field(label, value):
-        text_obj.setFont("Helvetica-Bold", 12)
-        text_obj.setFillColor(colors.HexColor("#4a5764"))
-        text_obj.textOut(f"{label}: ")
-        text_obj.setFont("Helvetica", 12)
-        text_obj.setFillColor(colors.black)
-        text_obj.textLine(str(value) if value else "-")
+    def draw_field(c, x, y, label, value):
+        c.setFont("Helvetica-Bold", 11)
+        c.setFillColor(colors.HexColor("#4a5764"))
+        c.drawString(x, y, f"{label}:")
+        c.setFont("Helvetica", 11)
+        c.setFillColor(colors.black)
+        c.drawString(x + 120, y, str(value) if value else "-")
 
-    add_field("Appointment ID", f"#{appointment.id:06d}")
-    add_field("Status", appointment.status)
-    add_field("Date", appointment.date)
-    if appointment.serial_number:
-        add_field("Serial", f"#{appointment.serial_number}")
-    else:
-        add_field("Time", appointment.time or "-")
-    add_field("Room", appointment.room)
-    text_obj.textLine("")
-    add_field("Patient Name", appointment.patient_name)
-    add_field("Patient Phone", appointment.patient_phone)
-    text_obj.textLine("")
-    add_field("Doctor Name", appointment.doctor_name)
+    draw_field(c, col1_x, start_y, "Appointment ID", f"#{appointment.id:06d}")
+    draw_field(c, col2_x, start_y, "Status", appointment.status)
     
+    start_y -= line_height
+    draw_field(c, col1_x, start_y, "Date", appointment.date)
+    if appointment.serial_number:
+        draw_field(c, col2_x, start_y, "Serial", f"#{appointment.serial_number}")
+    else:
+        draw_field(c, col2_x, start_y, "Time", appointment.time or "-")
+
+    start_y -= line_height
+    draw_field(c, col1_x, start_y, "Doctor Name", appointment.doctor_name)
+    draw_field(c, col2_x, start_y, "Room", appointment.room)
+    
+    start_y -= 15
+    c.setLineWidth(0.5)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, start_y, width - 50, start_y)
+    
+    start_y -= 20
+    draw_field(c, col1_x, start_y, "Patient Name", appointment.patient_name)
+    draw_field(c, col2_x, start_y, "Patient Phone", appointment.patient_phone)
+    
+    start_y -= line_height
     booked_by = "Patient self-booking"
     if appointment.booked_by_name and appointment.booked_by_role != "user":
         booked_by = f"{appointment.booked_by_name} ({appointment.booked_by_role})"
-    add_field("Booked By", booked_by)
+    draw_field(c, col1_x, start_y, "Booked By", booked_by)
     if appointment.marketing_officer_name:
-        add_field("Marketing Officer", appointment.marketing_officer_name)
-    if appointment.commission_doctor_name:
-        add_field("Commission Doctor", appointment.commission_doctor_name)
+        draw_field(c, col2_x, start_y, "Marketing Officer", appointment.marketing_officer_name)
+    elif appointment.commission_doctor_name:
+        draw_field(c, col2_x, start_y, "Commission Doctor", appointment.commission_doctor_name)
         
+    start_y -= line_height
     reason = appointment.reason or "Not provided"
-    wrapped_reason = textwrap.wrap(reason, width=60)
-    text_obj.setFont("Helvetica-Bold", 12)
-    text_obj.setFillColor(colors.HexColor("#4a5764"))
-    text_obj.textOut("Reason: ")
-    text_obj.setFont("Helvetica", 12)
-    text_obj.setFillColor(colors.black)
-    if wrapped_reason:
-        text_obj.textLine(wrapped_reason[0])
-        for line in wrapped_reason[1:]:
-            text_obj.textOut("        ")
-            text_obj.textLine(line)
-    else:
-        text_obj.textLine("-")
-        
-    text_obj.textLine("")
-    add_field("Issued At", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
+    wrapped_reason = textwrap.wrap(reason, width=80)
+    c.setFont("Helvetica-Bold", 11)
+    c.setFillColor(colors.HexColor("#4a5764"))
+    c.drawString(col1_x, start_y, "Reason:")
     
-    c.drawText(text_obj)
+    c.setFont("Helvetica", 11)
+    c.setFillColor(colors.black)
+    if wrapped_reason:
+        for line in wrapped_reason:
+            c.drawString(col1_x + 120, start_y, line)
+            start_y -= 15
+    else:
+        c.drawString(col1_x + 120, start_y, "-")
+        start_y -= 15
+        
+    start_y -= 20
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.gray)
+    c.drawString(col1_x, start_y, f"Issued At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     
     c.setFont("Helvetica-Oblique", 10)
     c.setFillColor(colors.gray)
@@ -1012,10 +1275,12 @@ def cancel_appointment(
     db: Session = Depends(get_db),
     current_user: AppointmentUser = Depends(_current_user),
 ):
-    _require_role(current_user, "admin", "marketing", "commission_doctor")
+    _require_role(current_user, "admin", "marketing", "commission_doctor", "user")
     appointment = db.query(AppointmentBooking).filter(AppointmentBooking.id == appointment_id).first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
+    if current_user.role == "user" and appointment.patient_phone != current_user.phone:
+        raise HTTPException(status_code=403, detail="You can only cancel your own appointments")
     if current_user.role == "marketing" and not (
         appointment.marketing_officer_id == current_user.id or appointment.booked_by_id == current_user.id
     ):

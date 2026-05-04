@@ -4,13 +4,33 @@ const STORAGE_API_TOKEN = 'medicare_api_token';
 const STORAGE_VIEW = 'medicare_last_view';
 const API_BASE = window.NSGH_APPOINTMENT_API || 'http://127.0.0.1:8000/appointment';
 const SLOT_INTERVAL_MINUTES = 30;
-const BOOKING_WINDOW_DAYS = 90;
+const BOOKING_WINDOW_DAYS = 7;
+const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const WEEKDAY_ALIASES = {
+    mon: 'Monday',
+    monday: 'Monday',
+    tue: 'Tuesday',
+    tues: 'Tuesday',
+    tuesday: 'Tuesday',
+    wed: 'Wednesday',
+    wednesday: 'Wednesday',
+    thu: 'Thursday',
+    thur: 'Thursday',
+    thurs: 'Thursday',
+    thursday: 'Thursday',
+    fri: 'Friday',
+    friday: 'Friday',
+    sat: 'Saturday',
+    saturday: 'Saturday',
+    sun: 'Sunday',
+    sunday: 'Sunday'
+};
 
 const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor' };
 const VALID_APPOINTMENT_STATUSES = ['Booked', 'Completed', 'Cancelled'];
 
 const PERMISSIONS = {
-    user: { dashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true },
+    user: { dashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
     doctor: { doctorDashboard: true, viewAppointments: true },
     admin: { adminPanel: true, manageUsers: true, manageDoctors: true, manageAppointments: true, manageMarketing: true },
     marketing: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true, changeOwnPassword: true },
@@ -37,8 +57,167 @@ let pdfState = {
     objectUrl: null
 };
 
+let paginationState = {
+    myApp: { skip: 0, limit: 10 },
+    adminApp: { skip: 0, limit: 10 },
+    todaySerials: { skip: 0, limit: 10 }
+};
+
+let bookingDatePickerState = {
+    visibleMonth: null,
+    selectedDate: '',
+    docId: null,
+    allowedDates: new Set()
+};
+
 // --- Helpers ---
 function getEl(id) { return document.getElementById(id); }
+
+function closeBookingDatePicker() {
+    getEl('booking-date-picker')?.classList.remove('is-open');
+    getEl('booking-date-trigger')?.setAttribute('aria-expanded', 'false');
+}
+
+function openBookingDatePicker() {
+    getEl('booking-date-picker')?.classList.add('is-open');
+    getEl('booking-date-trigger')?.setAttribute('aria-expanded', 'true');
+}
+
+function toggleBookingDatePicker(forceOpen = null) {
+    const picker = getEl('booking-date-picker');
+    if (!picker) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !picker.classList.contains('is-open');
+    if (shouldOpen) openBookingDatePicker();
+    else closeBookingDatePicker();
+}
+
+function bookingDatePickerMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(date) {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function formatLongDate(dateStr) {
+    const date = parseLocalDate(dateStr);
+    if (!date) return '';
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getMonthStart(date) {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date, amount) {
+    return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function getNextAvailableBookingDate(doc) {
+    const today = todayISO();
+    if (isDoctorWorkingOnDate(doc, today) && !isTodayBookingCutoffPassed(doc, today)) {
+        return today;
+    }
+    for (let i = 1; i <= 7; i++) {
+        const candidate = addDaysISO(i);
+        if (isDoctorWorkingOnDate(doc, candidate)) {
+            return candidate;
+        }
+    }
+    return null;
+}
+
+function isDateSelectableForBooking(doc, dateStr) {
+    return !!doc && dateStr === getNextAvailableBookingDate(doc);
+}
+
+function getAllowedBookingDates(doc) {
+    const candidate = getNextAvailableBookingDate(doc);
+    return candidate ? [candidate] : [];
+}
+
+function selectBookingDate(dateStr) {
+    const doc = appState.doctors.find(d => d.id === Number(bookingDatePickerState.docId));
+    if (!doc || !dateStr || !isAllowedBookingDate(doc, dateStr)) return;
+
+    bookingDatePickerState.selectedDate = dateStr;
+    bookingDatePickerState.visibleMonth = getMonthStart(parseLocalDate(dateStr));
+    const hiddenInput = getEl('booking-date');
+    if (hiddenInput) hiddenInput.value = dateStr;
+    renderBookingDatePicker();
+    renderBookingTimeSlots();
+    closeBookingDatePicker();
+}
+
+function moveBookingDatePickerMonth(offset) {
+    const nextMonth = addMonths(bookingDatePickerState.visibleMonth || getMonthStart(new Date()), offset);
+    renderBookingDatePicker(nextMonth);
+}
+
+function renderBookingDatePicker(monthDate = null) {
+    const doc = appState.doctors.find(d => d.id === Number(bookingDatePickerState.docId));
+    const grid = getEl('booking-date-grid');
+    const monthLabel = getEl('booking-date-month-label');
+    const triggerLabel = getEl('booking-date-trigger-label');
+    const helper = getEl('booking-date-helper');
+    const hiddenInput = getEl('booking-date');
+    if (!grid || !monthLabel || !triggerLabel || !hiddenInput) return;
+
+    const baseMonth = monthDate || bookingDatePickerState.visibleMonth || getMonthStart(new Date());
+    bookingDatePickerState.visibleMonth = getMonthStart(baseMonth);
+
+    const allowedDates = Array.from(bookingDatePickerState.allowedDates || []);
+    const selectedDate = bookingDatePickerState.selectedDate;
+    const isAvailable = selectedDate && allowedDates.includes(selectedDate);
+
+    monthLabel.textContent = 'Next available appointment';
+
+    const cells = [];
+    if (selectedDate && doc) {
+        const date = parseLocalDate(selectedDate);
+        const weekday = date ? date.toLocaleDateString('en-US', { weekday: 'long' }) : 'Next Date';
+        const fullDate = formatLongDate(selectedDate);
+        cells.push(`
+            <button type="button" class="date-picker-day date-picker-single${isAvailable ? ' is-selected' : ''}" data-date="${selectedDate}" aria-label="${fullDate}">
+                <strong>${weekday}</strong>
+                <span>${fullDate}</span>
+                <small>${isAvailable ? 'Selected for booking' : 'Not available'}</small>
+            </button>
+        `);
+    } else {
+        cells.push('<div class="date-picker-day date-picker-single is-disabled" aria-live="polite"><strong>No appointment date available</strong><span>No upcoming dates open for this doctor.</span><small>Please choose another doctor.</small></div>');
+    }
+
+    grid.innerHTML = cells.join('');
+    triggerLabel.textContent = bookingDatePickerState.selectedDate
+        ? `${formatLongDate(bookingDatePickerState.selectedDate)}`
+        : 'No date available';
+    if (helper) {
+        helper.textContent = bookingDatePickerState.selectedDate
+            ? `Selected automatically: ${formatLongDate(bookingDatePickerState.selectedDate)}.`
+            : 'No upcoming date is available for this doctor.';
+    }
+}
+
+function toggleNav() {
+    const navLinks = getEl('nav-links');
+    const hamburgerBtn = document.querySelector('.hamburger-btn');
+    if (navLinks) navLinks.classList.toggle('active');
+    if (hamburgerBtn) hamburgerBtn.classList.toggle('active');
+}
+
+function togglePassword(inputId, btnEl) {
+    const input = getEl(inputId);
+    if (!input) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        btnEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"/></svg>';
+    } else {
+        input.type = 'password';
+        btnEl.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    }
+}
 
 function getRole(user) { return (user && user.role) || ROLES.USER; }
 
@@ -120,6 +299,33 @@ function setLoading(btnId, loading, loadingText = 'Please wait...') {
         btn.dataset.originalText = '';
         btn.disabled = false;
     }
+}
+
+function startOtpTimer(btnId) {
+    const btn = getEl(btnId);
+    if (!btn) return;
+    
+    if (btn.dataset.timerId) {
+        clearInterval(Number(btn.dataset.timerId));
+    }
+    
+    let timeLeft = 60;
+    btn.disabled = true;
+    btn.textContent = `Resend OTP (${timeLeft}s)`;
+    
+    const timerId = window.setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            window.clearInterval(timerId);
+            btn.textContent = 'Resend OTP';
+            btn.disabled = false;
+            delete btn.dataset.timerId;
+        } else {
+            btn.textContent = `Resend OTP (${timeLeft}s)`;
+        }
+    }, 1000);
+    
+    btn.dataset.timerId = timerId;
 }
 
 async function apiRequest(path, options = {}) {
@@ -248,6 +454,136 @@ function formatTime(value) {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
+function normalizeWorkingDays(value) {
+    let items = [];
+    if (Array.isArray(value)) {
+        items = value;
+    } else if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+            if (trimmed.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) items = parsed;
+                } catch {
+                    items = trimmed.split(',');
+                }
+            } else {
+                items = trimmed.split(',');
+            }
+        }
+    }
+
+    const seen = new Set();
+    const normalized = [];
+    items.forEach(item => {
+        const key = String(item || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+        const day = WEEKDAY_ALIASES[key];
+        if (day && !seen.has(day)) {
+            seen.add(day);
+            normalized.push(day);
+        }
+    });
+
+    if (!normalized.length) return [...WEEKDAY_NAMES];
+    return WEEKDAY_NAMES.filter(day => normalized.includes(day));
+}
+
+function normalizeScheduleEntries(value) {
+    let items = [];
+    if (Array.isArray(value)) {
+        items = value;
+    } else if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) items = parsed;
+            } catch {
+                items = [];
+            }
+        }
+    }
+
+    const normalized = [];
+    const seen = new Set();
+    items.forEach(item => {
+        const dayKey = String(item?.day || item?.weekday || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+        const day = WEEKDAY_ALIASES[dayKey];
+        const startTime = String(item?.startTime || item?.start_time || '').trim();
+        const endTime = String(item?.endTime || item?.end_time || '').trim();
+        if (!day || seen.has(day) || !startTime || !endTime) return;
+        if (timeToMinutes(endTime) <= timeToMinutes(startTime)) return;
+        seen.add(day);
+        normalized.push({ day, startTime, endTime });
+    });
+
+    return WEEKDAY_NAMES
+        .filter(day => normalized.some(item => item.day === day))
+        .map(day => normalized.find(item => item.day === day));
+}
+
+function formatScheduleEntriesLabel(entries) {
+    const normalized = normalizeScheduleEntries(entries);
+    if (!normalized.length) return 'Schedule not set';
+    return normalized.map(item => `${item.day.slice(0, 3)} ${formatTime(item.startTime)} - ${formatTime(item.endTime)}`).join(', ');
+}
+
+function getScheduleEntryForDate(doc, dateStr) {
+    const weekday = getWeekdayNameFromISO(dateStr);
+    const schedule = normalizeScheduleEntries(doc?.workingSchedule ?? doc?.working_schedule);
+    return schedule.find(item => item.day === weekday) || null;
+}
+
+function getPreviousWeekdayName(dayName) {
+    const index = WEEKDAY_NAMES.indexOf(dayName);
+    if (index < 0) return '';
+    return WEEKDAY_NAMES[(index - 1 + WEEKDAY_NAMES.length) % WEEKDAY_NAMES.length];
+}
+
+function isAllowedBookingDate(doc, dateStr) {
+    return isDoctorWorkingOnDate(doc, dateStr);
+}
+
+function getDoctorFallbackSchedule(doc) {
+    const schedule = normalizeScheduleEntries(doc?.workingSchedule ?? doc?.working_schedule);
+    if (schedule.length) return schedule[0];
+
+    const startTime = doc?.startTime || doc?.start_time;
+    const endTime = doc?.endTime || doc?.end_time;
+    if (startTime && endTime && timeToMinutes(endTime) > timeToMinutes(startTime)) {
+        return { day: 'Monday', startTime, endTime };
+    }
+
+    const parsed = parseScheduleFromLabel(doc?.time);
+    return parsed ? { day: 'Monday', ...parsed } : { day: 'Monday', startTime: '09:00', endTime: '17:00' };
+}
+
+function getWeekdayNameFromISO(dateStr) {
+    const date = parseLocalDate(dateStr);
+    if (!date) return '';
+    const index = (date.getDay() + 6) % 7;
+    return WEEKDAY_NAMES[index];
+}
+
+function isDoctorWorkingOnDate(doc, dateStr) {
+    return !!getScheduleEntryForDate(doc, dateStr);
+}
+
+function isTodayBookingCutoffPassed(doc, dateStr) {
+    if (dateStr !== todayISO()) return false;
+    const schedule = getScheduleEntryForDate(doc, dateStr) || getDoctorFallbackSchedule(doc);
+    const startMinutes = timeToMinutes(schedule?.startTime);
+    if (startMinutes === null) return false;
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return nowMinutes >= startMinutes;
+}
+
+function getFirstValidBookingDate(doc) {
+    return getNextAvailableBookingDate(doc) || '';
+}
+
 function parseScheduleFromLabel(label) {
     if (!label) return null;
     const [start, end] = String(label).split(/\s+-\s+/);
@@ -257,19 +593,8 @@ function parseScheduleFromLabel(label) {
     return { startTime: minutesToTimeValue(startMin), endTime: minutesToTimeValue(endMin) };
 }
 
-function getDoctorSchedule(doc) {
-    const explicitStart = timeToMinutes(doc?.startTime);
-    const explicitEnd = timeToMinutes(doc?.endTime);
-    if (explicitStart !== null && explicitEnd !== null && explicitEnd > explicitStart) {
-        return { startTime: minutesToTimeValue(explicitStart), endTime: minutesToTimeValue(explicitEnd) };
-    }
-
-    const parsed = parseScheduleFromLabel(doc?.time);
-    return parsed || { startTime: '09:00', endTime: '17:00' };
-}
-
-function buildScheduleLabel(startTime, endTime) {
-    return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+function buildScheduleLabel(scheduleEntries) {
+    return formatScheduleEntriesLabel(scheduleEntries);
 }
 
 function statusBadgeClass(status) {
@@ -359,14 +684,16 @@ async function openAppointmentPdf(appId) {
     pdfState.appointmentId = Number(appId);
     
     try {
-        const response = await fetch(`${API_BASE}/appointments/${appId}/pdf`, {
+       const response = await fetch(`${API_BASE}/appointments/${appId}/pdf`, {
             headers: { 'Authorization': `Bearer ${appState.authToken}` }
         });
+
         if (!response.ok) throw new Error('Failed to fetch PDF');
-        
-        const blob = await response.blob();
-        pdfState.objectUrl = URL.createObjectURL(blob);
-        
+
+        const pdfBlob = await response.blob();
+
+        pdfState.objectUrl = URL.createObjectURL(pdfBlob);
+
         if (frame) frame.src = pdfState.objectUrl;
         setText('pdf-appointment-title', `Appointment ${formatAppointmentId(app.id)} - ${app.patientName}`);
     } catch (error) {
@@ -387,6 +714,19 @@ function closeAppointmentPdfModal() {
     pdfState = { appointmentId: null, objectUrl: null };
 }
 
+function showAppointmentSuccess(app) {
+    setText('success-patient-name', app.patientName);
+    setText('success-doctor-name', app.docName);
+    setText('success-date', formatDate(app.date));
+    setText('success-serial', app.serial_number ? `#${app.serial_number}` : '-');
+    getEl('appointment-success-modal')?.classList.add('active');
+}
+
+function closeSuccessModal() {
+    closeModal('appointment-success-modal');
+    navigate('appointments');
+}
+
 function appointmentPdfActions(appId) {
     const safeId = Number(appId);
     return `
@@ -402,8 +742,10 @@ function normalizeData() {
     }));
 
     appState.doctors = (appState.doctors || []).map(doc => {
-        const schedule = getDoctorSchedule(doc);
+        const scheduleEntries = normalizeScheduleEntries(doc.workingSchedule ?? doc.working_schedule);
+        const fallbackSchedule = scheduleEntries[0] || getDoctorFallbackSchedule(doc);
         const categories = normalizeCategoryList(doc.category ?? doc.specialty);
+        const workingDays = scheduleEntries.map(item => item.day);
         const categoryLabel = categories.length ? categories.join(', ') : 'General Physician';
         const isAvailable = doc.is_available ?? doc.isAvailable ?? 1;
         return {
@@ -413,15 +755,23 @@ function normalizeData() {
             phone: doc.phone || '',
             category: categories,
             categoryLabel,
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            time: buildScheduleLabel(schedule.startTime, schedule.endTime),
+            workingDays,
+            workingDaysLabel: workingDays.length ? (workingDays.length === 7 ? 'Every day' : workingDays.map(day => day.slice(0, 3)).join(', ')) : 'Every day',
+            workingSchedule: scheduleEntries,
+            workingScheduleLabel: formatScheduleEntriesLabel(scheduleEntries),
+            startTime: fallbackSchedule.startTime,
+            endTime: fallbackSchedule.endTime,
+            time: formatScheduleEntriesLabel(scheduleEntries),
             room: doc.room || '-',
             is_available: isAvailable ? 1 : 0
         };
     });
 
-    appState.appointments = (appState.appointments || []).map(app => {
+    populateFilterDropdowns();
+}
+
+function normalizeAppointments(list) {
+    return (list || []).map(app => {
         const minutes = timeToMinutes(app.time);
         return {
             ...app,
@@ -439,8 +789,6 @@ function normalizeData() {
             commissionDoctorName: app.commissionDoctorName || null
         };
     });
-
-    populateFilterDropdowns();
 }
 
 function persistSession() {
@@ -524,6 +872,8 @@ function navigateSafe(view) {
     ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'marketing-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view']
         .forEach(v => getEl(v)?.classList.add('hidden'));
     getEl(`${view}-view`)?.classList.remove('hidden');
+    getEl('nav-links')?.classList.remove('active');
+    document.querySelector('.hamburger-btn')?.classList.remove('active');
 
     const navbar = getEl('main-nav');
     if (view === 'auth') {
@@ -537,7 +887,10 @@ function navigateSafe(view) {
     if (view === 'doctor-dashboard') initDoctorDashboard();
     if (view === 'marketing-dashboard') initMarketingDashboard();
     if (view === 'doctors') renderDoctors();
-    if (view === 'appointments') renderAppointments();
+    if (view === 'appointments') {
+        paginationState.myApp.skip = 0;
+        renderAppointments();
+    }
     if (view === 'admin') renderAdmin();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -551,8 +904,16 @@ function updateNavbar() {
     if (!appState.currentUser) return;
     const role = getRole(appState.currentUser);
     setText('nav-user-name', `${appState.currentUser.name} (${roleLabel(role)})`);
-    const adminBtn = getEl('admin-nav-btn');
-    if (adminBtn) adminBtn.style.display = role === ROLES.ADMIN ? '' : 'none';
+    const adminTabs = getEl('admin-nav-tabs');
+    if (adminTabs) {
+        if (role === ROLES.ADMIN) {
+            adminTabs.classList.remove('hidden');
+            adminTabs.style.display = 'flex';
+        } else {
+            adminTabs.classList.add('hidden');
+            adminTabs.style.display = 'none';
+        }
+    }
 }
 
 function redirectByRole(user, withToast = true) {
@@ -651,6 +1012,7 @@ async function startRegistration() {
         getEl('reg-otp').value = '';
         showRegStep(2);
         showToast(`OTP sent to ${phone}`);
+        startOtpTimer('btn-resend-reg-otp');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not send OTP'), 'error');
     } finally {
@@ -683,6 +1045,25 @@ async function verifyRegistrationOTP() {
     } finally {
         setLoading('btn-verify-reg-otp', false);
     }
+}
+
+async function resendRegistrationOTP() {
+    if (!authState.pendingRegistration) return;
+    let success = false;
+    setLoading('btn-resend-reg-otp', true, 'Sending...');
+    try {
+        await apiRequest('/otp/send', {
+            method: 'POST',
+            body: JSON.stringify({ phone: authState.pendingRegistration.phone })
+        });
+        showToast('OTP resent successfully');
+        success = true;
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not resend OTP'), 'error');
+    } finally {
+        setLoading('btn-resend-reg-otp', false);
+    }
+    if (success) startOtpTimer('btn-resend-reg-otp');
 }
 
 async function completeRegistration() {
@@ -768,6 +1149,7 @@ async function sendForgotOTP() {
         getEl('forgot-otp').value = '';
         showForgotStep(2);
         showToast('OTP sent');
+        startOtpTimer('btn-resend-forgot-otp');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not send OTP'), 'error');
     } finally {
@@ -800,6 +1182,25 @@ async function verifyForgotOTP() {
     } finally {
         setLoading('btn-verify-forgot-otp', false);
     }
+}
+
+async function resendForgotOTP() {
+    if (!authState.pendingReset) return;
+    let success = false;
+    setLoading('btn-resend-forgot-otp', true, 'Sending...');
+    try {
+        await apiRequest('/otp/send', {
+            method: 'POST',
+            body: JSON.stringify({ phone: authState.pendingReset.phone })
+        });
+        showToast('OTP resent successfully');
+        success = true;
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not resend OTP'), 'error');
+    } finally {
+        setLoading('btn-resend-forgot-otp', false);
+    }
+    if (success) startOtpTimer('btn-resend-forgot-otp');
 }
 
 async function resetPassword() {
@@ -900,7 +1301,8 @@ function getAvailableSlots(docId, date) {
     const doc = appState.doctors.find(d => d.id === Number(docId));
     if (!doc || !doc.is_available || !date || date < todayISO() || date > addDaysISO(BOOKING_WINDOW_DAYS)) return [];
 
-    const schedule = getDoctorSchedule(doc);
+    const schedule = getScheduleEntryForDate(doc, date);
+    if (!schedule) return [];
     const start = timeToMinutes(schedule.startTime);
     const end = timeToMinutes(schedule.endTime);
     const booked = getBookedSlots(docId, date);
@@ -962,7 +1364,7 @@ function renderDoctors() {
                         </div>
                     </div>
                     <div class="doc-info mt-2">
-                        <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${escapeHTML(doc.time)}</p>
+                            <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg> ${escapeHTML(doc.workingScheduleLabel || doc.time || 'Schedule not set')}</p>
                         <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Room ${escapeHTML(doc.room)}</p>
                         <p class="availability-pill">Next: ${escapeHTML(getNextAvailability(doc.id))}</p>
                     </div>
@@ -989,38 +1391,38 @@ function appointmentSourceMeta(app) {
 function canCancelSerial(app) {
     const role = getRole(appState.currentUser);
     if (app.status !== 'Booked' || isPastAppointment(app)) return false;
+    if (role === ROLES.USER) return app.patientPhone === appState.currentUser.phone;
     if (role === ROLES.MARKETING) return app.marketingOfficerId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     if (role === ROLES.COMMISSION_DOCTOR) return app.commissionDoctorId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     return false;
 }
 
-function getFilteredMyAppointments() {
-    const role = getRole(appState.currentUser);
-    let myApps = [];
-    if (role === ROLES.USER) {
-        myApps = appState.appointments.filter(a => a.patientPhone === appState.currentUser.phone);
-    } else if (role === ROLES.DOCTOR) {
-        const doctorRecord = appState.doctors.find(d => d.phone === appState.currentUser.phone);
-        if (doctorRecord) myApps = appState.appointments.filter(a => a.docId === doctorRecord.id);
-    } else if (role === ROLES.MARKETING) {
-        myApps = appState.appointments.filter(a => a.marketingOfficerId === appState.currentUser.id || a.bookedById === appState.currentUser.id);
-    } else if (role === ROLES.COMMISSION_DOCTOR) {
-        myApps = appState.appointments.filter(a => a.commissionDoctorId === appState.currentUser.id || a.bookedById === appState.currentUser.id);
+function renderPaginationControls(containerId, pagState, currentLength, callbackName) {
+    const container = getEl(containerId);
+    if (!container) return;
+    
+    const isFirstPage = pagState.skip === 0;
+    const hasNextPage = currentLength === pagState.limit;
+    
+    if (isFirstPage && !hasNextPage && currentLength === 0) {
+        container.innerHTML = '';
+        return;
     }
-
-    const date = getEl('filter-my-app-date')?.value;
-    const status = getEl('filter-my-app-status')?.value;
-    const docId = getEl('filter-my-app-doctor')?.value;
-
-    return myApps.filter(a => {
-        if (date && a.date !== date) return false;
-        if (status && a.status !== status) return false;
-        if (docId && String(a.docId) !== docId) return false;
-        return true;
-    });
+    
+    const pageNum = Math.floor(pagState.skip / pagState.limit) + 1;
+    
+    container.innerHTML = `
+        <button class="btn btn-outline btn-compact" onclick="${callbackName}('prev')" ${isFirstPage ? 'disabled' : ''}>Previous</button>
+        <span class="text-sm" style="color:var(--text-muted)">Page ${pageNum}</span>
+        <button class="btn btn-outline btn-compact" onclick="${callbackName}('next')" ${!hasNextPage ? 'disabled' : ''}>Next</button>
+    `;
 }
 
-function renderAppointments() {
+async function renderAppointments(action = null) {
+    if (action === 'next') paginationState.myApp.skip += paginationState.myApp.limit;
+    else if (action === 'prev') paginationState.myApp.skip = Math.max(0, paginationState.myApp.skip - paginationState.myApp.limit);
+    else if (action === 'reset') paginationState.myApp.skip = 0;
+
     const role = getRole(appState.currentUser);
     const listEl = getEl('appointments-list');
     const tableContainer = getEl('appointments-table').parentElement;
@@ -1049,23 +1451,61 @@ function renderAppointments() {
         getEl('filter-my-app-doctor-group')?.classList.remove('hidden');
     }
 
-    const myApps = getFilteredMyAppointments();
-
-    if (myApps.length === 0) {
-        tableContainer.classList.add('hidden');
-        getEl('appointments-empty').classList.remove('hidden');
-        return;
-    }
+    listEl.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
     tableContainer.classList.remove('hidden');
     getEl('appointments-empty').classList.add('hidden');
 
-    listEl.innerHTML = sortAppointments(myApps).map(app => {
+    try {
+        const date = getEl('filter-my-app-date')?.value || '';
+        const status = getEl('filter-my-app-status')?.value || '';
+        const docId = getEl('filter-my-app-doctor')?.value || '';
+
+        let url = `/appointments?skip=${paginationState.myApp.skip}&limit=${paginationState.myApp.limit}`;
+        if (date) url += `&date=${date}`;
+        if (status) url += `&status=${status}`;
+        if (docId) url += `&doctor_id=${docId}`;
+
+        const rawData = await apiRequest(url);
+        const myApps = normalizeAppointments(rawData);
+        appState.appointments = myApps;
+
+        if (myApps.length === 0 && paginationState.myApp.skip === 0) {
+            tableContainer.classList.add('hidden');
+            getEl('appointments-empty').classList.remove('hidden');
+            getEl('my-app-pagination').innerHTML = '';
+            return;
+        }
+        
+        tableContainer.classList.remove('hidden');
+        getEl('appointments-empty').classList.add('hidden');
+
+        listEl.innerHTML = sortAppointments(myApps).map(app => {
         const canCancel = canCancelSerial(app);
         const firstCol = role === ROLES.DOCTOR
             ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
             : (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR)
                 ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div><div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
                 : `<strong>${escapeHTML(app.docName)}</strong>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
+
+        const actionCol = role === ROLES.DOCTOR
+            ? `
+                <div class="table-actions">
+                    <select class="compact-select" onchange="updateAppointmentStatus(${Number(app.id)}, this.value)">
+                        <option value="Booked" ${app.status === 'Booked' ? 'selected' : ''}>Booked</option>
+                        <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        <option value="Cancelled" ${app.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                    ${appointmentPdfActions(app.id)}
+                </div>
+            `
+            : `
+                <div class="table-actions">
+                    ${appointmentPdfActions(app.id)}
+                    ${canCancel
+                        ? `<button class="btn btn-outline btn-compact btn-danger-ghost" onclick="cancelAppointment(${Number(app.id)})">Cancel</button>`
+                        : ''}
+                </div>
+            `;
 
         return `
             <tr>
@@ -1075,16 +1515,16 @@ function renderAppointments() {
                 <td data-label="Room">${escapeHTML(app.room)}</td>
                 <td data-label="Status"><span class="badge ${statusBadgeClass(app.status)}">${escapeHTML(app.status)}</span></td>
                 <td data-label="Action">
-                    <div class="table-actions">
-                        ${appointmentPdfActions(app.id)}
-                        ${canCancel
-                            ? `<button class="btn btn-outline btn-compact btn-danger-ghost" onclick="cancelAppointment(${Number(app.id)})">Cancel</button>`
-                            : ''}
-                    </div>
+                    ${actionCol}
                 </td>
             </tr>
         `;
     }).join('');
+        renderPaginationControls('my-app-pagination', paginationState.myApp, myApps.length, 'renderAppointments');
+    } catch (e) {
+        listEl.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load appointments</td></tr>';
+        getEl('my-app-pagination').innerHTML = '';
+    }
 }
 
 // --- Booking ---
@@ -1103,9 +1543,11 @@ function openBookingModal(docId) {
 
     const initial = doc.name.replace(/^Dr\.?\s*/i, '').charAt(0).toUpperCase() || 'D';
     getEl('booking-doc-id').value = doc.id;
+    bookingDatePickerState.docId = doc.id;
     setText('modal-doc-name', doc.name);
     setText('modal-doc-cat', doc.categoryLabel);
-    setText('modal-doc-time', doc.time);
+    setText('modal-doc-time', doc.workingScheduleLabel || doc.time || 'Schedule not set');
+    setText('modal-doc-days', doc.workingScheduleLabel || 'Schedule not set');
     setText('modal-doc-room', doc.room);
     setText('modal-doc-initial', initial);
     const needsPatientFields = getRole(appState.currentUser) !== ROLES.USER;
@@ -1115,61 +1557,66 @@ function openBookingModal(docId) {
     setText('booking-reason-label', needsPatientFields ? 'Note' : 'Reason for Visit');
     getEl('booking-reason').placeholder = needsPatientFields ? 'Write a note for this serial' : 'Briefly describe symptoms or appointment purpose';
 
-    const bookingDate = getEl('booking-date');
-    bookingDate.min = todayISO();
-    bookingDate.max = addDaysISO(BOOKING_WINDOW_DAYS);
-    bookingDate.value = todayISO();
+    const hasAvailableDate = setupBookingDateInput(doc);
+    if (!hasAvailableDate) {
+        showToast('No valid booking days available for this doctor right now', 'error');
+        return;
+    }
     getEl('booking-reason').value = '';
-    
-    // Hide time selection (queue-based system doesn't need it)
-    const timeGroup = getEl('booking-time-group');
-    if (timeGroup) timeGroup.classList.add('hidden');
     
     getEl('btn-confirm-booking').disabled = false;
     getEl('booking-modal').classList.add('active');
+    openBookingDatePicker();
 }
 
-async function renderBookingTimeSlots() {
+function setupBookingDateInput(doc) {
+    const input = getEl('booking-date');
+    const helper = getEl('booking-date-helper');
+    if (!input) return false;
+
+    const allowedDates = getAllowedBookingDates(doc);
+    bookingDatePickerState.docId = doc.id;
+    bookingDatePickerState.allowedDates = new Set(allowedDates);
+    bookingDatePickerState.selectedDate = allowedDates[0] || '';
+    bookingDatePickerState.visibleMonth = bookingDatePickerState.selectedDate
+        ? getMonthStart(parseLocalDate(bookingDatePickerState.selectedDate))
+        : getMonthStart(new Date());
+    input.value = bookingDatePickerState.selectedDate;
+    renderBookingDatePicker();
+
+    if (helper) {
+        helper.textContent = allowedDates.length
+            ? 'Next available date is selected automatically so booking stays quick and simple.'
+            : 'No upcoming dates are available for this doctor.';
+    }
+
+    return !!allowedDates.length;
+}
+
+function renderBookingTimeSlots() {
     const docId = parseInt(getEl('booking-doc-id')?.value || '', 10);
     const date = getEl('booking-date')?.value;
-    const select = getEl('booking-time');
-    const helper = getEl('booking-slot-helper');
+    const helper = getEl('booking-date-helper');
     const confirmBtn = getEl('btn-confirm-booking');
-    if (!select || !helper || !confirmBtn) return;
+    if (!helper || !confirmBtn) return;
 
-    select.innerHTML = '';
     if (!docId || !date) {
-        select.innerHTML = '<option value="">Select a date first</option>';
-        helper.textContent = 'Available slots are shown after you choose a date.';
+        helper.textContent = 'Select an available date to continue.';
         confirmBtn.disabled = true;
         return;
     }
 
-    select.innerHTML = '<option value="">Loading slots...</option>';
-    helper.textContent = 'Checking available slots...';
-    confirmBtn.disabled = true;
-
-    let slots = [];
-    try {
-        slots = await fetchAvailableSlots(docId, date);
-    } catch (error) {
-        select.innerHTML = '<option value="">Could not load slots</option>';
-        helper.textContent = error.isNetworkError ? 'Could not connect to the appointment API.' : (error.message || 'Could not load available slots.');
-        showToast(helper.textContent, 'error');
+    const doc = appState.doctors.find(d => d.id === Number(docId));
+    const nextDate = getNextAvailableBookingDate(doc);
+    if (!doc || date !== nextDate || !isAllowedBookingDate(doc, date)) {
+        const fallbackDate = getFirstValidBookingDate(doc);
+        if (fallbackDate && getEl('booking-date')) getEl('booking-date').value = fallbackDate;
+        helper.textContent = 'Choose the next available date from the calendar.';
+        confirmBtn.disabled = !fallbackDate;
         return;
     }
 
-    if (!slots.length) {
-        select.innerHTML = '<option value="">No open slots</option>';
-        helper.textContent = 'This date is fully booked or outside the booking window.';
-        confirmBtn.disabled = true;
-        return;
-    }
-
-    select.innerHTML = '<option value="">Choose a time slot...</option>' + slots
-        .map(slot => `<option value="${escapeHTML(slot.value)}">${escapeHTML(slot.label)}</option>`)
-        .join('');
-    helper.textContent = `${slots.length} open slot${slots.length === 1 ? '' : 's'} on ${formatDate(date)}.`;
+    helper.textContent = `${formatDate(date)} is available for booking.`;
     confirmBtn.disabled = false;
 }
 
@@ -1195,8 +1642,18 @@ async function confirmBooking() {
         showToast('Please select a date', 'error');
         return;
     }
-    if (date < todayISO() || date > addDaysISO(BOOKING_WINDOW_DAYS)) {
-        showToast('Choose a valid appointment date', 'error');
+    const nextDate = getNextAvailableBookingDate(doc);
+    if (date !== nextDate) {
+        showToast('Choose the next available appointment date', 'error');
+        return;
+    }
+    if (!isAllowedBookingDate(doc, date)) {
+        const weekday = getWeekdayNameFromISO(date);
+        showToast(`Doctor is not available on ${weekday || 'that day'}`, 'error');
+        return;
+    }
+    if (getScheduleEntryForDate(doc, date) && isTodayBookingCutoffPassed(doc, date)) {
+        showToast('Today booking is closed after doctor start time. Choose another date.', 'error');
         return;
     }
     if (!isPatientBooking && patientName.length < 2) {
@@ -1205,18 +1662,6 @@ async function confirmBooking() {
     }
     if (!isPatientBooking && !isValidPhone(patientPhone)) {
         showToast('Enter a valid patient phone number', 'error');
-        return;
-    }
-
-    // Check if patient already has an appointment with this doctor on this date (queue system - one per date per doctor)
-    const hasPatientConflict = appState.appointments.some(app =>
-        app.docId === docId &&
-        app.patientPhone === (isPatientBooking ? appState.currentUser.phone : patientPhone) &&
-        app.date === date &&
-        app.status === 'Booked'
-    );
-    if (hasPatientConflict) {
-        showToast('You already have an appointment with this doctor on this date', 'error');
         return;
     }
 
@@ -1238,9 +1683,6 @@ async function confirmBooking() {
         
         await refreshDataFromApi();
         appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
-        if (!appState.appointments.some(app => app.id === appointment.id)) {
-            appState.appointments.push(appointment);
-        }
         persistSession();
         closeModal('booking-modal');
         
@@ -1249,6 +1691,8 @@ async function confirmBooking() {
         const queueMsg = response.queue_position ? `\n${response.queue_position}` : '';
         showToast(`${message}${queueMsg}`);
         navigate('appointments');
+        showAppointmentSuccess(appointment);
+        showToast('Appointment booked successfully');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not book appointment'), 'error');
     } finally {
@@ -1276,7 +1720,7 @@ async function cancelAppointment(appId) {
         await refreshDataFromApi();
         appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
         persistSession();
-        renderAppointments();
+        renderAppointments('reset');
         showToast('Appointment cancelled.', 'error');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not cancel appointment'), 'error');
@@ -1294,6 +1738,13 @@ function renderAdmin() {
 }
 
 function switchAdminTab(tabId) {
+    if (appState.currentView !== 'admin') {
+        navigateSafe('admin');
+    }
+
+    getEl('nav-links')?.classList.remove('active');
+    document.querySelector('.hamburger-btn')?.classList.remove('active');
+
     ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-appointments', 'admin-today-serials'].forEach(t => {
         getEl(`tab-${t}`)?.classList.remove('active');
         getEl(`${t}-content`)?.classList.add('hidden');
@@ -1304,8 +1755,14 @@ function switchAdminTab(tabId) {
     if (tabId === 'admin-users') renderAdminUsers();
     if (tabId === 'admin-doctors') renderAdminDoctors();
     if (tabId === 'admin-marketing') renderAdminMarketing();
-    if (tabId === 'admin-appointments') renderAdminAppointments();
-    if (tabId === 'admin-today-serials') renderAdminTodaySerials();
+    if (tabId === 'admin-appointments') { 
+        paginationState.adminApp.skip = 0; 
+        renderAdminAppointments(); 
+    }
+    if (tabId === 'admin-today-serials') { 
+        paginationState.todaySerials.skip = 0; 
+        renderAdminTodaySerials(); 
+    }
 }
 
 function renderAdminUsers() {
@@ -1477,11 +1934,58 @@ async function saveMarketingOfficer() {
 }
 
 // --- Admin doctors ---
+function buildTimeOptions(selectedValue = '') {
+    const options = ['<option value="">Select</option>'];
+    for (let h = 6; h <= 22; h += 1) {
+        for (let m = 0; m < 60; m += SLOT_INTERVAL_MINUTES) {
+            const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            options.push(`<option value="${value}" ${value === selectedValue ? 'selected' : ''}>${formatTime(value)}</option>`);
+        }
+    }
+    return options.join('');
+}
+
+function renderWorkingScheduleForm(scheduleEntries = []) {
+    const rowsEl = getEl('admin-doc-schedule-rows');
+    if (!rowsEl) return;
+    const normalized = normalizeScheduleEntries(scheduleEntries);
+    rowsEl.innerHTML = WEEKDAY_NAMES.map(day => {
+        const entry = normalized.find(item => item.day === day) || null;
+        const checked = entry ? 'checked' : '';
+        const startValue = entry?.startTime || '09:00';
+        const endValue = entry?.endTime || '17:00';
+        return `
+            <div class="schedule-row" data-day="${day}">
+                <label class="schedule-day"><input type="checkbox" class="schedule-day-check" ${checked}> <span>${day}</span></label>
+                <select class="schedule-start">${buildTimeOptions(startValue)}</select>
+                <select class="schedule-end">${buildTimeOptions(endValue)}</select>
+            </div>
+        `;
+    }).join('');
+}
+
+function setWorkingScheduleForm(scheduleEntries = []) {
+    renderWorkingScheduleForm(scheduleEntries);
+}
+
+function getWorkingScheduleForm() {
+    const rows = Array.from(document.querySelectorAll('#admin-doc-schedule-rows .schedule-row'));
+    return rows.flatMap(row => {
+        const day = row.dataset.day;
+        const checked = row.querySelector('.schedule-day-check')?.checked;
+        const startTime = row.querySelector('.schedule-start')?.value;
+        const endTime = row.querySelector('.schedule-end')?.value;
+        if (!checked) return [];
+        if (!day || !startTime || !endTime || timeToMinutes(endTime) <= timeToMinutes(startTime)) return [];
+        return [{ day, startTime, endTime }];
+    });
+}
+
 function renderAdminDoctors() {
     const tbody = getEl('admin-doctor-list');
     tbody.innerHTML = '';
     if (appState.doctors.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-muted)">No doctors yet. Click "+ Add Doctor".</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:var(--text-muted)">No doctors yet. Click "+ Add Doctor".</td></tr>';
         return;
     }
     tbody.innerHTML = appState.doctors.map(doc => {
@@ -1491,6 +1995,7 @@ function renderAdminDoctors() {
             <td data-label="Name"><strong>${escapeHTML(doc.name)}</strong></td>
             <td data-label="Phone">${escapeHTML(doc.phone || '-')}</td>
             <td data-label="Category">${escapeHTML(doc.categoryLabel)}</td>
+            <td data-label="Working Schedule">${escapeHTML(doc.workingScheduleLabel || 'Schedule not set')}</td>
             <td data-label="Time">${escapeHTML(doc.time)}</td>
             <td data-label="Room">${escapeHTML(doc.room)}</td>
             <td data-label="Status">${statusLabel}</td>
@@ -1515,7 +2020,7 @@ function openAdminDoctorModal(docId = null) {
         const doc = appState.doctors.find(d => d.id === Number(docId));
         if (!doc) return;
         const linkedUser = appState.users.find(u => u.phone === doc.phone && getRole(u) === ROLES.DOCTOR);
-        const schedule = getDoctorSchedule(doc);
+        const schedule = normalizeScheduleEntries(doc.workingSchedule ?? doc.working_schedule);
 
         setText('admin-doc-modal-title', 'Edit Doctor');
         getEl('admin-doc-id').value = doc.id;
@@ -1527,8 +2032,7 @@ function openAdminDoctorModal(docId = null) {
             ? doc.category[0]
             : doc.categoryLabel;
         getEl('admin-doc-category').value = docCategory;
-        getEl('admin-doc-start-time').value = schedule.startTime;
-        getEl('admin-doc-end-time').value = schedule.endTime;
+        setWorkingScheduleForm(schedule);
         getEl('admin-doc-room').value = doc.room;
         getEl('admin-doc-available').checked = doc.is_available ? true : false;
         getEl('admin-doc-password').value = '';
@@ -1540,8 +2044,7 @@ function openAdminDoctorModal(docId = null) {
         getEl('admin-doc-phone').disabled = false;
         getEl('admin-doc-available').checked = true;
         passwordGroup.classList.remove('hidden');
-        getEl('admin-doc-start-time').value = '09:00';
-        getEl('admin-doc-end-time').value = '17:00';
+        setWorkingScheduleForm([]);
     }
     getEl('admin-doctor-modal').classList.add('active');
 }
@@ -1571,14 +2074,18 @@ async function saveDoctor() {
     const phone = normalizePhone(getEl('admin-doc-phone').value);
     const email = getEl('admin-doc-email').value.trim();
     const category = getEl('admin-doc-category').value;
-    const startTime = getEl('admin-doc-start-time').value;
-    const endTime = getEl('admin-doc-end-time').value;
     const room = getEl('admin-doc-room').value.trim();
     const password = getEl('admin-doc-password').value;
     const isAvailable = getEl('admin-doc-available').checked;
 
-    if (name.length < 2 || !phone || !category || !startTime || !endTime || !room) {
+    const workingSchedule = getWorkingScheduleForm();
+
+    if (name.length < 2 || !phone || !category || !room) {
         showToast('Please fill required fields', 'error');
+        return;
+    }
+    if (!workingSchedule.length) {
+        showToast('Add at least one working day and time range', 'error');
         return;
     }
     if (!isValidPhone(phone)) {
@@ -1587,10 +2094,6 @@ async function saveDoctor() {
     }
     if (!isValidEmail(email)) {
         showToast('Enter a valid email address', 'error');
-        return;
-    }
-    if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
-        showToast('End time must be after start time', 'error');
         return;
     }
     if (!idVal) {
@@ -1606,7 +2109,15 @@ async function saveDoctor() {
 
     setLoading('btn-save-doc', true, 'Saving...');
     try {
-        const payload = { name, phone, email: email || null, category, startTime, endTime, room };
+        const payload = {
+            name,
+            phone,
+            email: email || null,
+            category,
+            workingDays: workingSchedule.map(item => item.day),
+            workingSchedule,
+            room
+        };
         if (idVal) {
             // Update doctor details first
             await apiRequest(`/doctors/${Number(idVal)}`, {
@@ -1651,29 +2162,36 @@ async function saveDoctor() {
 }
 
 // --- Admin appointments ---
-function getFilteredAdminAppointments() {
-    const date = getEl('filter-admin-app-date')?.value;
-    const status = getEl('filter-admin-app-status')?.value;
-    const docId = getEl('filter-admin-app-doctor')?.value;
+async function renderAdminAppointments(action = null) {
+    if (action === 'next') paginationState.adminApp.skip += paginationState.adminApp.limit;
+    else if (action === 'prev') paginationState.adminApp.skip = Math.max(0, paginationState.adminApp.skip - paginationState.adminApp.limit);
+    else if (action === 'reset') paginationState.adminApp.skip = 0;
 
-    return appState.appointments.filter(a => {
-        if (date && a.date !== date) return false;
-        if (status && a.status !== status) return false;
-        if (docId && String(a.docId) !== docId) return false;
-        return true;
-    });
-}
-
-function renderAdminAppointments() {
     const tbody = getEl('admin-all-appointments-list');
-    tbody.innerHTML = '';
-    const filtered = getFilteredAdminAppointments();
-    const sorted = sortAppointments(filtered);
-    if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No appointments found.</td></tr>';
-        return;
-    }
-    tbody.innerHTML = sorted.map(app => `
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+    
+    try {
+        const date = getEl('filter-admin-app-date')?.value || '';
+        const status = getEl('filter-admin-app-status')?.value || '';
+        const docId = getEl('filter-admin-app-doctor')?.value || '';
+
+        let url = `/appointments?skip=${paginationState.adminApp.skip}&limit=${paginationState.adminApp.limit}`;
+        if (date) url += `&date=${date}`;
+        if (status) url += `&status=${status}`;
+        if (docId) url += `&doctor_id=${docId}`;
+
+        const rawData = await apiRequest(url);
+        const data = normalizeAppointments(rawData);
+        appState.appointments = data;
+
+        if (data.length === 0 && paginationState.adminApp.skip === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No appointments found.</td></tr>';
+            getEl('admin-app-pagination').innerHTML = '';
+            return;
+        }
+        
+        const sorted = sortAppointments(data);
+        tbody.innerHTML = sorted.map(app => `
         <tr>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
@@ -1699,31 +2217,42 @@ function renderAdminAppointments() {
             </td>
         </tr>
     `).join('');
-}
-
-function getFilteredTodaySerials() {
-    const today = todayISO();
-    const status = getEl('filter-admin-today-status')?.value;
-    const docId = getEl('filter-admin-today-doctor')?.value;
-
-    return appState.appointments.filter(a => {
-        if (a.date !== today) return false;
-        if (status && a.status !== status) return false;
-        if (docId && String(a.docId) !== docId) return false;
-        return true;
-    });
-}
-
-function renderAdminTodaySerials() {
-    const tbody = getEl('admin-today-serials-list');
-    tbody.innerHTML = '';
-    const filtered = getFilteredTodaySerials();
-    const sorted = sortAppointments(filtered);
-    if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No serials found for today.</td></tr>';
-        return;
+        renderPaginationControls('admin-app-pagination', paginationState.adminApp, data.length, 'renderAdminAppointments');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load appointments</td></tr>';
+        getEl('admin-app-pagination').innerHTML = '';
     }
-    tbody.innerHTML = sorted.map(app => `
+}
+
+async function renderAdminTodaySerials(action = null) {
+    if (action === 'next') paginationState.todaySerials.skip += paginationState.todaySerials.limit;
+    else if (action === 'prev') paginationState.todaySerials.skip = Math.max(0, paginationState.todaySerials.skip - paginationState.todaySerials.limit);
+    else if (action === 'reset') paginationState.todaySerials.skip = 0;
+
+    const tbody = getEl('admin-today-serials-list');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+
+    try {
+        const today = todayISO();
+        const status = getEl('filter-admin-today-status')?.value || '';
+        const docId = getEl('filter-admin-today-doctor')?.value || '';
+
+        let url = `/appointments?skip=${paginationState.todaySerials.skip}&limit=${paginationState.todaySerials.limit}&date=${today}`;
+        if (status) url += `&status=${status}`;
+        if (docId) url += `&doctor_id=${docId}`;
+
+        const rawData = await apiRequest(url);
+        const data = normalizeAppointments(rawData);
+        appState.appointments = data;
+
+        if (data.length === 0 && paginationState.todaySerials.skip === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No serials found for today.</td></tr>';
+            getEl('today-serials-pagination').innerHTML = '';
+            return;
+        }
+        
+        const sorted = sortAppointments(data);
+        tbody.innerHTML = sorted.map(app => `
         <tr>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
@@ -1749,6 +2278,11 @@ function renderAdminTodaySerials() {
             </td>
         </tr>
     `).join('');
+        renderPaginationControls('today-serials-pagination', paginationState.todaySerials, data.length, 'renderAdminTodaySerials');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load serials</td></tr>';
+        getEl('today-serials-pagination').innerHTML = '';
+    }
 }
 
 function generateTimeOptions(selectId) {
@@ -1780,15 +2314,18 @@ async function updateAppointmentStatus(id, newStatus) {
             method: 'PATCH',
             body: JSON.stringify({ status: newStatus })
         });
-        await refreshDataFromApi();
-        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
-        persistSession();
-        renderAdminAppointments();
+        
+        const appToUpdate = appState.appointments.find(a => a.id === Number(id));
+        if(appToUpdate) appToUpdate.status = newStatus;
+        
+        if (getEl('appointments-view') && !getEl('appointments-view').classList.contains('hidden')) renderAppointments();
+        if (getEl('admin-appointments-content') && !getEl('admin-appointments-content').classList.contains('hidden')) renderAdminAppointments();
         if (getEl('admin-today-serials-content') && !getEl('admin-today-serials-content').classList.contains('hidden')) renderAdminTodaySerials();
         showToast(`Status updated to ${newStatus}`);
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not update status'), 'error');
-        renderAdminAppointments();
+        if (getEl('appointments-view') && !getEl('appointments-view').classList.contains('hidden')) renderAppointments();
+        if (getEl('admin-appointments-content') && !getEl('admin-appointments-content').classList.contains('hidden')) renderAdminAppointments();
         if (getEl('admin-today-serials-content') && !getEl('admin-today-serials-content').classList.contains('hidden')) renderAdminTodaySerials();
     }
 }
@@ -1836,12 +2373,27 @@ async function changeMarketingPassword() {
 }
 
 function bindUIEvents() {
+    getEl('booking-date-trigger')?.addEventListener('click', () => toggleBookingDatePicker());
+    getEl('booking-date-prev')?.addEventListener('click', () => moveBookingDatePickerMonth(-1));
+    getEl('booking-date-next')?.addEventListener('click', () => moveBookingDatePickerMonth(1));
+    getEl('booking-date-grid')?.addEventListener('click', event => {
+        const button = event.target.closest('.date-picker-day');
+        if (!button || button.disabled) return;
+        selectBookingDate(button.dataset.date);
+    });
+
     getEl('booking-date')?.addEventListener('change', renderBookingTimeSlots);
+
+    document.addEventListener('click', event => {
+        const picker = getEl('booking-date-picker');
+        if (picker && !picker.contains(event.target)) closeBookingDatePicker();
+    });
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', event => {
             if (event.target === overlay) {
                 if (overlay.id === 'appointment-pdf-modal') closeAppointmentPdfModal();
+                else if (overlay.id === 'appointment-success-modal') closeSuccessModal();
                 else closeModal(overlay.id);
             }
         });
@@ -1851,6 +2403,7 @@ function bindUIEvents() {
         if (event.key === 'Escape') {
             document.querySelectorAll('.modal-overlay.active').forEach(modal => {
                 if (modal.id === 'appointment-pdf-modal') closeAppointmentPdfModal();
+                else if (modal.id === 'appointment-success-modal') closeSuccessModal();
                 else closeModal(modal.id);
             });
         }
@@ -1922,25 +2475,44 @@ function clearMyAppFilters() {
     if(getEl('filter-my-app-date')) getEl('filter-my-app-date').value = '';
     if(getEl('filter-my-app-status')) getEl('filter-my-app-status').value = '';
     if(getEl('filter-my-app-doctor')) getEl('filter-my-app-doctor').value = '';
-    renderAppointments();
+    renderAppointments('reset');
 }
 
 function clearAdminAppFilters() {
     if(getEl('filter-admin-app-date')) getEl('filter-admin-app-date').value = '';
     if(getEl('filter-admin-app-status')) getEl('filter-admin-app-status').value = '';
     if(getEl('filter-admin-app-doctor')) getEl('filter-admin-app-doctor').value = '';
-    renderAdminAppointments();
+    renderAdminAppointments('reset');
 }
 
 function clearTodaySerialsFilters() {
     if(getEl('filter-admin-today-status')) getEl('filter-admin-today-status').value = '';
     if(getEl('filter-admin-today-doctor')) getEl('filter-admin-today-doctor').value = '';
-    renderAdminTodaySerials();
+    renderAdminTodaySerials('reset');
 }
 
-function exportMyAppointments() { exportToCSV(sortAppointments(getFilteredMyAppointments()), 'my-appointments.csv'); }
-function exportAdminAppointments() { exportToCSV(sortAppointments(getFilteredAdminAppointments()), 'all-appointments.csv'); }
-function exportTodaySerials() { exportToCSV(sortAppointments(getFilteredTodaySerials()), 'today-serials.csv'); }
+async function exportAppointmentsHelper(date, status, docId, filename) {
+    let url = `/appointments?skip=0&limit=1000`;
+    if (date) url += `&date=${date}`;
+    if (status) url += `&status=${status}`;
+    if (docId) url += `&doctor_id=${docId}`;
+    try {
+        const rawData = await apiRequest(url);
+        exportToCSV(sortAppointments(normalizeAppointments(rawData)), filename);
+    } catch(e) {
+        showToast('Export failed', 'error');
+    }
+}
+
+function exportMyAppointments() { 
+    exportAppointmentsHelper(getEl('filter-my-app-date')?.value, getEl('filter-my-app-status')?.value, getEl('filter-my-app-doctor')?.value, 'my-appointments.csv'); 
+}
+function exportAdminAppointments() { 
+    exportAppointmentsHelper(getEl('filter-admin-app-date')?.value, getEl('filter-admin-app-status')?.value, getEl('filter-admin-app-doctor')?.value, 'all-appointments.csv'); 
+}
+function exportTodaySerials() { 
+    exportAppointmentsHelper(todayISO(), getEl('filter-admin-today-status')?.value, getEl('filter-admin-today-doctor')?.value, 'today-serials.csv'); 
+}
 
 // Boot
 generateTimeOptions('admin-doc-start-time');
