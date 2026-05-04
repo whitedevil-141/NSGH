@@ -2,7 +2,7 @@ import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException, status
 
-from utils.config import get_env
+from api.utils.config import get_env
 
 
 JWT_SECRET = get_env("JWT_SECRET")

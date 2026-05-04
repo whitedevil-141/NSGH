@@ -3,7 +3,7 @@ import os
 import requests
 from fastapi import HTTPException
 
-from utils.config import load_env
+from api.utils.config import load_env
 
 
 BULKSMSBD_SMS_URL = "http://bulksmsbd.net/api/smsapi"
