@@ -12,3 +12,4 @@ PyJWT
 mangum
 paramiko
 aiosmtplib
+reportlab
