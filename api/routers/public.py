@@ -2,14 +2,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from models import Doctor, Staff, Message
-from database import get_db
-from schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
-from limiter import limiter, Request
+from api.models import Doctor, Staff, Message
+from api.database import get_db
+from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
+from api.limiter import limiter, Request
 import json
 import aiosmtplib
 from email.message import EmailMessage
-from utils.config import get_env, get_int_env
+from api.utils.config import get_env, get_int_env
 
 router = APIRouter(
     tags=["Public"]

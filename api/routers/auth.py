@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-import crud, models, database
-from utils.jwt_handler import create_access_token
-from utils.security import hash_password, verify_password
-from schemas import RegisterRequest
-from limiter import limiter, Request
+from api import crud, models, database
+from api.utils.jwt_handler import create_access_token
+from api.utils.security import hash_password, verify_password
+from api.schemas import RegisterRequest
+from api.limiter import limiter, Request
 
 router = APIRouter()
 

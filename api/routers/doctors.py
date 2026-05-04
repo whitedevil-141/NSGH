@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from database import get_db
-from models import Doctor
-from schemas import DoctorOut
-from utils.deps import get_current_user
-from limiter import limiter, Request
-from utils.image_handler import upload_to_hosting, delete_from_hosting
+from api.database import get_db
+from api.models import Doctor
+from api.schemas import DoctorOut
+from api.utils.deps import get_current_user
+from api.limiter import limiter, Request
+from api.utils.image_handler import upload_to_hosting, delete_from_hosting
 import json
 
 

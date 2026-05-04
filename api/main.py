@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Response
-from database import engine, Base
+from api.database import engine, Base
 from sqlalchemy import inspect, text
-from routers import auth, public, doctors, staffs, appointment
-from limiter import limiter, Request
+from api.routers import auth, public, doctors, staffs, appointment
+from api.limiter import limiter, Request
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -106,4 +106,3 @@ def root(request: Request):
         "redoc_url": "/redoc",
         "version": "1.0.0"
     }
-

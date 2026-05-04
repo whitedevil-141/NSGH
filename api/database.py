@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from utils.config import get_env
+from api.utils.config import get_env
 
 
 DATABASE_URL = get_env("DATABASE_URL")

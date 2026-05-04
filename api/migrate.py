@@ -4,7 +4,7 @@ Run this script to update existing database tables with missing columns.
 """
 
 from sqlalchemy import text
-from database import engine
+from api.database import engine
 
 def migrate():
     """Add missing columns to appointment_doctors and appointment_bookings tables"""

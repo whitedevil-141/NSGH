@@ -3,7 +3,7 @@ import uuid
 from fastapi import HTTPException, UploadFile
 import paramiko
 
-from utils.config import get_env, get_int_env
+from api.utils.config import get_env, get_int_env
 
 
 HOST = get_env("SFTP_HOST")

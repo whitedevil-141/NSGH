@@ -18,9 +18,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import AppointmentBooking, AppointmentDoctor, AppointmentUser
-from schemas import (
+from api.database import get_db
+from api.models import AppointmentBooking, AppointmentDoctor, AppointmentUser
+from api.schemas import (
     AppointmentCreate,
     AppointmentDataResponse,
     AppointmentDoctorCreate,
@@ -39,10 +39,10 @@ from schemas import (
     OtpSendRequest,
     OtpVerifyRequest,
 )
-from limiter import limiter
-from utils.jwt_handler import JWT_ALGORITHM, JWT_SECRET, create_access_token
-from utils.sms import send_sms
-from utils.security import hash_password, verify_password
+from api.limiter import limiter
+from api.utils.jwt_handler import JWT_ALGORITHM, JWT_SECRET, create_access_token
+from api.utils.sms import send_sms
+from api.utils.security import hash_password, verify_password
 
 
 router = APIRouter(tags=["Appointment Portal"])
