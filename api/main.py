@@ -1,10 +1,9 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from api.database import engine, Base
 from sqlalchemy import inspect, text
 from api.routers import auth, public, doctors, staffs, appointment
-from api.limiter import limiter, Request
+from api.limiter import limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
 # Create all tables
@@ -61,7 +60,9 @@ def ensure_appointment_schema() -> None:
 
 ensure_appointment_schema()
 
-app = FastAPI(title="NSGH Hospital Backend API")
+app = FastAPI(
+    title="NSGH Hospital Backend API",
+)
 
 
 # attach limiter
@@ -73,14 +74,11 @@ app.add_exception_handler(RateLimitExceeded, lambda request, exc: Response(
 
 
 
-app.add_middleware(
-    SlowAPIMiddleware,
-)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

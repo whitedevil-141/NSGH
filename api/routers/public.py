@@ -5,7 +5,8 @@ from typing import List
 from api.models import Doctor, Staff, Message
 from api.database import get_db
 from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
-from api.limiter import limiter, Request
+from api.limiter import limiter
+from fastapi import Request
 import json
 import aiosmtplib
 from email.message import EmailMessage

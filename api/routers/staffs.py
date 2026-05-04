@@ -5,7 +5,8 @@ from api.database import get_db
 from api.models import Staff
 from api.schemas import StaffPublic
 from api.utils.deps import get_current_user
-from api.limiter import limiter, Request
+from api.limiter import limiter
+from fastapi import Request
 from api.utils.image_handler import upload_to_hosting, delete_from_hosting
 
 

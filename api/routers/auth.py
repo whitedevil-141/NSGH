@@ -8,7 +8,8 @@ from api import crud, models, database
 from api.utils.jwt_handler import create_access_token
 from api.utils.security import hash_password, verify_password
 from api.schemas import RegisterRequest
-from api.limiter import limiter, Request
+from api.limiter import limiter
+from fastapi import Request
 
 router = APIRouter()
 
@@ -17,8 +18,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 # ==========================
 # LOGIN ENDPOINT
 # ==========================
-@limiter.limit("5/minute")
 @router.post("/login", tags=["Auth"])
+@limiter.limit("5/minute")
 def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     with database.SessionLocal() as db:
         user = crud.get_user_by_username(db, form_data.username)
@@ -47,8 +48,8 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 # ==========================
 # REGISTER ENDPOINT
 # ==========================
-@limiter.limit("3/minute")
 @router.post("/register", status_code=status.HTTP_201_CREATED, tags=["Auth"])
+@limiter.limit("3/minute")
 def register_user(request: Request, data: RegisterRequest):
     with database.SessionLocal() as db:
         # check if username already exists
