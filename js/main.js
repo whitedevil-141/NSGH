@@ -36,11 +36,6 @@ if (desktopMenu && mobileMenu.innerHTML.trim() === "") {
   // clone the ul
   const clonedMenu = desktopMenu.cloneNode(true);
 
-  // add complain link as an <li> inside the cloned ul
-  const complainLink = document.createElement("li");
-  complainLink.innerHTML = '<a href="index.html#contact">Complain/Suggestion</a>';
-  clonedMenu.appendChild(complainLink);
-
   // insert the cloned ul into the mobile menu container
   mobileMenu.appendChild(clonedMenu);
 }
