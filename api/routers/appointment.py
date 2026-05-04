@@ -554,7 +554,7 @@ def is_number_already_registered(db: Session, phone: str) -> bool:
               
 @router.post("/otp/send")
 @limiter.limit("5/minute")
-def send_otp(request: Request, data: OtpSendRequest):
+def send_otp(request: Request, data: OtpSendRequest, db: Session = Depends(get_db)):
     phone = _require_phone(data.phone)
     now = datetime.utcnow()
     today = now.date()
@@ -563,7 +563,7 @@ def send_otp(request: Request, data: OtpSendRequest):
     if phone == "admin":
         raise HTTPException(status_code=400, detail="OTP cannot be sent to this number")
     
-    if is_number_already_registered(request.state.db, phone):
+    if is_number_already_registered(db, phone):
         raise HTTPException(status_code=400, detail="This phone number is already registered")
     
     with _otp_lock:
