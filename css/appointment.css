@@ -337,6 +337,12 @@ textarea:focus-visible,
     margin-bottom: 1.1rem;
 }
 
+.booking-patient-grid {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.75fr) minmax(180px, 1.25fr);
+    gap: 1rem;
+}
+
 .weekday-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -1367,6 +1373,11 @@ tbody tr:hover td {
 }
 
 @media (max-width: 640px) {
+    .booking-patient-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
     .flex.gap-4,
     .flex.gap-2 {
         flex-wrap: wrap;

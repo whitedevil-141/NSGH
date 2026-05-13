@@ -632,14 +632,24 @@
 
             <form id="booking-form" onsubmit="event.preventDefault(); confirmBooking();">
                 <input type="hidden" id="booking-doc-id">
-                <div id="booking-patient-fields" class="hidden">
+                <div id="booking-patient-fields">
                     <div class="input-group">
                         <label>Patient Name</label>
-                        <input type="text" id="booking-patient-name" placeholder="e.g. Patient full name">
+                        <input type="text" id="booking-patient-name" required placeholder="e.g. Patient full name">
+                    </div>
+                    <div class="booking-patient-grid">
+                        <div class="input-group">
+                            <label>Patient Age</label>
+                            <input type="number" id="booking-patient-age" required min="0" max="120" inputmode="numeric" placeholder="e.g. 35">
+                        </div>
+                        <div class="input-group">
+                            <label>Patient Number</label>
+                            <input type="tel" id="booking-patient-phone" required placeholder="e.g. 01700000000">
+                        </div>
                     </div>
                     <div class="input-group">
-                        <label>Patient Phone</label>
-                        <input type="tel" id="booking-patient-phone" placeholder="e.g. 01700000000">
+                        <label>Patient Address</label>
+                        <input type="text" id="booking-patient-address" required placeholder="e.g. Village, area, city">
                     </div>
                 </div>
                 <div class="input-group">
@@ -662,8 +672,8 @@
                 </div>
                 
                 <div class="input-group">
-                    <label><span id="booking-reason-label">Reason for Visit</span> <span class="label-optional">(optional)</span></label>
-                    <textarea id="booking-reason" rows="3" maxlength="180" placeholder="Briefly describe symptoms or appointment purpose"></textarea>
+                    <label><span id="booking-reason-label">Note</span></label>
+                    <textarea id="booking-reason" rows="3" maxlength="180" placeholder="Write a note for this appointment"></textarea>
                 </div>
                 <div class="flex gap-2 mt-4">
                     <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('booking-modal')">Cancel</button>
@@ -893,6 +903,7 @@
                 <div class="card" style="background-color: #f8f9fa;">
                     <p class="mb-2"><strong>Hospital:</strong> New Shafipur General Hospital</p>
                     <p class="mb-2"><strong>Patient:</strong> <span id="success-patient-name"></span></p>
+                    <p class="mb-2"><strong>Patient Number:</strong> <span id="success-patient-number"></span></p>
                     <p class="mb-2"><strong>Doctor:</strong> <span id="success-doctor-name"></span></p>
                     <p class="mb-2"><strong>Date:</strong> <span id="success-date"></span></p>
                     <p class="mb-0"><strong>Serial:</strong> <span id="success-serial"></span></p>

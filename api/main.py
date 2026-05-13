@@ -18,6 +18,8 @@ def ensure_appointment_schema() -> None:
         },
         "appointment_bookings": {
             "time": "VARCHAR(5) NULL",
+            "patient_age": "INT NULL",
+            "patient_address": "VARCHAR(255) NULL",
             "booked_by_id": "VARCHAR(32) NULL",
             "booked_by_name": "VARCHAR(100) NULL",
             "booked_by_role": "VARCHAR(20) NULL",

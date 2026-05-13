@@ -67,6 +67,32 @@ def migrate():
                 print(f"Note: {e}")
         
         try:
+            print("Checking patient_age column...")
+            connection.execute(text("""
+                ALTER TABLE appointment_bookings 
+                ADD COLUMN patient_age INT NULL
+            """))
+            print("✓ Added patient_age column to appointment_bookings")
+        except Exception as e:
+            if "Duplicate column name" in str(e) or "patient_age" in str(e):
+                print("✓ patient_age column already exists in appointment_bookings")
+            else:
+                print(f"Error adding patient_age column: {e}")
+
+        try:
+            print("Checking patient_address column...")
+            connection.execute(text("""
+                ALTER TABLE appointment_bookings 
+                ADD COLUMN patient_address VARCHAR(255) NULL
+            """))
+            print("✓ Added patient_address column to appointment_bookings")
+        except Exception as e:
+            if "Duplicate column name" in str(e) or "patient_address" in str(e):
+                print("✓ patient_address column already exists in appointment_bookings")
+            else:
+                print(f"Error adding patient_address column: {e}")
+        
+        try:
             # Add serial_number column to appointment_bookings if it doesn't exist
             print("Checking serial_number column...")
             connection.execute(text("""

@@ -113,6 +113,8 @@ class AppointmentBooking(Base):
     id = Column(Integer, primary_key=True, index=True)
     patient_name = Column(String(100), nullable=False)
     patient_phone = Column(String(20), index=True, nullable=False)
+    patient_age = Column(Integer, nullable=True)
+    patient_address = Column(String(255), nullable=True)
     doctor_id = Column(Integer, index=True, nullable=False)
     doctor_name = Column(String(100), nullable=False)
     date = Column(String(10), index=True, nullable=False)

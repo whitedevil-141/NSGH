@@ -233,6 +233,8 @@ class AppointmentCreate(BaseModel):
     docId: int
     date: str
     patientName: Optional[str] = None
+    patientAge: Optional[int] = None
+    patientAddress: Optional[str] = None
     patientPhone: Optional[str] = None
     reason: Optional[str] = None
 
@@ -245,6 +247,8 @@ class AppointmentOut(BaseModel):
     id: int
     patientName: str
     patientPhone: str
+    patientAge: Optional[int] = None
+    patientAddress: Optional[str] = None
     docId: int
     docName: str
     date: str

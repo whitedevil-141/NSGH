@@ -374,6 +374,8 @@ def _appointment_out(appointment: AppointmentBooking) -> AppointmentOut:
         id=appointment.id,
         patientName=appointment.patient_name,
         patientPhone=appointment.patient_phone,
+        patientAge=getattr(appointment, "patient_age", None),
+        patientAddress=getattr(appointment, "patient_address", None),
         docId=appointment.doctor_id,
         docName=appointment.doctor_name,
         date=appointment.date,
@@ -472,6 +474,8 @@ def _seed_if_empty(db: Session) -> None:
                 id=int(item["id"]),
                 patient_name=item["patientName"],
                 patient_phone=_normalize_phone(item["patientPhone"]),
+                patient_age=item.get("patientAge"),
+                patient_address=item.get("patientAddress"),
                 doctor_id=int(item["docId"]),
                 doctor_name=item["docName"],
                 date=item["date"],
@@ -670,7 +674,10 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
 
     appointments_query = db.query(AppointmentBooking)
     if current_user.role == "user":
-        appointments_query = appointments_query.filter(AppointmentBooking.patient_phone == current_user.phone)
+        appointments_query = appointments_query.filter(
+            (AppointmentBooking.patient_phone == current_user.phone)
+            | (AppointmentBooking.booked_by_id == current_user.id)
+        )
     elif current_user.role == "doctor":
         doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
         appointments_query = appointments_query.filter(AppointmentBooking.doctor_id == (doctor.id if doctor else -1))
@@ -969,7 +976,10 @@ def list_appointments(
 ):
     query = db.query(AppointmentBooking)
     if current_user.role == "user":
-        query = query.filter(AppointmentBooking.patient_phone == current_user.phone)
+        query = query.filter(
+            (AppointmentBooking.patient_phone == current_user.phone)
+            | (AppointmentBooking.booked_by_id == current_user.id)
+        )
     elif current_user.role == "doctor":
         doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
         query = query.filter(AppointmentBooking.doctor_id == (doctor.id if doctor else -1))
@@ -1034,14 +1044,19 @@ def create_appointment(
                 detail="Booking for today is closed. You can book only before the doctor's start time",
             )
 
-    if current_user.role == "user":
-        patient_name = current_user.name
-        patient_phone = current_user.phone
-    else:
-        patient_name = (data.patientName or "").strip()
-        if len(patient_name) < 2:
-            raise HTTPException(status_code=400, detail="Patient name is required")
-        patient_phone = _require_phone(data.patientPhone or "")
+    patient_name = (data.patientName or "").strip()
+    if len(patient_name) < 2:
+        raise HTTPException(status_code=400, detail="Patient name is required")
+
+    patient_age = data.patientAge
+    if patient_age is None or patient_age < 0 or patient_age > 120:
+        raise HTTPException(status_code=400, detail="Valid patient age is required")
+
+    patient_address = (data.patientAddress or "").strip()
+    if len(patient_address) < 3:
+        raise HTTPException(status_code=400, detail="Patient address is required")
+
+    patient_phone = _require_phone(data.patientPhone or "")
 
     # Check if patient already has an appointment with this doctor on this date
     patient_conflict = (
@@ -1076,6 +1091,8 @@ def create_appointment(
     appointment = AppointmentBooking(
         patient_name=patient_name,
         patient_phone=patient_phone,
+        patient_age=patient_age,
+        patient_address=patient_address[:255],
         doctor_id=doctor.id,
         doctor_name=doctor.name,
         date=data.date,
@@ -1156,7 +1173,9 @@ def generate_appointment_pdf(
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
-    if current_user.role == "user" and appointment.patient_phone != current_user.phone:
+    if current_user.role == "user" and (
+        appointment.patient_phone != current_user.phone and appointment.booked_by_id != current_user.id
+    ):
         raise HTTPException(status_code=403, detail="Not authorized to view this appointment")
     elif current_user.role == "doctor":
         doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
@@ -1231,11 +1250,17 @@ def generate_appointment_pdf(
     
     start_y -= 20
     draw_field(c, col1_x, start_y, "Patient Name", appointment.patient_name)
-    draw_field(c, col2_x, start_y, "Patient Phone", appointment.patient_phone)
+    draw_field(c, col2_x, start_y, "Patient Number", appointment.patient_phone)
     
     start_y -= line_height
+    draw_field(c, col1_x, start_y, "Patient Age", getattr(appointment, "patient_age", None))
+    draw_field(c, col2_x, start_y, "Address", getattr(appointment, "patient_address", None))
+
+    start_y -= line_height
     booked_by = "Patient self-booking"
-    if appointment.booked_by_name and appointment.booked_by_role != "user":
+    if appointment.booked_by_name and (
+        appointment.booked_by_role != "user" or appointment.booked_by_name != appointment.patient_name
+    ):
         booked_by = f"{appointment.booked_by_name} ({appointment.booked_by_role})"
     draw_field(c, col1_x, start_y, "Booked By", booked_by)
     if appointment.marketing_officer_name:
@@ -1248,7 +1273,7 @@ def generate_appointment_pdf(
     wrapped_reason = textwrap.wrap(reason, width=80)
     c.setFont("Helvetica-Bold", 11)
     c.setFillColor(colors.HexColor("#4a5764"))
-    c.drawString(col1_x, start_y, "Reason:")
+    c.drawString(col1_x, start_y, "Note:")
     
     c.setFont("Helvetica", 11)
     c.setFillColor(colors.black)
@@ -1293,7 +1318,9 @@ def cancel_appointment(
     appointment = db.query(AppointmentBooking).filter(AppointmentBooking.id == appointment_id).first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
-    if current_user.role == "user" and appointment.patient_phone != current_user.phone:
+    if current_user.role == "user" and (
+        appointment.patient_phone != current_user.phone and appointment.booked_by_id != current_user.id
+    ):
         raise HTTPException(status_code=403, detail="You can only cancel your own appointments")
     if current_user.role == "marketing" and not (
         appointment.marketing_officer_id == current_user.id or appointment.booked_by_id == current_user.id

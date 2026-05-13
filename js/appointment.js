@@ -716,6 +716,7 @@ function closeAppointmentPdfModal() {
 
 function showAppointmentSuccess(app) {
     setText('success-patient-name', app.patientName);
+    setText('success-patient-number', app.patientPhone);
     setText('success-doctor-name', app.docName);
     setText('success-date', formatDate(app.date));
     setText('success-serial', app.serial_number ? `#${app.serial_number}` : '-');
@@ -780,6 +781,8 @@ function normalizeAppointments(list) {
             time: minutes === null ? app.time : minutesToTimeValue(minutes),
             status: VALID_APPOINTMENT_STATUSES.includes(app.status) ? app.status : 'Booked',
             reason: app.reason || '',
+            patientAge: app.patientAge ?? null,
+            patientAddress: app.patientAddress || '',
             bookedById: app.bookedById || null,
             bookedByName: app.bookedByName || null,
             bookedByRole: app.bookedByRole || null,
@@ -1382,16 +1385,28 @@ function appointmentSourceMeta(app) {
     const lines = [];
     if (app.commissionDoctorName) lines.push(`Commission Doctor: ${app.commissionDoctorName}`);
     if (app.marketingOfficerName) lines.push(`Marketing Officer: ${app.marketingOfficerName}`);
-    if (!app.commissionDoctorName && !app.marketingOfficerName && app.bookedByName && app.bookedByRole !== ROLES.USER) {
+    if (
+        !app.commissionDoctorName &&
+        !app.marketingOfficerName &&
+        app.bookedByName &&
+        (app.bookedByRole !== ROLES.USER || app.bookedByName !== app.patientName)
+    ) {
         lines.push(`Booked by: ${app.bookedByName} (${roleLabel(app.bookedByRole)})`);
     }
+    return lines.map(line => `<div class="row-subtle">${escapeHTML(line)}</div>`).join('');
+}
+
+function appointmentPatientDetailsMeta(app) {
+    const lines = [];
+    if (app.patientAge !== null && app.patientAge !== undefined && app.patientAge !== '') lines.push(`Age: ${app.patientAge}`);
+    if (app.patientAddress) lines.push(`Address: ${app.patientAddress}`);
     return lines.map(line => `<div class="row-subtle">${escapeHTML(line)}</div>`).join('');
 }
 
 function canCancelSerial(app) {
     const role = getRole(appState.currentUser);
     if (app.status !== 'Booked' || isPastAppointment(app)) return false;
-    if (role === ROLES.USER) return app.patientPhone === appState.currentUser.phone;
+    if (role === ROLES.USER) return app.patientPhone === appState.currentUser.phone || app.bookedById === appState.currentUser.id;
     if (role === ROLES.MARKETING) return app.marketingOfficerId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     if (role === ROLES.COMMISSION_DOCTOR) return app.commissionDoctorId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     return false;
@@ -1482,10 +1497,10 @@ async function renderAppointments(action = null) {
         listEl.innerHTML = sortAppointments(myApps).map(app => {
         const canCancel = canCancelSerial(app);
         const firstCol = role === ROLES.DOCTOR
-            ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
+            ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
             : (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR)
-                ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div><div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
-                : `<strong>${escapeHTML(app.docName)}</strong>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
+                ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}<div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
+                : `<strong>${escapeHTML(app.docName)}</strong><div class="row-subtle">Patient: ${escapeHTML(app.patientName)}</div><div class="row-subtle">Number: ${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
 
         const actionCol = role === ROLES.DOCTOR
             ? `
@@ -1550,12 +1565,13 @@ function openBookingModal(docId) {
     setText('modal-doc-days', doc.workingScheduleLabel || 'Schedule not set');
     setText('modal-doc-room', doc.room);
     setText('modal-doc-initial', initial);
-    const needsPatientFields = getRole(appState.currentUser) !== ROLES.USER;
-    getEl('booking-patient-fields')?.classList.toggle('hidden', !needsPatientFields);
-    getEl('booking-patient-name').value = '';
-    getEl('booking-patient-phone').value = '';
-    setText('booking-reason-label', needsPatientFields ? 'Note' : 'Reason for Visit');
-    getEl('booking-reason').placeholder = needsPatientFields ? 'Write a note for this serial' : 'Briefly describe symptoms or appointment purpose';
+    getEl('booking-patient-fields')?.classList.remove('hidden');
+    getEl('booking-patient-name').value = appState.currentUser?.name || '';
+    getEl('booking-patient-age').value = appState.currentUser?.age || '';
+    getEl('booking-patient-address').value = '';
+    getEl('booking-patient-phone').value = appState.currentUser?.phone || '';
+    setText('booking-reason-label', 'Note');
+    getEl('booking-reason').placeholder = 'Write a note for this appointment';
 
     const hasAvailableDate = setupBookingDateInput(doc);
     if (!hasAvailableDate) {
@@ -1634,9 +1650,11 @@ async function confirmBooking() {
     const date = getEl('booking-date').value;
     const reason = getEl('booking-reason').value.trim().slice(0, 180);
     const patientName = getEl('booking-patient-name')?.value.trim() || '';
+    const patientAgeRaw = getEl('booking-patient-age')?.value.trim() || '';
+    const patientAge = patientAgeRaw === '' ? null : Number(patientAgeRaw);
+    const patientAddress = getEl('booking-patient-address')?.value.trim() || '';
     const patientPhone = normalizePhone(getEl('booking-patient-phone')?.value || '');
     const doc = appState.doctors.find(d => d.id === docId);
-    const isPatientBooking = getRole(appState.currentUser) === ROLES.USER;
 
     if (!doc || !date) {
         showToast('Please select a date', 'error');
@@ -1656,22 +1674,26 @@ async function confirmBooking() {
         showToast('Today booking is closed after doctor start time. Choose another date.', 'error');
         return;
     }
-    if (!isPatientBooking && patientName.length < 2) {
+    if (patientName.length < 2) {
         showToast('Patient name is required', 'error');
         return;
     }
-    if (!isPatientBooking && !isValidPhone(patientPhone)) {
-        showToast('Enter a valid patient phone number', 'error');
+    if (!Number.isInteger(patientAge) || patientAge < 0 || patientAge > 120) {
+        showToast('Enter a valid patient age', 'error');
+        return;
+    }
+    if (patientAddress.length < 3) {
+        showToast('Patient address is required', 'error');
+        return;
+    }
+    if (!isValidPhone(patientPhone)) {
+        showToast('Enter a valid patient number', 'error');
         return;
     }
 
     setLoading('btn-confirm-booking', true, 'Booking...');
     try {
-        const payload = { docId, date, reason };
-        if (!isPatientBooking) {
-            payload.patientName = patientName;
-            payload.patientPhone = patientPhone;
-        }
+        const payload = { docId, date, reason, patientName, patientAge, patientAddress, patientPhone };
         const response = await apiRequest('/appointments', {
             method: 'POST',
             body: JSON.stringify(payload)
@@ -2196,6 +2218,7 @@ async function renderAdminAppointments(action = null) {
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
+                ${appointmentPatientDetailsMeta(app)}
                 ${appointmentSourceMeta(app)}
                 ${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}
             </td>
@@ -2257,6 +2280,7 @@ async function renderAdminTodaySerials(action = null) {
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
+                ${appointmentPatientDetailsMeta(app)}
                 ${appointmentSourceMeta(app)}
                 ${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}
             </td>
@@ -2390,6 +2414,7 @@ function bindUIEvents() {
     });
 
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        if (overlay.querySelector('form')) return;
         overlay.addEventListener('click', event => {
             if (event.target === overlay) {
                 if (overlay.id === 'appointment-pdf-modal') closeAppointmentPdfModal();
@@ -2423,7 +2448,7 @@ function exportToCSV(appointments, filename) {
         return;
     }
 
-    const headers = ['Appointment ID', 'Date', 'Time/Serial', 'Patient Name', 'Patient Phone', 'Doctor', 'Room', 'Status', 'Reason', 'Source'];
+    const headers = ['Appointment ID', 'Date', 'Time/Serial', 'Patient Name', 'Patient Age', 'Patient Address', 'Patient Number', 'Doctor', 'Room', 'Status', 'Note', 'Source'];
     const csvRows = [headers.join(',')];
 
     appointments.forEach(app => {
@@ -2431,6 +2456,8 @@ function exportToCSV(appointments, filename) {
         const date = app.date || '-';
         const timeSerial = app.serial_number ? `Serial #${app.serial_number}` : (formatTime(app.time) || '-');
         const patientName = `"${(app.patientName || '').replace(/"/g, '""')}"`;
+        const patientAge = app.patientAge ?? '-';
+        const patientAddress = `"${(app.patientAddress || '').replace(/"/g, '""')}"`;
         const patientPhone = app.patientPhone || '-';
         const doctor = `"${(app.docName || '').replace(/"/g, '""')}"`;
         const room = app.room || '-';
@@ -2440,10 +2467,10 @@ function exportToCSV(appointments, filename) {
         let source = 'Patient';
         if (app.commissionDoctorName) source = `Commission Doctor: ${app.commissionDoctorName}`;
         else if (app.marketingOfficerName) source = `Marketing Officer: ${app.marketingOfficerName}`;
-        else if (app.bookedByName && app.bookedByRole !== ROLES.USER) source = `${app.bookedByName} (${roleLabel(app.bookedByRole)})`;
+        else if (app.bookedByName && (app.bookedByRole !== ROLES.USER || app.bookedByName !== app.patientName)) source = `${app.bookedByName} (${roleLabel(app.bookedByRole)})`;
         source = `"${source.replace(/"/g, '""')}"`;
 
-        csvRows.push([id, date, timeSerial, patientName, patientPhone, doctor, room, status, reason, source].join(','));
+        csvRows.push([id, date, timeSerial, patientName, patientAge, patientAddress, patientPhone, doctor, room, status, reason, source].join(','));
     });
 
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
