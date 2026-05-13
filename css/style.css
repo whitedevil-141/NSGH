@@ -4171,156 +4171,306 @@ div.single-cta:last-child {
     padding: 10px;
 }
 
-/* Container box for todays doctors */
-#doctorsContainer {
-    min-height: 350px;            /* Fixed container height */
-    border: 1px solid #ddd;       /* Thin solid border */
-    border-radius: 12px;
-    padding: 15px;
-    position: relative;
-    background: #fff;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.10); /* subtle shadow */
-}
-#todayName {
-    color: #1e0b9b; /* primary color */
+/* Today's doctors schedule list */
+.todays-schedule-section {
+    background: linear-gradient(180deg, #f4f8ff 0%, #eef7fb 100%);
+    padding: 50px 0 70px;
 }
 
-/* Doctor card */
-#doctorsContainer .doctor-card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    padding: 20px 15px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    min-height: 240px;
+.todays-schedule-container {
+    max-width: 780px;
+    padding: 0 20px;
+}
+
+.todays-schedule-card {
+    background:
+        linear-gradient(135deg, rgba(30, 11, 155, 0.08) 0%, rgba(7, 204, 236, 0.06) 44%, rgba(255, 255, 255, 0.96) 100%),
+        #ffffff;
+    border: 1px solid #dcd9ff;
+    /* border-left: 5px solid #1e0b9b; */
+    border-radius: 10px;
+    box-shadow: 0 14px 28px rgba(30, 11, 155, 0.14);
+    padding: 22px 24px;
+}
+
+.todays-schedule-header {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
-}
-/* Name styling */
-#doctorsContainer .doctor-card h5 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #1e0b9b; /* primary color */
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px;
 }
 
-/* Designation styling */
-#doctorsContainer .doctor-card p.text-muted {
-    font-size: 14px;
-    color: #555;
-    margin-bottom: 0;
+.todays-schedule-header h2 {
+    color: #1e0b9b;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0;
+    margin: 0;
 }
 
-/* Doctor photo */
-#doctorsContainer .doctor-card img {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 12px;
-}
-#doctorsContainer .doctor-card-link {
-    text-decoration: none;
-    color: inherit;
-    display: block; /* take full slide width */
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-/* Hover effect */
-#doctorsContainer .doctor-card-link:hover .doctor-card {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 24px rgba(0,0,0,0.16);
-}
-/* Slick spacing */
-#doctorsContainer .slick-slide {
-    margin-right: 15px;
-}
-
-/* No doctors message */
-#noDoctorsMessage {
-    text-align: center;
-    font-size: 16px;
-    color: #888;
-    width: 100%;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-/* Modern dropdown styling scoped */
-#todays-doctors .custom-dropdown {
-    width: 220px;
+#todays-doctors #doctorsContainer {
+    min-height: 240px;
+    max-height: 430px;
+    overflow-y: auto;
+    padding: 0 14px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     position: relative;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: #1e0b9b #e2e8ff;
+}
+
+#todays-doctors #doctorsContainer::-webkit-scrollbar {
+    width: 5px;
+}
+
+#todays-doctors #doctorsContainer::-webkit-scrollbar-track {
+    background: #e2e8ff;
+    border-radius: 999px;
+}
+
+#todays-doctors #doctorsContainer::-webkit-scrollbar-thumb {
+    background: #1e0b9b;
+    border-radius: 999px;
+}
+
+#todays-doctors .custom-dropdown {
+    width: 282px;
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #d9d6ff;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(30, 11, 155, 0.09);
     cursor: pointer;
     user-select: none;
-    z-index: 1000;
+    z-index: 20;
 }
 
 #todays-doctors .custom-dropdown .dropdown-header {
-    padding: 12px 15px;
-    font-size: 15px;
+    min-height: 40px;
+    padding: 0 13px;
+    color: #55556b;
+    font-size: 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
 #todays-doctors .custom-dropdown .dropdown-header i {
+    color: #1e0b9b;
+    font-size: 12px;
     transition: transform 0.3s ease;
 }
 
-/* Rotate arrow when open */
 #todays-doctors .custom-dropdown.open .dropdown-header i {
     transform: rotate(180deg);
 }
 
-/* Dropdown list (absolute, doesn't push content) */
 #todays-doctors .custom-dropdown .dropdown-list {
     position: absolute;
-    top: 100%;
+    top: calc(100% + 6px);
     left: 0;
     right: 0;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
+    background: #ffffff;
+    border: 1px solid #d9d6ff;
+    border-radius: 12px;
+    box-shadow: 0 14px 24px rgba(30, 11, 155, 0.14);
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: all 0.3s ease;
-    z-index: 999; /* above slider */
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+    z-index: 25;
 }
 
-/* Open state */
 #todays-doctors .custom-dropdown.open .dropdown-list {
-    max-height: 400px;
+    max-height: 260px;
     opacity: 1;
+    overflow-y: auto;
 }
 
-/* Dropdown list items */
 #todays-doctors .custom-dropdown .dropdown-list li {
-    padding: 10px 15px;
+    color: #202038;
+    font-size: 14px;
+    line-height: 1.2;
+    padding: 11px 14px;
     cursor: pointer;
 }
 
 #todays-doctors .custom-dropdown .dropdown-list li:hover {
-    background: #f7f7f7;
+    background: #f0f5ff;
+    color: #1e0b9b;
 }
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .doctor-card {
-        padding: 15px 10px;
-        min-height: 200px;
+
+.today-doctor-row {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 38px;
+    align-items: center;
+    gap: 14px;
+    min-height: 88px;
+    padding: 12px 4px 12px 0;
+    border-bottom: 1px solid #e1e4f6;
+    color: #202038;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+
+.today-doctor-row:hover {
+    background: rgba(30, 11, 155, 0.05);
+    color: #202038;
+    text-decoration: none;
+}
+
+.today-doctor-row:last-child {
+    border-bottom: 0;
+}
+
+.today-doctor-photo {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px #eef1ff, 0 4px 12px rgba(30, 11, 155, 0.12);
+}
+
+.today-doctor-info {
+    min-width: 0;
+}
+
+.today-doctor-info h3 {
+    color: #14142f;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0;
+    margin: 0 0 3px;
+    overflow-wrap: anywhere;
+}
+
+.today-doctor-info p {
+    color: #303044;
+    font-size: 13px;
+    line-height: 1.35;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.today-doctor-info span {
+    color: #1e0b9b;
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+}
+
+.today-doctor-calendar {
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(30, 11, 155, 0.18);
+    border-radius: 50%;
+    color: #1e0b9b;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(30, 11, 155, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.today-doctor-row:hover .today-doctor-calendar {
+    background: #1e0b9b;
+    border-color: #1e0b9b;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(30, 11, 155, 0.22);
+}
+
+.today-empty-message {
+    color: #68687d;
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 95px 0 0;
+    text-align: center;
+}
+
+@media (max-width: 575px) {
+    .todays-schedule-section {
+        padding: 36px 0 50px;
     }
-    .doctor-card img {
-        width: 80px;
-        height: 80px;
+
+    .todays-schedule-card {
+        padding: 17px 16px;
     }
+
+    .todays-schedule-header {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .todays-schedule-header h2 {
+        font-size: 24px;
+    }
+
+    #todays-doctors .custom-dropdown {
+        width: 100%;
+    }
+
+    #todays-doctors #doctorsContainer {
+        max-height: 420px;
+        padding-right: 8px;
+    }
+
+    .today-doctor-row {
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 11px;
+        min-height: 82px;
+        padding-right: 0;
+    }
+
+    .today-doctor-photo {
+        width: 52px;
+        height: 52px;
+    }
+
+    .today-doctor-info h3 {
+        font-size: 14px;
+    }
+
+    .today-doctor-info p,
+    .today-doctor-info span {
+        font-size: 12px;
+    }
+
+    .today-doctor-calendar {
+        display: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .todays-schedule-container {
+        padding: 0 12px;
+    }
+
+    .today-doctor-row {
+        grid-template-columns: 48px minmax(0, 1fr);
+        padding-right: 0;
+    }
+
+    .today-doctor-photo {
+        width: 48px;
+        height: 48px;
+    }
+
 }
 /* Modern Card Hover Effect with corner fill */
 .service-card {
