@@ -83,7 +83,7 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/staffs/data", response_model=StaffsDataResponse)
 @limiter.limit("30/minute")
-def fetch_public_data(request: Request, db: Session = Depends(get_db)):
+def fetch_public_staffs(request: Request, db: Session = Depends(get_db)):
     staffs = db.query(Staff).all()
     staffs_data = []
 
