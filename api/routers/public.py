@@ -8,9 +8,6 @@ from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPubli
 from api.limiter import limiter
 from fastapi import Request
 import json
-import aiosmtplib
-from email.message import EmailMessage
-from api.utils.config import get_env, get_int_env
 
 router = APIRouter(
     tags=["Public"]
@@ -106,41 +103,23 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
     )
     
 
-SMTP_HOST = get_env("SMTP_HOST")
-SMTP_PORT = get_int_env("SMTP_PORT", 465)
-SMTP_USER = get_env("SMTP_USER")
-SMTP_PASS = get_env("SMTP_PASS")
-TO_EMAIL = get_env("TO_EMAIL")
+
 
 @router.post("/contact")
 @limiter.limit("2/minute")
-async def send_contact(contact: ContactBase, request: Request):
-    # Build email
-    email = EmailMessage()
-    email["From"] = SMTP_USER
-    email["To"] = TO_EMAIL
-    email["Subject"] = f"New Contact Form: {contact.subject}"
-    email.set_content(f"""
-    📩 New website message:
-
-    Name: {contact.name}
-    Phone: {contact.phone}
-    Subject: {contact.subject}
-
-    Message:
-    {contact.message}
-    """)
-
+async def send_contact(contact: ContactBase, request: Request, db: Session = Depends(get_db)):
+    """Store contact messages in the database instead of sending email."""
     try:
-        await aiosmtplib.send(
-            email,
-            hostname=SMTP_HOST,
-            port=SMTP_PORT,
-            username=SMTP_USER,
-            password=SMTP_PASS,
-            use_tls=True if SMTP_PORT == 465 else False,
-            start_tls=True if SMTP_PORT == 587 else False,
+        msg = Message(
+            name=contact.name,
+            phone=contact.phone,
+            subject=contact.subject,
+            message=contact.message,
         )
-        return {"status": "success", "message": "Message sent via email!"}
+        db.add(msg)
+        db.commit()
+        db.refresh(msg)
+        return {"status": "success", "message": "Message saved", "id": msg.id}
     except Exception as e:
+        db.rollback()
         return {"status": "error", "message": str(e)}

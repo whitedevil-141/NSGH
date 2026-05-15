@@ -1,13 +1,20 @@
+import os
+import sys
+
+if __package__ is None or __package__ == "":
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from fastapi import FastAPI, Request, Response
 from api.database import engine, Base
 from sqlalchemy import inspect, text
 from api.routers import auth, public, doctors, staffs, appointment
 from api.limiter import limiter
+from api.utils.init_db import initialize_database
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 
-# Create all tables
-Base.metadata.create_all(bind=engine)
+# Initialize database (creates tables & minimal seed data if needed)
+initialize_database()
 
 
 def ensure_appointment_schema() -> None:
@@ -19,7 +26,6 @@ def ensure_appointment_schema() -> None:
         "appointment_bookings": {
             "time": "VARCHAR(5) NULL",
             "patient_age": "INT NULL",
-            "patient_address": "VARCHAR(255) NULL",
             "booked_by_id": "VARCHAR(32) NULL",
             "booked_by_name": "VARCHAR(100) NULL",
             "booked_by_role": "VARCHAR(20) NULL",
@@ -31,7 +37,6 @@ def ensure_appointment_schema() -> None:
         },
         "appointment_doctors": {
             "is_available": "INT NOT NULL DEFAULT 1",
-            "working_days": "VARCHAR(120) NOT NULL DEFAULT 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'",
             "working_schedule": "VARCHAR(2000) NOT NULL DEFAULT '[]'",
         },
     }
@@ -106,3 +111,32 @@ def root(request: Request):
         "redoc_url": "/redoc",
         "version": "1.0.0"
     }
+
+
+@app.on_event("startup")
+def run_auto_migrations():
+    """Run idempotent migrations once at API startup.
+
+    This will attempt to apply schema migrations and utf8mb4 conversions.
+    Errors are caught and logged but won't stop the app from starting.
+    """
+    try:
+        import api.migrate as _migrate
+        _migrate.migrate()
+    except Exception as e:
+        print(f"Migration error: {e}")
+
+    try:
+        import api.migrate_utf8mb4 as _migrateutf
+        _migrateutf.migrate()
+    except Exception as e:
+        print(f"utf8mb4 migration error: {e}")
+
+    # Run a read-only schema check and print a report for operator review.
+    try:
+        from api.utils.db_check import check_schema
+        from api.database import Base as _Base
+        # apply=True will attempt safe automatic fixes (ADD COLUMN, nullability)
+        check_schema(engine, _Base, apply=True)
+    except Exception as e:
+        print(f"DB schema check error: {e}")

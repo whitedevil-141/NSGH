@@ -2,7 +2,7 @@
 const STORAGE_SESSION = 'medicare_session';
 const STORAGE_API_TOKEN = 'medicare_api_token';
 const STORAGE_VIEW = 'medicare_last_view';
-const API_BASE = window.NSGH_APPOINTMENT_API || 'https://api.nsghbd.com/appointment';
+const API_BASE = window.NSGH_APPOINTMENT_API || 'http://localhost:8000/appointment';
 const SLOT_INTERVAL_MINUTES = 30;
 const BOOKING_WINDOW_DAYS = 7;
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -30,7 +30,7 @@ const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'mark
 const VALID_APPOINTMENT_STATUSES = ['Booked', 'Completed', 'Cancelled'];
 
 const PERMISSIONS = {
-    user: { dashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
+    user: { dashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true },
     doctor: { doctorDashboard: true, viewAppointments: true },
     admin: { adminPanel: true, manageUsers: true, manageDoctors: true, manageAppointments: true, manageMarketing: true },
     marketing: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true, changeOwnPassword: true },
@@ -43,7 +43,8 @@ let appState = {
     authToken: localStorage.getItem(STORAGE_API_TOKEN),
     users: [],
     doctors: [],
-    appointments: []
+    appointments: [],
+    pendingStatusChange: null
 };
 
 let authState = {
@@ -52,10 +53,7 @@ let authState = {
     pendingReset: null
 };
 
-let pdfState = {
-    appointmentId: null,
-    objectUrl: null
-};
+// PDF preview/download removed
 
 let paginationState = {
     myApp: { skip: 0, limit: 10 },
@@ -523,10 +521,43 @@ function normalizeScheduleEntries(value) {
         .map(day => normalized.find(item => item.day === day));
 }
 
+const BN_DIGIT_MAP = { '0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯' };
+const BN_DAY_SHORT = {
+    Monday: 'সোম', Tuesday: 'মঙ্গল', Wednesday: 'বুধ', Thursday: 'বৃহঃ',
+    Friday: 'শুক্র', Saturday: 'শনি', Sunday: 'রবি'
+};
+
+function toBnDigits(value) {
+    return String(value ?? '').replace(/[0-9]/g, d => BN_DIGIT_MAP[d]);
+}
+
+function bnPeriod(hour24) {
+    if (hour24 >= 4 && hour24 < 6) return 'ভোর';
+    if (hour24 >= 6 && hour24 < 12) return 'সকাল';
+    if (hour24 >= 12 && hour24 < 15) return 'দুপুর';
+    if (hour24 >= 15 && hour24 < 18) return 'বিকাল';
+    if (hour24 >= 18 && hour24 < 20) return 'সন্ধ্যা';
+    return 'রাত';
+}
+
+function formatTimeBn(value) {
+    const minutes = timeToMinutes(value);
+    if (minutes === null) return '';
+    const hour24 = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    const hour12 = (hour24 % 12) || 12;
+    const period = bnPeriod(hour24);
+    return minute
+        ? `${period} ${toBnDigits(hour12)}টা ${toBnDigits(minute)} মিনিট`
+        : `${period} ${toBnDigits(hour12)}টা`;
+}
+
 function formatScheduleEntriesLabel(entries) {
     const normalized = normalizeScheduleEntries(entries);
-    if (!normalized.length) return 'Schedule not set';
-    return normalized.map(item => `${item.day.slice(0, 3)} ${formatTime(item.startTime)} - ${formatTime(item.endTime)}`).join(', ');
+    if (!normalized.length) return 'সময়সূচি নির্ধারিত নেই';
+    return normalized
+        .map(item => `${BN_DAY_SHORT[item.day] || item.day.slice(0, 3)} ${formatTimeBn(item.startTime)} - ${formatTimeBn(item.endTime)}`)
+        .join(', ');
 }
 
 function getScheduleEntryForDate(doc, dateStr) {
@@ -635,84 +666,9 @@ function formatAppointmentId(appId) {
     return `#${String(Number(appId) || 0).padStart(6, '0')}`;
 }
 
-function appointmentPdfFileName(app) {
-    const patient = String(app.patientName || 'patient').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
-    return `appointment-${formatAppointmentId(app.id).slice(1)}-${patient || 'patient'}.pdf`;
-}
+// appointmentPdfFileName removed
 
-async function downloadAppointmentPdf(appId) {
-    const app = findAppointment(appId);
-    if (!app) {
-        showToast('Appointment not found', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE}/appointments/${appId}/pdf`, {
-            headers: { 'Authorization': `Bearer ${appState.authToken}` }
-        });
-        if (!response.ok) throw new Error('Failed to fetch PDF');
-        
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = appointmentPdfFileName(app);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    } catch (error) {
-        showToast('Could not download PDF from server', 'error');
-    }
-}
-
-async function openAppointmentPdf(appId) {
-    const app = findAppointment(appId);
-    if (!app) {
-        showToast('Appointment not found', 'error');
-        return;
-    }
-
-    getEl('appointment-pdf-modal')?.classList.add('active');
-    setText('pdf-appointment-title', `Loading PDF...`);
-    const frame = getEl('appointment-pdf-frame');
-    if (frame) frame.removeAttribute('src');
-
-    if (pdfState.objectUrl) URL.revokeObjectURL(pdfState.objectUrl);
-    pdfState.appointmentId = Number(appId);
-    
-    try {
-       const response = await fetch(`${API_BASE}/appointments/${appId}/pdf`, {
-            headers: { 'Authorization': `Bearer ${appState.authToken}` }
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch PDF');
-
-        const pdfBlob = await response.blob();
-
-        pdfState.objectUrl = URL.createObjectURL(pdfBlob);
-
-        if (frame) frame.src = pdfState.objectUrl;
-        setText('pdf-appointment-title', `Appointment ${formatAppointmentId(app.id)} - ${app.patientName}`);
-    } catch (error) {
-        showToast('Could not load PDF from server', 'error');
-        closeAppointmentPdfModal();
-    }
-}
-
-function downloadCurrentAppointmentPdf() {
-    if (pdfState.appointmentId) downloadAppointmentPdf(pdfState.appointmentId);
-}
-
-function closeAppointmentPdfModal() {
-    closeModal('appointment-pdf-modal');
-    const frame = getEl('appointment-pdf-frame');
-    if (frame) frame.removeAttribute('src');
-    if (pdfState.objectUrl) URL.revokeObjectURL(pdfState.objectUrl);
-    pdfState = { appointmentId: null, objectUrl: null };
-}
+// PDF-related functions removed
 
 function showAppointmentSuccess(app) {
     setText('success-patient-name', app.patientName);
@@ -728,13 +684,7 @@ function closeSuccessModal() {
     navigate('appointments');
 }
 
-function appointmentPdfActions(appId) {
-    const safeId = Number(appId);
-    return `
-        <button class="btn btn-soft btn-compact" onclick="openAppointmentPdf(${safeId})">View PDF</button>
-        <button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${safeId})">Download</button>
-    `;
-}
+// PDF actions removed
 
 function normalizeData() {
     appState.users = (appState.users || []).map(user => ({
@@ -782,7 +732,6 @@ function normalizeAppointments(list) {
             status: VALID_APPOINTMENT_STATUSES.includes(app.status) ? app.status : 'Booked',
             reason: app.reason || '',
             patientAge: app.patientAge ?? null,
-            patientAddress: app.patientAddress || '',
             bookedById: app.bookedById || null,
             bookedByName: app.bookedByName || null,
             bookedByRole: app.bookedByRole || null,
@@ -1080,10 +1029,9 @@ async function completeRegistration() {
     const name = getEl('reg-name').value.trim();
     const age = parseInt(getEl('reg-age').value, 10);
     const gender = getEl('reg-gender').value;
-    const bloodGroup = getEl('reg-blood-group').value;
     const email = getEl('reg-email').value.trim();
 
-    if (name.length < 2 || !age || age < 1 || age > 120 || !gender || !bloodGroup) {
+    if (name.length < 2 || !age || age < 1 || age > 120 || !gender) {
         showToast('Please complete the required profile fields', 'error');
         return;
     }
@@ -1102,7 +1050,6 @@ async function completeRegistration() {
                 password: pending.password,
                 age,
                 gender,
-                bloodGroup,
                 email: email || null,
                 role: ROLES.USER
             })
@@ -1270,7 +1217,6 @@ function initDashboard() {
     setText('dash-user-phone', u.phone);
     setText('dash-user-gender', u.gender || '-');
     setText('dash-user-age', u.age || '-');
-    setText('dash-user-blood', u.bloodGroup || '-');
 }
 
 function initDoctorDashboard() {
@@ -1399,14 +1345,12 @@ function appointmentSourceMeta(app) {
 function appointmentPatientDetailsMeta(app) {
     const lines = [];
     if (app.patientAge !== null && app.patientAge !== undefined && app.patientAge !== '') lines.push(`Age: ${app.patientAge}`);
-    if (app.patientAddress) lines.push(`Address: ${app.patientAddress}`);
     return lines.map(line => `<div class="row-subtle">${escapeHTML(line)}</div>`).join('');
 }
 
 function canCancelSerial(app) {
     const role = getRole(appState.currentUser);
     if (app.status !== 'Booked' || isPastAppointment(app)) return false;
-    if (role === ROLES.USER) return app.patientPhone === appState.currentUser.phone || app.bookedById === appState.currentUser.id;
     if (role === ROLES.MARKETING) return app.marketingOfficerId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     if (role === ROLES.COMMISSION_DOCTOR) return app.commissionDoctorId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     return false;
@@ -1502,6 +1446,7 @@ async function renderAppointments(action = null) {
                 ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}<div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
                 : `<strong>${escapeHTML(app.docName)}</strong><div class="row-subtle">Patient: ${escapeHTML(app.patientName)}</div><div class="row-subtle">Number: ${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
 
+        const pdfBtn = `<button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${Number(app.id)})">Download PDF</button>`;
         const actionCol = role === ROLES.DOCTOR
             ? `
                 <div class="table-actions">
@@ -1510,12 +1455,12 @@ async function renderAppointments(action = null) {
                         <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
                         <option value="Cancelled" ${app.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                    ${appointmentPdfActions(app.id)}
+                    ${pdfBtn}
                 </div>
             `
             : `
                 <div class="table-actions">
-                    ${appointmentPdfActions(app.id)}
+                    ${pdfBtn}
                     ${canCancel
                         ? `<button class="btn btn-outline btn-compact btn-danger-ghost" onclick="cancelAppointment(${Number(app.id)})">Cancel</button>`
                         : ''}
@@ -1568,7 +1513,6 @@ function openBookingModal(docId) {
     getEl('booking-patient-fields')?.classList.remove('hidden');
     getEl('booking-patient-name').value = appState.currentUser?.name || '';
     getEl('booking-patient-age').value = appState.currentUser?.age || '';
-    getEl('booking-patient-address').value = '';
     getEl('booking-patient-phone').value = appState.currentUser?.phone || '';
     setText('booking-reason-label', 'Note');
     getEl('booking-reason').placeholder = 'Write a note for this appointment';
@@ -1652,7 +1596,6 @@ async function confirmBooking() {
     const patientName = getEl('booking-patient-name')?.value.trim() || '';
     const patientAgeRaw = getEl('booking-patient-age')?.value.trim() || '';
     const patientAge = patientAgeRaw === '' ? null : Number(patientAgeRaw);
-    const patientAddress = getEl('booking-patient-address')?.value.trim() || '';
     const patientPhone = normalizePhone(getEl('booking-patient-phone')?.value || '');
     const doc = appState.doctors.find(d => d.id === docId);
 
@@ -1682,18 +1625,20 @@ async function confirmBooking() {
         showToast('Enter a valid patient age', 'error');
         return;
     }
-    if (patientAddress.length < 3) {
-        showToast('Patient address is required', 'error');
-        return;
-    }
     if (!isValidPhone(patientPhone)) {
         showToast('Enter a valid patient number', 'error');
+        return;
+    }
+    
+    // Spam prevention: check for obviously invalid patterns (repeated digits)
+    if (/^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+)$/.test(patientPhone.replace(/\D/g, ''))) {
+        showToast('Invalid phone number format. Please enter a real number', 'error');
         return;
     }
 
     setLoading('btn-confirm-booking', true, 'Booking...');
     try {
-        const payload = { docId, date, reason, patientName, patientAge, patientAddress, patientPhone };
+        const payload = { docId, date, reason, patientName, patientAge, patientPhone };
         const response = await apiRequest('/appointments', {
             method: 'POST',
             body: JSON.stringify(payload)
@@ -1719,6 +1664,40 @@ async function confirmBooking() {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not book appointment'), 'error');
     } finally {
         setLoading('btn-confirm-booking', false);
+    }
+}
+
+async function downloadAppointmentPdf(appId) {
+    if (!appState.authToken) {
+        showToast('Please sign in to download the appointment slip', 'error');
+        return;
+    }
+    let blobUrl = null;
+    try {
+        const response = await fetch(`${API_BASE}/appointments/${Number(appId)}/pdf`, {
+            headers: { Authorization: `Bearer ${appState.authToken}` }
+        });
+        if (!response.ok) {
+            let detail = 'Could not download appointment slip';
+            try { detail = (await response.json())?.detail || detail; } catch {}
+            showToast(detail, 'error');
+            return;
+        }
+        const blob = await response.blob();
+        blobUrl = URL.createObjectURL(blob);
+        const disposition = response.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        const filename = match?.[1] || `appointment-${String(appId).padStart(6, '0')}.pdf`;
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    } catch (error) {
+        showToast(error?.message || 'Could not download appointment slip', 'error');
+    } finally {
+        if (blobUrl) setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     }
 }
 
@@ -1855,8 +1834,7 @@ async function saveEditedUser() {
                 name,
                 email: email || null,
                 age: Number.isNaN(ageVal) ? null : ageVal,
-                gender: gender || null,
-                bloodGroup: user.bloodGroup || null
+                gender: gender || null
             })
         });
         await refreshDataFromApi();
@@ -1899,7 +1877,7 @@ function renderAdminMarketing() {
     if (!tbody) return;
     const officers = appState.users.filter(u => getRole(u) === ROLES.MARKETING);
     if (!officers.length) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="color:var(--text-muted)">No marketing officers yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No marketing officers yet.</td></tr>';
         return;
     }
     tbody.innerHTML = officers.map(user => `
@@ -1908,8 +1886,77 @@ function renderAdminMarketing() {
                 <td data-label="Phone">${escapeHTML(user.phone)}</td>
                 <td data-label="Email">${escapeHTML(user.email || '-')}</td>
                 <td data-label="Role"><span class="badge badge-info">Marketing Officer</span></td>
+                <td data-label="Actions">
+                    <div class="table-actions">
+                        <button class="btn btn-outline btn-compact" onclick="editMarketingOfficer('${escapeHTML(user.id)}')">Edit</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteMarketingOfficer('${escapeHTML(user.id)}')">Delete</button>
+                    </div>
+                </td>
             </tr>
     `).join('');
+}
+
+function editMarketingOfficer(userId) {
+    const officer = appState.users.find(u => u.id === userId);
+    if (!officer || getRole(officer) !== ROLES.MARKETING) return;
+    getEl('edit-marketing-id').value = officer.id;
+    getEl('edit-marketing-name').value = officer.name || '';
+    getEl('edit-marketing-phone').value = officer.phone || '';
+    getEl('edit-marketing-email').value = officer.email || '';
+    getEl('admin-edit-marketing-modal')?.classList.add('active');
+}
+
+async function saveEditedMarketingOfficer() {
+    const userId = getEl('edit-marketing-id').value;
+    const officer = appState.users.find(u => u.id === userId);
+    if (!officer) return;
+
+    const name = getEl('edit-marketing-name').value.trim();
+    const email = getEl('edit-marketing-email').value.trim();
+
+    if (name.length < 2) {
+        showToast('Marketing officer name is required', 'error');
+        return;
+    }
+    if (email && !isValidEmail(email)) {
+        showToast('Enter a valid email address', 'error');
+        return;
+    }
+
+    setLoading('btn-save-edited-marketing', true, 'Saving...');
+    try {
+        await apiRequest(`/marketing-officers/${encodeURIComponent(userId)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, email: email || null })
+        });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        showToast('Marketing officer updated successfully');
+        closeModal('admin-edit-marketing-modal');
+        renderAdminMarketing();
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not update marketing officer'), 'error');
+    } finally {
+        setLoading('btn-save-edited-marketing', false);
+    }
+}
+
+async function deleteMarketingOfficer(userId) {
+    const officer = appState.users.find(u => u.id === userId);
+    if (!officer || getRole(officer) !== ROLES.MARKETING) return;
+    if (!confirm(`Delete marketing officer "${officer.name}"? Linked serials will keep their history but lose this officer reference.`)) return;
+
+    try {
+        await apiRequest(`/marketing-officers/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        renderAdminMarketing();
+        showToast('Marketing officer deleted.', 'error');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not delete marketing officer'), 'error');
+    }
 }
 
 function openAdminMarketingModal() {
@@ -2007,7 +2054,7 @@ function renderAdminDoctors() {
     const tbody = getEl('admin-doctor-list');
     tbody.innerHTML = '';
     if (appState.doctors.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:var(--text-muted)">No doctors yet. Click "+ Add Doctor".</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-muted)">No doctors yet. Click "+ Add Doctor".</td></tr>';
         return;
     }
     tbody.innerHTML = appState.doctors.map(doc => {
@@ -2018,7 +2065,6 @@ function renderAdminDoctors() {
             <td data-label="Phone">${escapeHTML(doc.phone || '-')}</td>
             <td data-label="Category">${escapeHTML(doc.categoryLabel)}</td>
             <td data-label="Working Schedule">${escapeHTML(doc.workingScheduleLabel || 'Schedule not set')}</td>
-            <td data-label="Time">${escapeHTML(doc.time)}</td>
             <td data-label="Room">${escapeHTML(doc.room)}</td>
             <td data-label="Status">${statusLabel}</td>
             <td data-label="Actions">
@@ -2235,7 +2281,7 @@ async function renderAdminAppointments(action = null) {
                         <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
                         <option value="Cancelled" ${app.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                    ${appointmentPdfActions(app.id)}
+                    <button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${Number(app.id)})">Download PDF</button>
                 </div>
             </td>
         </tr>
@@ -2297,7 +2343,7 @@ async function renderAdminTodaySerials(action = null) {
                         <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
                         <option value="Cancelled" ${app.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                    ${appointmentPdfActions(app.id)}
+                    <button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${Number(app.id)})">Download PDF</button>
                 </div>
             </td>
         </tr>
@@ -2333,26 +2379,71 @@ async function updateAppointmentStatus(id, newStatus) {
     }
     const app = appState.appointments.find(a => a.id === Number(id));
     if (!app) return;
+    
+    // Store the appointment details for confirmation modal
+    appState.pendingStatusChange = {
+        appointmentId: Number(id),
+        newStatus: newStatus,
+        appointment: app
+    };
+    
+    // Show confirmation modal
+    getEl('confirm-patient-name').textContent = app.patientName || '-';
+    getEl('confirm-doctor-name').textContent = app.doctorName || '-';
+    getEl('confirm-current-status').textContent = app.status || 'Booked';
+    getEl('confirm-new-status').textContent = newStatus;
+    
+    getEl('status-change-modal').classList.add('active');
+}
+
+async function confirmStatusChange() {
+    const pendingChange = appState.pendingStatusChange;
+    if (!pendingChange) return;
+    
+    // Spam prevention: validate patient phone before status change
+    const patientPhone = normalizePhone(pendingChange.appointment.patientPhone || '');
+    if (!patientPhone || !isValidPhone(patientPhone)) {
+        showToast('Invalid patient number. Cannot send SMS notification', 'error');
+        appState.pendingStatusChange = null;
+        return;
+    }
+    
+    // Spam prevention: check for obviously invalid patterns (repeated digits)
+    if (/^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+)$/.test(patientPhone.replace(/\D/g, ''))) {
+        showToast('Invalid patient number. Cannot send SMS notification', 'error');
+        appState.pendingStatusChange = null;
+        return;
+    }
+    
+    closeModal('status-change-modal');
+    
     try {
-        await apiRequest(`/appointments/${Number(id)}/status`, {
+        await apiRequest(`/appointments/${pendingChange.appointmentId}/status`, {
             method: 'PATCH',
-            body: JSON.stringify({ status: newStatus })
+            body: JSON.stringify({ status: pendingChange.newStatus })
         });
         
-        const appToUpdate = appState.appointments.find(a => a.id === Number(id));
-        if(appToUpdate) appToUpdate.status = newStatus;
+        const appToUpdate = appState.appointments.find(a => a.id === pendingChange.appointmentId);
+        if(appToUpdate) appToUpdate.status = pendingChange.newStatus;
         
         if (getEl('appointments-view') && !getEl('appointments-view').classList.contains('hidden')) renderAppointments();
         if (getEl('admin-appointments-content') && !getEl('admin-appointments-content').classList.contains('hidden')) renderAdminAppointments();
         if (getEl('admin-today-serials-content') && !getEl('admin-today-serials-content').classList.contains('hidden')) renderAdminTodaySerials();
-        showToast(`Status updated to ${newStatus}`);
+        showToast(`Status updated to ${pendingChange.newStatus}`);
+        
+        // Clear pending change
+        appState.pendingStatusChange = null;
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not update status'), 'error');
         if (getEl('appointments-view') && !getEl('appointments-view').classList.contains('hidden')) renderAppointments();
         if (getEl('admin-appointments-content') && !getEl('admin-appointments-content').classList.contains('hidden')) renderAdminAppointments();
         if (getEl('admin-today-serials-content') && !getEl('admin-today-serials-content').classList.contains('hidden')) renderAdminTodaySerials();
+        
+        // Clear pending change
+        appState.pendingStatusChange = null;
     }
 }
+
 
 function openMarketingPasswordModal() {
     if (!hasPermission('changeOwnPassword')) {
@@ -2417,8 +2508,7 @@ function bindUIEvents() {
         if (overlay.querySelector('form')) return;
         overlay.addEventListener('click', event => {
             if (event.target === overlay) {
-                if (overlay.id === 'appointment-pdf-modal') closeAppointmentPdfModal();
-                else if (overlay.id === 'appointment-success-modal') closeSuccessModal();
+                if (overlay.id === 'appointment-success-modal') closeSuccessModal();
                 else closeModal(overlay.id);
             }
         });
@@ -2427,8 +2517,7 @@ function bindUIEvents() {
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape') {
             document.querySelectorAll('.modal-overlay.active').forEach(modal => {
-                if (modal.id === 'appointment-pdf-modal') closeAppointmentPdfModal();
-                else if (modal.id === 'appointment-success-modal') closeSuccessModal();
+                if (modal.id === 'appointment-success-modal') closeSuccessModal();
                 else closeModal(modal.id);
             });
         }
@@ -2448,7 +2537,7 @@ function exportToCSV(appointments, filename) {
         return;
     }
 
-    const headers = ['Appointment ID', 'Date', 'Time/Serial', 'Patient Name', 'Patient Age', 'Patient Address', 'Patient Number', 'Doctor', 'Room', 'Status', 'Note', 'Source'];
+    const headers = ['Appointment ID', 'Date', 'Time/Serial', 'Patient Name', 'Patient Age', 'Patient Number', 'Doctor', 'Room', 'Status', 'Note', 'Source'];
     const csvRows = [headers.join(',')];
 
     appointments.forEach(app => {
@@ -2457,7 +2546,6 @@ function exportToCSV(appointments, filename) {
         const timeSerial = app.serial_number ? `Serial #${app.serial_number}` : (formatTime(app.time) || '-');
         const patientName = `"${(app.patientName || '').replace(/"/g, '""')}"`;
         const patientAge = app.patientAge ?? '-';
-        const patientAddress = `"${(app.patientAddress || '').replace(/"/g, '""')}"`;
         const patientPhone = app.patientPhone || '-';
         const doctor = `"${(app.docName || '').replace(/"/g, '""')}"`;
         const room = app.room || '-';
@@ -2470,7 +2558,7 @@ function exportToCSV(appointments, filename) {
         else if (app.bookedByName && (app.bookedByRole !== ROLES.USER || app.bookedByName !== app.patientName)) source = `${app.bookedByName} (${roleLabel(app.bookedByRole)})`;
         source = `"${source.replace(/"/g, '""')}"`;
 
-        csvRows.push([id, date, timeSerial, patientName, patientAge, patientAddress, patientPhone, doctor, room, status, reason, source].join(','));
+        csvRows.push([id, date, timeSerial, patientName, patientAge, patientPhone, doctor, room, status, reason, source].join(','));
     });
 
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });

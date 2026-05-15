@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from api.utils.config import load_env
 
 
-BULKSMSBD_SMS_URL = "http://bulksmsbd.net/api/smsapi"
+BULKSMSBD_SMS_URL = "https://bulksmsbd.net/api/smsapi"
 
 
 def send_sms(number: str, message: str) -> dict:

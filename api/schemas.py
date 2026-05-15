@@ -140,7 +140,6 @@ class AppointmentUserBase(BaseModel):
     email: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
-    bloodGroup: Optional[str] = None
     role: str = "user"
     specialty: Optional[str] = None
     createdById: Optional[str] = None
@@ -156,7 +155,6 @@ class AppointmentUserUpdate(BaseModel):
     email: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
-    bloodGroup: Optional[str] = None
 
 
 class AppointmentUserPasswordReset(BaseModel):
@@ -200,25 +198,20 @@ class AppointmentDoctorBase(BaseModel):
     name: str
     phone: str
     category: str
-    workingDays: List[str] = Field(default_factory=list)
     workingSchedule: List[AppointmentDoctorScheduleItem] = Field(default_factory=list)
-    startTime: Optional[str] = None
-    endTime: Optional[str] = None
     room: str
     email: Optional[str] = None
 
 
 class AppointmentDoctorCreate(AppointmentDoctorBase):
+    workingSchedule: List[AppointmentDoctorScheduleItem]  # Required for creation
     password: str
 
 
 class AppointmentDoctorUpdate(BaseModel):
     name: str
     category: str
-    workingDays: List[str] = Field(default_factory=list)
     workingSchedule: List[AppointmentDoctorScheduleItem] = Field(default_factory=list)
-    startTime: Optional[str] = None
-    endTime: Optional[str] = None
     room: str
     email: Optional[str] = None
 
@@ -234,7 +227,6 @@ class AppointmentCreate(BaseModel):
     date: str
     patientName: Optional[str] = None
     patientAge: Optional[int] = None
-    patientAddress: Optional[str] = None
     patientPhone: Optional[str] = None
     reason: Optional[str] = None
 
@@ -248,7 +240,6 @@ class AppointmentOut(BaseModel):
     patientName: str
     patientPhone: str
     patientAge: Optional[int] = None
-    patientAddress: Optional[str] = None
     docId: int
     docName: str
     date: str

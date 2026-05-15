@@ -85,7 +85,6 @@ class AppointmentUser(Base):
     email = Column(String(120), nullable=True)
     age = Column(Integer, nullable=True)
     gender = Column(String(20), nullable=True)
-    blood_group = Column(String(5), nullable=True)
     role = Column(String(20), nullable=False, default="user")
     specialty = Column(String(100), nullable=True)
     created_by_id = Column(String(32), nullable=True, index=True)
@@ -99,10 +98,7 @@ class AppointmentDoctor(Base):
     name = Column(String(100), nullable=False)
     phone = Column(String(20), unique=True, index=True, nullable=False)
     category = Column(String(100), nullable=False)
-    working_days = Column(String(120), nullable=False, default="Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday")
     working_schedule = Column(String(2000), nullable=False, default="[]")
-    start_time = Column(String(5), nullable=False)
-    end_time = Column(String(5), nullable=False)
     room = Column(String(20), nullable=False)
     is_available = Column(Integer, nullable=False, default=1)  # 1 for available, 0 for unavailable
 
@@ -114,7 +110,6 @@ class AppointmentBooking(Base):
     patient_name = Column(String(100), nullable=False)
     patient_phone = Column(String(20), index=True, nullable=False)
     patient_age = Column(Integer, nullable=True)
-    patient_address = Column(String(255), nullable=True)
     doctor_id = Column(Integer, index=True, nullable=False)
     doctor_name = Column(String(100), nullable=False)
     date = Column(String(10), index=True, nullable=False)
@@ -130,3 +125,4 @@ class AppointmentBooking(Base):
     marketing_officer_name = Column(String(100), nullable=True)
     commission_doctor_id = Column(String(32), nullable=True, index=True)
     commission_doctor_name = Column(String(100), nullable=True)
+    doctor_status_changed = Column(Integer, nullable=False, default=0)  # 1 = doctor has changed status once

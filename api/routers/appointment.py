@@ -4,16 +4,19 @@ import json
 import random
 import re
 import io
+import textwrap
 from datetime import date, datetime, timedelta
-from pathlib import Path
 from threading import Lock
 from typing import Optional
 from uuid import uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from fastapi.security import OAuth2PasswordBearer
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -40,6 +43,14 @@ from api.schemas import (
     OtpVerifyRequest,
 )
 from api.limiter import limiter
+from api.utils.bangla import bn_date, bn_schedule_summary, bn_time_range, to_bn_digits
+from api.utils.pdf import (
+    bilingual_string_width,
+    draw_bilingual_centered,
+    draw_bilingual_string,
+    register_fonts,
+    wrap_bilingual,
+)
 from api.utils.jwt_handler import JWT_ALGORITHM, JWT_SECRET, create_access_token
 from api.utils.sms import send_sms
 from api.utils.security import hash_password, verify_password
@@ -82,6 +93,7 @@ _otp_store: dict[str, dict] = {}
 _otp_verified_store: dict[str, datetime] = {}
 _otp_daily_limits: dict[str, dict] = {}
 _otp_lock = Lock()
+_otp_lock = Lock()
 
 
 def _normalize_phone(value: str) -> str:
@@ -108,6 +120,30 @@ def _sms_phone_number(phone: str) -> str:
     if phone.startswith("0"):
         return "88" + phone
     return phone
+
+
+def _is_valid_phone_for_sms(phone: str) -> bool:
+    """Validate phone number before sending SMS to prevent spam"""
+    if not phone:
+        return False
+    
+    normalized = _normalize_phone(phone)
+    
+    # Check basic format
+    if not PHONE_RE.match(normalized):
+        return False
+    
+    # Check for repeated digits spam pattern (e.g., 1111111, 2222222)
+    digits_only = re.sub(r"[^\d]", "", normalized)
+    if len(set(digits_only)) == 1:  # All same digit
+        return False
+    
+    # Check for obviously invalid sequences (too many repeating digits)
+    for digit in "0123456789":
+        if digit * 4 in digits_only:  # 4+ consecutive same digits
+            return False
+    
+    return True
 
 
 def _cleanup_expired_otps(now: datetime) -> None:
@@ -236,23 +272,6 @@ def _normalize_working_schedule(
     return normalized
 
 
-def _doctor_working_days(doctor: AppointmentDoctor) -> list[str]:
-    raw_days = getattr(doctor, "working_days", None)
-    if not raw_days:
-        return WEEKDAY_NAMES.copy()
-
-    raw_days = str(raw_days).strip()
-    if raw_days.startswith("["):
-        try:
-            parsed = json.loads(raw_days)
-            if isinstance(parsed, list):
-                return _normalize_working_days(parsed)
-        except Exception:
-            pass
-
-    parsed_days = [item.strip() for item in raw_days.split(",") if item.strip()]
-    return _normalize_working_days(parsed_days)
-
 
 def _doctor_schedule_items(doctor: AppointmentDoctor) -> list[dict]:
     raw_schedule = getattr(doctor, "working_schedule", None)
@@ -264,15 +283,6 @@ def _doctor_schedule_items(doctor: AppointmentDoctor) -> list[dict]:
                 return _normalize_working_schedule(parsed)
         except Exception:
             pass
-
-    days = _doctor_working_days(doctor)
-    if days:
-        return _normalize_working_schedule(
-            None,
-            fallback_days=days,
-            fallback_start=getattr(doctor, "start_time", None),
-            fallback_end=getattr(doctor, "end_time", None),
-        )
     return []
 
 
@@ -299,11 +309,8 @@ def _is_allowed_booking_day(doctor: AppointmentDoctor, selected_date: date) -> b
 def _doctor_schedule_summary(doctor: AppointmentDoctor) -> str:
     items = _doctor_schedule_items(doctor)
     if not items:
-        return "Schedule not set"
-    return ", ".join(
-        f"{item['day'][:3]} {_display_time(item['startTime'])} - {_display_time(item['endTime'])}"
-        for item in items
-    )
+        return "সময়সূচি নির্ধারিত নেই"
+    return bn_schedule_summary(items)
 
 
 def _display_time(value: str) -> str:
@@ -341,7 +348,6 @@ def _user_out(user: AppointmentUser) -> AppointmentUserOut:
         email=user.email,
         age=user.age,
         gender=user.gender,
-        bloodGroup=user.blood_group,
         role=user.role,
         specialty=user.specialty,
         createdById=getattr(user, "created_by_id", None),
@@ -358,10 +364,7 @@ def _doctor_out(doctor: AppointmentDoctor, email: Optional[str] = None) -> Appoi
         name=doctor.name,
         phone=doctor.phone,
         category=doctor.category,
-        workingDays=working_days,
         workingSchedule=schedule_items,
-        startTime=first_item["startTime"] if first_item else doctor.start_time,
-        endTime=first_item["endTime"] if first_item else doctor.end_time,
         time=_doctor_schedule_summary(doctor),
         room=doctor.room,
         email=email,
@@ -375,7 +378,6 @@ def _appointment_out(appointment: AppointmentBooking) -> AppointmentOut:
         patientName=appointment.patient_name,
         patientPhone=appointment.patient_phone,
         patientAge=getattr(appointment, "patient_age", None),
-        patientAddress=getattr(appointment, "patient_address", None),
         docId=appointment.doctor_id,
         docName=appointment.doctor_name,
         date=appointment.date,
@@ -419,84 +421,19 @@ def _require_role(user: AppointmentUser, *roles: str) -> None:
         raise HTTPException(status_code=403, detail="You do not have permission for this action")
 
 
-def _seed_if_empty(db: Session) -> None:
-    if db.query(AppointmentUser).first() or db.query(AppointmentDoctor).first():
-        return
-
-    seed_path = Path(__file__).resolve().parents[2] / "data" / "appointment-data.json"
-    if not seed_path.exists():
-        return
-
-    with seed_path.open("r", encoding="utf-8") as seed_file:
-        seed = json.load(seed_file)
-
-    for item in seed.get("users", []):
-        db.add(
-            AppointmentUser(
-                id=item["id"],
-                name=item["name"],
-                phone=_normalize_phone(item["phone"]),
-                password=hash_password(item["password"]),
-                email=item.get("email"),
-                age=item.get("age"),
-                gender=item.get("gender"),
-                blood_group=item.get("bloodGroup"),
-                role=item.get("role", "user"),
-                specialty=item.get("specialty"),
-            )
+def _doctors_with_emails(db: Session, doctors: list[AppointmentDoctor]) -> list[AppointmentDoctorOut]:
+    if not doctors:
+        return []
+    phones = [doc.phone for doc in doctors if doc.phone]
+    email_by_phone: dict[str, Optional[str]] = {}
+    if phones:
+        linked_users = (
+            db.query(AppointmentUser)
+            .filter(AppointmentUser.phone.in_(phones), AppointmentUser.role == "doctor")
+            .all()
         )
-
-    for item in seed.get("doctors", []):
-        seed_working_schedule = _normalize_working_schedule(
-            item.get("workingSchedule"),
-            fallback_days=item.get("workingDays") or WEEKDAY_NAMES,
-            fallback_start=item.get("startTime"),
-            fallback_end=item.get("endTime"),
-        )
-        db.add(
-            AppointmentDoctor(
-                id=int(item["id"]),
-                name=item["name"],
-                phone=_normalize_phone(item["phone"]),
-                category=item["category"],
-                working_days=",".join([slot["day"] for slot in seed_working_schedule]) if seed_working_schedule else ",".join(_normalize_working_days(item.get("workingDays") or WEEKDAY_NAMES)),
-                working_schedule=json.dumps(seed_working_schedule),
-                start_time=item["startTime"],
-                end_time=item["endTime"],
-                room=item["room"],
-                is_available=item.get("isAvailable", 1),
-            )
-        )
-
-    for item in seed.get("appointments", []):
-        db.add(
-            AppointmentBooking(
-                id=int(item["id"]),
-                patient_name=item["patientName"],
-                patient_phone=_normalize_phone(item["patientPhone"]),
-                patient_age=item.get("patientAge"),
-                patient_address=item.get("patientAddress"),
-                doctor_id=int(item["docId"]),
-                doctor_name=item["docName"],
-                date=item["date"],
-                time=item.get("time"),  # Optional now
-                room=item["room"],
-                serial_number=item.get("serialNumber"),  # Optional
-                status=item.get("status", "Booked"),
-                reason=item.get("reason"),
-            )
-        )
-
-    db.commit()
-
-
-def _doctor_with_email(db: Session, doctor: AppointmentDoctor) -> AppointmentDoctorOut:
-    linked_user = (
-        db.query(AppointmentUser)
-        .filter(AppointmentUser.phone == doctor.phone, AppointmentUser.role == "doctor")
-        .first()
-    )
-    return _doctor_out(doctor, linked_user.email if linked_user else None)
+        email_by_phone = {user.phone: user.email for user in linked_users}
+    return [_doctor_out(doc, email_by_phone.get(doc.phone)) for doc in doctors]
 
 
 def _create_staff_user(
@@ -644,7 +581,6 @@ def verify_otp(request: Request, data: OtpVerifyRequest):
 
 @router.post("/login")
 def login(data: AppointmentLoginRequest, db: Session = Depends(get_db)):
-    _seed_if_empty(db)
     phone = _normalize_phone(data.phone)
     user = db.query(AppointmentUser).filter(AppointmentUser.phone == phone).first()
     if not user or not verify_password(data.password, user.password):
@@ -659,7 +595,6 @@ def login(data: AppointmentLoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/data", response_model=AppointmentDataResponse)
 def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depends(_current_user)):
-    _seed_if_empty(db)
     users = []
     if current_user.role == "admin":
         users = [_user_out(user) for user in db.query(AppointmentUser).all()]
@@ -670,7 +605,7 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
     else:
         users = [_user_out(current_user)]
 
-    doctors = [_doctor_with_email(db, doctor) for doctor in db.query(AppointmentDoctor).all()]
+    doctors = _doctors_with_emails(db, db.query(AppointmentDoctor).all())
 
     appointments_query = db.query(AppointmentBooking)
     if current_user.role == "user":
@@ -701,7 +636,6 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
 
 @router.post("/users", response_model=AppointmentUserOut, status_code=status.HTTP_201_CREATED)
 def create_patient(data: AppointmentUserCreate, db: Session = Depends(get_db)):
-    _seed_if_empty(db)
     phone = _require_phone(data.phone)
     if data.role != "user":
         raise HTTPException(status_code=400, detail="Use the doctors endpoint to create doctor accounts")
@@ -716,7 +650,6 @@ def create_patient(data: AppointmentUserCreate, db: Session = Depends(get_db)):
         email=data.email,
         age=data.age,
         gender=data.gender,
-        blood_group=data.bloodGroup,
         role="user",
     )
     try:
@@ -745,7 +678,6 @@ def update_patient(
     user.email = data.email
     user.age = data.age
     user.gender = data.gender
-    user.blood_group = data.bloodGroup
     db.query(AppointmentBooking).filter(AppointmentBooking.patient_phone == user.phone).update(
         {AppointmentBooking.patient_name: user.name}
     )
@@ -773,7 +705,6 @@ def delete_patient(
 
 @router.post("/password/reset")
 def reset_password(data: AppointmentUserPasswordReset, db: Session = Depends(get_db)):
-    _seed_if_empty(db)
     phone = _normalize_phone(data.phone)
     if phone == "admin":
         raise HTTPException(status_code=400, detail="Admin password cannot be reset here")
@@ -823,10 +754,78 @@ def create_marketing_officer(
     return _user_out(_create_staff_user(db, data, "marketing"))
 
 
+@router.put("/marketing-officers/{user_id}", response_model=AppointmentUserOut)
+def update_marketing_officer(
+    user_id: str,
+    data: AppointmentUserUpdate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    officer = (
+        db.query(AppointmentUser)
+        .filter(AppointmentUser.id == user_id, AppointmentUser.role == "marketing")
+        .first()
+    )
+    if not officer:
+        raise HTTPException(status_code=404, detail="Marketing officer not found")
+
+    name = (data.name or "").strip()
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Marketing officer name is required")
+
+    officer.name = name
+    officer.email = data.email
+    db.query(AppointmentBooking).filter(
+        AppointmentBooking.marketing_officer_id == officer.id
+    ).update({AppointmentBooking.marketing_officer_name: officer.name})
+    db.query(AppointmentUser).filter(
+        AppointmentUser.created_by_id == officer.id
+    ).update({AppointmentUser.created_by_name: officer.name})
+    db.commit()
+    db.refresh(officer)
+    return _user_out(officer)
+
+
+@router.delete("/marketing-officers/{user_id}")
+def delete_marketing_officer(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    officer = (
+        db.query(AppointmentUser)
+        .filter(AppointmentUser.id == user_id, AppointmentUser.role == "marketing")
+        .first()
+    )
+    if not officer:
+        raise HTTPException(status_code=404, detail="Marketing officer not found")
+
+    db.query(AppointmentBooking).filter(
+        AppointmentBooking.marketing_officer_id == officer.id
+    ).update(
+        {
+            AppointmentBooking.marketing_officer_id: None,
+            AppointmentBooking.marketing_officer_name: None,
+        }
+    )
+    db.query(AppointmentUser).filter(
+        AppointmentUser.created_by_id == officer.id
+    ).update(
+        {
+            AppointmentUser.created_by_id: None,
+            AppointmentUser.created_by_name: None,
+        }
+    )
+    db.delete(officer)
+    db.commit()
+    return {"message": "Marketing officer deleted successfully"}
+
+
 @router.get("/doctors", response_model=list[AppointmentDoctorOut])
 def list_doctors(db: Session = Depends(get_db), current_user: AppointmentUser = Depends(_current_user)):
-    _seed_if_empty(db)
-    return [_doctor_with_email(db, doctor) for doctor in db.query(AppointmentDoctor).all()]
+    return _doctors_with_emails(db, db.query(AppointmentDoctor).all())
 
 
 @router.post("/doctors", response_model=AppointmentDoctorOut, status_code=status.HTTP_201_CREATED)
@@ -837,12 +836,7 @@ def create_doctor(
 ):
     _require_role(current_user, "admin")
     phone = _require_phone(data.phone)
-    working_schedule = _normalize_working_schedule(
-        data.workingSchedule,
-        fallback_days=data.workingDays,
-        fallback_start=data.startTime,
-        fallback_end=data.endTime,
-    )
+    working_schedule = _normalize_working_schedule(data.workingSchedule)
     if len(data.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
     if db.query(AppointmentUser).filter(AppointmentUser.phone == phone).first():
@@ -852,10 +846,7 @@ def create_doctor(
         name=data.name.strip(),
         phone=phone,
         category=data.category,
-        working_days=",".join([slot["day"] for slot in working_schedule]),
         working_schedule=json.dumps(working_schedule),
-        start_time=working_schedule[0]["startTime"] if working_schedule else (data.startTime or "09:00"),
-        end_time=working_schedule[0]["endTime"] if working_schedule else (data.endTime or "17:00"),
         room=data.room.strip(),
         is_available=1,  # Default to available
     )
@@ -888,22 +879,14 @@ def update_doctor(
     current_user: AppointmentUser = Depends(_current_user),
 ):
     _require_role(current_user, "admin")
-    working_schedule = _normalize_working_schedule(
-        data.workingSchedule,
-        fallback_days=data.workingDays,
-        fallback_start=data.startTime,
-        fallback_end=data.endTime,
-    )
+    working_schedule = _normalize_working_schedule(data.workingSchedule)
     doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
 
     doctor.name = data.name.strip()
     doctor.category = data.category
-    doctor.working_days = ",".join([slot["day"] for slot in working_schedule])
     doctor.working_schedule = json.dumps(working_schedule)
-    doctor.start_time = working_schedule[0]["startTime"] if working_schedule else (data.startTime or doctor.start_time)
-    doctor.end_time = working_schedule[0]["endTime"] if working_schedule else (data.endTime or doctor.end_time)
     doctor.room = data.room.strip()
     linked_user = (
         db.query(AppointmentUser)
@@ -1052,10 +1035,6 @@ def create_appointment(
     if patient_age is None or patient_age < 0 or patient_age > 120:
         raise HTTPException(status_code=400, detail="Valid patient age is required")
 
-    patient_address = (data.patientAddress or "").strip()
-    if len(patient_address) < 3:
-        raise HTTPException(status_code=400, detail="Patient address is required")
-
     patient_phone = _require_phone(data.patientPhone or "")
 
     # Check if patient already has an appointment with this doctor on this date
@@ -1092,7 +1071,6 @@ def create_appointment(
         patient_name=patient_name,
         patient_phone=patient_phone,
         patient_age=patient_age,
-        patient_address=patient_address[:255],
         doctor_id=doctor.id,
         doctor_name=doctor.name,
         date=data.date,
@@ -1116,14 +1094,27 @@ def create_appointment(
     appointment_out = _appointment_out(appointment)
     
     try:
-        sms_message = (
-            f"NSGH Appointment Confirmed.\n"
-            f"Patient: {patient_name}\n"
-            f"Dr: {doctor.name}\n"
-            f"Date: {data.date}\n"
-            f"Serial: #{serial_number}"
-        )
-        send_sms(number=_sms_phone_number(patient_phone), message=sms_message)
+        # Validate phone before sending SMS to prevent spam
+        if _is_valid_phone_for_sms(patient_phone):
+            date_bn = bn_date(data.date) or data.date
+            time_range_bn = bn_time_range(
+                schedule_item["startTime"] if schedule_item else None,
+                schedule_item["endTime"] if schedule_item else None,
+            )
+            line_three_parts = [date_bn]
+            if time_range_bn:
+                line_three_parts.append(time_range_bn)
+            line_three_parts.append(f"কক্ষ-{to_bn_digits(doctor.room)}")
+
+            sms_message = (
+                f"আপনার অ্যাপয়েন্টমেন্ট সফলভাবে বুক করা হয়েছে।\n"
+                f"ডাক্তার: {doctor.name},\n"
+                f"রোগী: {patient_name},\n"
+                f"সিরিয়াল: {to_bn_digits(serial_number)},\n"
+                f"{', '.join(line_three_parts)},\n"
+                f"নিউ সফিপুর জেনারেল হাসপাতাল"
+            )
+            send_sms(number=_sms_phone_number(patient_phone), message=sms_message)
     except Exception as e:
         # Log the SMS failure so it can be debugged, but don't fail the booking
         print(f"Failed to send booking SMS to {patient_phone}: {str(e)}")
@@ -1154,46 +1145,75 @@ def update_appointment_status(
         doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
         if not doctor or appointment.doctor_id != doctor.id:
             raise HTTPException(status_code=403, detail="You can only update your own appointments")
+        
+        # Doctor can only change status once
+        if appointment.doctor_status_changed:
+            raise HTTPException(status_code=403, detail="You can only change the appointment status once")
+        
+        # Mark that doctor has changed status
+        appointment.doctor_status_changed = 1
     else:
         _require_role(current_user, "admin")
 
     appointment.status = data.status
     db.commit()
     db.refresh(appointment)
+    
+    # Send SMS to patient about status change
+    try:
+        # Validate phone before sending SMS to prevent spam
+        if _is_valid_phone_for_sms(appointment.patient_phone):
+            status_bn = "সম্পন্ন" if data.status == "Completed" else "বাতিল" if data.status == "Cancelled" else data.status
+            date_bn = bn_date(appointment.date) or appointment.date
+            
+            sms_message = (
+                f"আপনার অ্যাপয়েন্টমেন্ট স্ট্যাটাস পরিবর্তিত হয়েছে।\n"
+                f"ডাক্তার: {appointment.doctor_name},\n"
+                f"রোগী: {appointment.patient_name},\n"
+                f"তারিখ: {date_bn},\n"
+                f"স্ট্যাটাস: {status_bn},\n"
+                f"নিউ সফিপুর জেনারেল হাসপাতাল"
+            )
+            send_sms(number=_sms_phone_number(appointment.patient_phone), message=sms_message)
+    except Exception as e:
+        # Log the SMS failure so it can be debugged, but don't fail the status update
+        print(f"Failed to send status change SMS to {appointment.patient_phone}: {str(e)}")
+
     return _appointment_out(appointment)
 
 
+# PDF generation endpoint removed
+
+
+def _can_view_appointment(user: AppointmentUser, appointment: AppointmentBooking, db: Session) -> bool:
+    if user.role == "admin":
+        return True
+    if user.role == "user":
+        return appointment.patient_phone == user.phone or appointment.booked_by_id == user.id
+    if user.role == "doctor":
+        doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == user.phone).first()
+        return bool(doctor and appointment.doctor_id == doctor.id)
+    if user.role == "marketing":
+        return appointment.marketing_officer_id == user.id or appointment.booked_by_id == user.id
+    if user.role == "commission_doctor":
+        return appointment.commission_doctor_id == user.id or appointment.booked_by_id == user.id
+    return False
+
+
 @router.get("/appointments/{appointment_id}/pdf")
-def generate_appointment_pdf(
+def download_appointment_pdf(
     appointment_id: int,
     db: Session = Depends(get_db),
-    current_user: AppointmentUser = Depends(_current_user)
+    current_user: AppointmentUser = Depends(_current_user),
 ):
+    """Server-rendered bilingual appointment slip PDF. English labels, mixed-script values."""
     appointment = db.query(AppointmentBooking).filter(AppointmentBooking.id == appointment_id).first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
+    if not _can_view_appointment(current_user, appointment, db):
+        raise HTTPException(status_code=403, detail="You do not have permission to view this appointment")
 
-    if current_user.role == "user" and (
-        appointment.patient_phone != current_user.phone and appointment.booked_by_id != current_user.id
-    ):
-        raise HTTPException(status_code=403, detail="Not authorized to view this appointment")
-    elif current_user.role == "doctor":
-        doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
-        if not doctor or appointment.doctor_id != doctor.id:
-            raise HTTPException(status_code=403, detail="Not authorized to view this appointment")
-    elif current_user.role in ["marketing", "commission_doctor"]:
-        if appointment.marketing_officer_id != current_user.id and \
-           appointment.commission_doctor_id != current_user.id and \
-           appointment.booked_by_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to view this appointment")
-
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.pdfgen import canvas
-        from reportlab.lib import colors
-        import textwrap
-    except ImportError:
-        raise HTTPException(status_code=500, detail="PDF generation library (reportlab) not installed. Please install it using 'pip install reportlab'.")
+    register_fonts()
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -1202,12 +1222,12 @@ def generate_appointment_pdf(
     c.setFont("Helvetica-Bold", 24)
     c.setFillColor(colors.HexColor("#241d4e"))
     c.drawCentredString(width / 2.0, height - 50, "New Shafipur General Hospital")
-    
+
     c.setFont("Helvetica", 10)
     c.setFillColor(colors.darkgray)
     c.drawCentredString(width / 2.0, height - 65, "Shafipur Bazar, Kaliakair, Gazipur-1751")
     c.drawCentredString(width / 2.0, height - 77, "Phone: +880 1711-902062 | Email: support@nsgh.com")
-    
+
     c.setLineWidth(1)
     c.setStrokeColor(colors.lightgrey)
     c.line(50, height - 90, width - 50, height - 90)
@@ -1219,91 +1239,89 @@ def generate_appointment_pdf(
     start_y = height - 160
     col1_x = 50
     col2_x = width / 2.0 + 10
+    label_offset = 120
     line_height = 25
-    
-    def draw_field(c, x, y, label, value):
+
+    def draw_field(x, y, label, value):
         c.setFont("Helvetica-Bold", 11)
         c.setFillColor(colors.HexColor("#4a5764"))
         c.drawString(x, y, f"{label}:")
-        c.setFont("Helvetica", 11)
         c.setFillColor(colors.black)
-        c.drawString(x + 120, y, str(value) if value else "-")
+        text = str(value) if value not in (None, "") else "-"
+        draw_bilingual_string(c, x + label_offset, y, text, 11)
 
-    draw_field(c, col1_x, start_y, "Appointment ID", f"#{appointment.id:06d}")
-    draw_field(c, col2_x, start_y, "Status", appointment.status)
-    
+    draw_field(col1_x, start_y, "Appointment ID", f"#{appointment.id:06d}")
+    draw_field(col2_x, start_y, "Status", appointment.status)
+
     start_y -= line_height
-    draw_field(c, col1_x, start_y, "Date", appointment.date)
+    draw_field(col1_x, start_y, "Date", appointment.date)
     if appointment.serial_number:
-        draw_field(c, col2_x, start_y, "Serial", f"#{appointment.serial_number}")
+        draw_field(col2_x, start_y, "Serial", f"#{appointment.serial_number}")
     else:
-        draw_field(c, col2_x, start_y, "Time", appointment.time or "-")
+        draw_field(col2_x, start_y, "Time", appointment.time or "-")
 
     start_y -= line_height
-    draw_field(c, col1_x, start_y, "Doctor Name", appointment.doctor_name)
-    draw_field(c, col2_x, start_y, "Room", appointment.room)
-    
+    draw_field(col1_x, start_y, "Doctor Name", appointment.doctor_name)
+    draw_field(col2_x, start_y, "Room", appointment.room)
+
     start_y -= 15
     c.setLineWidth(0.5)
     c.setStrokeColor(colors.lightgrey)
     c.line(50, start_y, width - 50, start_y)
-    
+
     start_y -= 20
-    draw_field(c, col1_x, start_y, "Patient Name", appointment.patient_name)
-    draw_field(c, col2_x, start_y, "Patient Number", appointment.patient_phone)
-    
-    start_y -= line_height
-    draw_field(c, col1_x, start_y, "Patient Age", getattr(appointment, "patient_age", None))
-    draw_field(c, col2_x, start_y, "Address", getattr(appointment, "patient_address", None))
+    draw_field(col1_x, start_y, "Patient Name", appointment.patient_name)
+    draw_field(col2_x, start_y, "Patient Phone", appointment.patient_phone)
+
+    if getattr(appointment, "patient_age", None) is not None:
+        start_y -= line_height
+        draw_field(col1_x, start_y, "Patient Age", appointment.patient_age)
 
     start_y -= line_height
     booked_by = "Patient self-booking"
-    if appointment.booked_by_name and (
-        appointment.booked_by_role != "user" or appointment.booked_by_name != appointment.patient_name
-    ):
+    if appointment.booked_by_name and appointment.booked_by_role != "user":
         booked_by = f"{appointment.booked_by_name} ({appointment.booked_by_role})"
-    draw_field(c, col1_x, start_y, "Booked By", booked_by)
+    draw_field(col1_x, start_y, "Booked By", booked_by)
     if appointment.marketing_officer_name:
-        draw_field(c, col2_x, start_y, "Marketing Officer", appointment.marketing_officer_name)
+        draw_field(col2_x, start_y, "Marketing Officer", appointment.marketing_officer_name)
     elif appointment.commission_doctor_name:
-        draw_field(c, col2_x, start_y, "Commission Doctor", appointment.commission_doctor_name)
-        
+        draw_field(col2_x, start_y, "Commission Doctor", appointment.commission_doctor_name)
+
     start_y -= line_height
     reason = appointment.reason or "Not provided"
-    wrapped_reason = textwrap.wrap(reason, width=80)
     c.setFont("Helvetica-Bold", 11)
     c.setFillColor(colors.HexColor("#4a5764"))
-    c.drawString(col1_x, start_y, "Note:")
-    
-    c.setFont("Helvetica", 11)
+    c.drawString(col1_x, start_y, "Reason:")
     c.setFillColor(colors.black)
+    wrapped_reason = wrap_bilingual(reason, max_width=width - col1_x - label_offset - 50, font_size=11)
     if wrapped_reason:
         for line in wrapped_reason:
-            c.drawString(col1_x + 120, start_y, line)
+            draw_bilingual_string(c, col1_x + label_offset, start_y, line, 11)
             start_y -= 15
     else:
-        c.drawString(col1_x + 120, start_y, "-")
+        c.drawString(col1_x + label_offset, start_y, "-")
         start_y -= 15
-        
+
     start_y -= 20
     c.setFont("Helvetica", 10)
     c.setFillColor(colors.gray)
     c.drawString(col1_x, start_y, f"Issued At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    
+
     c.setFont("Helvetica-Oblique", 10)
     c.setFillColor(colors.gray)
     c.drawCentredString(width / 2.0, 50, "Please bring this slip and arrive 15 minutes before your appointment.")
-    
+
     c.showPage()
     c.save()
-    
+
     buffer.seek(0)
-    
-    patient_clean = re.sub(r'[^a-zA-Z0-9]+', '-', appointment.patient_name or 'patient').strip('-').lower()
+
+    patient_clean = re.sub(r'[^a-zA-Z0-9]+', '-', appointment.patient_name or 'patient').strip('-').lower() or "patient"
     filename = f"appointment-{appointment.id:06d}-{patient_clean}.pdf"
-    
+
     headers = {
-        "Content-Disposition": f'inline; filename="{filename}"'
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-store",
     }
     return StreamingResponse(buffer, media_type="application/pdf", headers=headers)
 
