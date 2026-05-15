@@ -15,19 +15,34 @@ _EN_REGULAR = "Helvetica"
 _EN_BOLD = "Helvetica-Bold"
 _EN_OBLIQUE = "Helvetica-Oblique"
 _fonts_registered = False
+_bn_regular_ok = False
+_bn_bold_ok = False
 
 
 def register_fonts() -> None:
-    """Register Noto Sans Bengali fonts with ReportLab. Safe to call repeatedly."""
-    global _fonts_registered
+    """Register Noto Sans Bengali fonts with ReportLab. Safe to call repeatedly.
+
+    If the TTF files are not present (e.g. not deployed to the host), the
+    module falls back to Helvetica for Bangla runs instead of crashing later
+    when the canvas tries to setFont("NotoSansBengali", ...).
+    """
+    global _fonts_registered, _bn_regular_ok, _bn_bold_ok
     if _fonts_registered:
         return
     regular_path = os.path.join(_FONT_DIR, "NotoSansBengali-Regular.ttf")
     bold_path = os.path.join(_FONT_DIR, "NotoSansBengali-Bold.ttf")
     if os.path.isfile(regular_path):
-        pdfmetrics.registerFont(TTFont(_BN_REGULAR, regular_path))
+        try:
+            pdfmetrics.registerFont(TTFont(_BN_REGULAR, regular_path))
+            _bn_regular_ok = True
+        except Exception:
+            _bn_regular_ok = False
     if os.path.isfile(bold_path):
-        pdfmetrics.registerFont(TTFont(_BN_BOLD, bold_path))
+        try:
+            pdfmetrics.registerFont(TTFont(_BN_BOLD, bold_path))
+            _bn_bold_ok = True
+        except Exception:
+            _bn_bold_ok = False
     _fonts_registered = True
 
 
@@ -76,7 +91,12 @@ def _segment_runs(text: str):
 
 def _font_name(is_bangla: bool, bold: bool, oblique: bool = False) -> str:
     if is_bangla:
-        return _BN_BOLD if bold else _BN_REGULAR
+        if bold and _bn_bold_ok:
+            return _BN_BOLD
+        if not bold and _bn_regular_ok:
+            return _BN_REGULAR
+        # Fonts not registered — fall back so the canvas keeps drawing.
+        return _EN_BOLD if bold else _EN_REGULAR
     if oblique:
         return _EN_OBLIQUE
     return _EN_BOLD if bold else _EN_REGULAR

@@ -1220,7 +1220,10 @@ def download_appointment_pdf(
     if not _can_view_appointment(current_user, appointment, db):
         raise HTTPException(status_code=403, detail="You do not have permission to view this appointment")
 
-    register_fonts()
+    try:
+        register_fonts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF font registration failed: {e}")
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -1318,10 +1321,15 @@ def download_appointment_pdf(
     c.setFillColor(colors.gray)
     c.drawCentredString(width / 2.0, 50, "Please bring this slip and arrive 15 minutes before your appointment.")
 
-    c.showPage()
-    c.save()
+    try:
+        c.showPage()
+        c.save()
+    except Exception as e:
+        # Surface the failure cleanly instead of letting the worker hang
+        # behind cPanel/Passenger with a half-written response.
+        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {e}")
 
-    buffer.seek(0)
+    pdf_bytes = buffer.getvalue()
 
     patient_clean = re.sub(r'[^a-zA-Z0-9]+', '-', appointment.patient_name or 'patient').strip('-').lower() or "patient"
     filename = f"appointment-{appointment.id:06d}-{patient_clean}.pdf"
@@ -1329,8 +1337,9 @@ def download_appointment_pdf(
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
         "Cache-Control": "no-store",
+        "Content-Length": str(len(pdf_bytes)),
     }
-    return StreamingResponse(buffer, media_type="application/pdf", headers=headers)
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
 @router.post("/appointments/{appointment_id}/cancel", response_model=AppointmentOut)
