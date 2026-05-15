@@ -4,6 +4,16 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     window.location.href = 'login.html';
 });
 
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
 // ---------------- Doctors Tab ----------------
 const perPage = 8;
 let currentPage = 1;
@@ -104,12 +114,12 @@ function renderDoctors() {
         }
         const specializationStr = specs.length ? specs.join(', ') : '-';
         div.innerHTML = `
-            <img src="${imgSrc}" alt="Not Available" class="img-fluid rounded-circle mb-2">
-            <h5>${d.name}</h5>
-            <p><strong>Specialties:</strong> ${specializationStr}<br>
-               <strong>Phone:</strong> ${d.phone || '-'}</p>
-            <button class="btn btn-warning btn-sm me-1" onclick="editDoctor('${d.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteDoctor('${d.id}')">Delete</button>
+            <img src="${escapeHTML(imgSrc || '')}" alt="Not Available" class="img-fluid rounded-circle mb-2">
+            <h5>${escapeHTML(d.name)}</h5>
+            <p><strong>Specialties:</strong> ${escapeHTML(specializationStr)}<br>
+               <strong>Phone:</strong> ${escapeHTML(d.phone || '-')}</p>
+            <button class="btn btn-warning btn-sm me-1" onclick="editDoctor(${Number(d.id)})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteDoctor(${Number(d.id)})">Delete</button>
         `;
         container.appendChild(div);
     });
@@ -165,9 +175,9 @@ function addConditionField(containerId='conditionsContainer', condition={icon:''
     const div = document.createElement('div');
     div.className = 'row g-1 mb-1 align-items-center';
     div.innerHTML = `
-        <div class="col-1"><input type="text" name="condition_icon[]" class="form-control form-control-sm" placeholder="Icon" value="${condition.icon}"></div>
-        <div class="col-4"><input type="text" name="condition_title[]" class="form-control form-control-sm" placeholder="Title" value="${condition.title}"></div>
-        <div class="col-6"><input type="text" name="condition_description[]" class="form-control form-control-sm" placeholder="Description" value="${condition.description}"></div>
+        <div class="col-1"><input type="text" name="condition_icon[]" class="form-control form-control-sm" placeholder="Icon" value="${escapeHTML(condition.icon || '')}"></div>
+        <div class="col-4"><input type="text" name="condition_title[]" class="form-control form-control-sm" placeholder="Title" value="${escapeHTML(condition.title || '')}"></div>
+        <div class="col-6"><input type="text" name="condition_description[]" class="form-control form-control-sm" placeholder="Description" value="${escapeHTML(condition.description || '')}"></div>
         <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()">X</button></div>
     `;
     container.appendChild(div);
@@ -396,12 +406,12 @@ function renderStaffs() {
         const div = document.createElement('div');
         div.className = 'col-md-3 staff-card mb-3 text-center';
         div.innerHTML = `
-            <img src="${s.photo_url || 'placeholder.png'}" alt="Not Available" class="img-fluid rounded-circle mb-2" style="width:100px;height:100px;">
-            <h5>${s.name}</h5>
-            <p><strong>Designation:</strong> ${s.designation || '-'}</p>
-            <p><strong>Phone:</strong> ${s.phone || '-'}</p>
-            <button class="btn btn-warning btn-sm me-1" onclick="editStaff('${s.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteStaff('${s.id}')">Delete</button>
+            <img src="${escapeHTML(s.photo_url || 'placeholder.png')}" alt="Not Available" class="img-fluid rounded-circle mb-2" style="width:100px;height:100px;">
+            <h5>${escapeHTML(s.name)}</h5>
+            <p><strong>Designation:</strong> ${escapeHTML(s.designation || '-')}</p>
+            <p><strong>Phone:</strong> ${escapeHTML(s.phone || '-')}</p>
+            <button class="btn btn-warning btn-sm me-1" onclick="editStaff(${Number(s.id)})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStaff(${Number(s.id)})">Delete</button>
         `;
         staffContainer.appendChild(div);
     });
