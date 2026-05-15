@@ -122,11 +122,18 @@ def initialize_database() -> None:
                 category=item["category"],
                 working_schedule=json.dumps([
                     {
-                        "day": "Monday",
-                        "slots": [
-                            {"start": item["startTime"], "end": item["endTime"]}
-                        ]
+                        "day": day,
+                        "startTime": item["startTime"],
+                        "endTime": item["endTime"],
                     }
+                    for day in (
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Saturday",
+                        "Sunday",
+                    )
                 ]),
                 room=item["room"],
                 is_available=1,
