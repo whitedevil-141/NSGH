@@ -1114,7 +1114,7 @@ def create_appointment(
             line_three_parts.append(f"কক্ষ-{to_bn_digits(doctor.room)}")
 
             sms_message = (
-                f"আপনার অ্যাপয়েন্টমেন্ট সফলভাবে বুক করা হয়েছে।\n"
+                f"আপনার অনলাইন অ্যাপয়েন্টমেন্ট সফলভাবে বুক করা হয়েছে।\n"
                 f"ডাক্তার: {doctor.name},\n"
                 f"রোগী: {patient_name},\n"
                 f"সিরিয়াল: {to_bn_digits(serial_number)},\n"
@@ -1174,7 +1174,7 @@ def update_appointment_status(
             date_bn = bn_date(appointment.date) or appointment.date
             
             sms_message = (
-                f"আপনার অ্যাপয়েন্টমেন্ট স্ট্যাটাস পরিবর্তিত হয়েছে।\n"
+                f"আপনার অনলাইন অ্যাপয়েন্টমেন্ট স্ট্যাটাস পরিবর্তিত হয়েছে।\n"
                 f"ডাক্তার: {appointment.doctor_name},\n"
                 f"রোগী: {appointment.patient_name},\n"
                 f"তারিখ: {date_bn},\n"
