@@ -2388,7 +2388,7 @@ async function updateAppointmentStatus(id, newStatus) {
     
     // Show confirmation modal
     getEl('confirm-patient-name').textContent = app.patientName || '-';
-    getEl('confirm-doctor-name').textContent = app.doctorName || '-';
+    getEl('confirm-doctor-name').textContent = app.docName || '-';
     getEl('confirm-current-status').textContent = app.status || 'Booked';
     getEl('confirm-new-status').textContent = newStatus;
     
