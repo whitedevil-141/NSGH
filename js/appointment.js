@@ -1722,7 +1722,7 @@ async function cancelAppointment(appId) {
         appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
         persistSession();
         renderAppointments('reset');
-        showToast('Appointment cancelled.', 'error');
+        showToast('Appointment cancelled.');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not cancel appointment'), 'error');
     }
@@ -1865,7 +1865,7 @@ async function deleteUser(userId) {
         appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
         persistSession();
         renderAdminUsers();
-        showToast('Patient deleted.', 'error');
+        showToast('Patient deleted.');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not delete patient'), 'error');
     }
@@ -1953,7 +1953,7 @@ async function deleteMarketingOfficer(userId) {
         appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
         persistSession();
         renderAdminMarketing();
-        showToast('Marketing officer deleted.', 'error');
+        showToast('Marketing officer deleted.');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not delete marketing officer'), 'error');
     }
@@ -2130,7 +2130,7 @@ async function deleteDoctor(id) {
         appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
         persistSession();
         renderAdminDoctors();
-        showToast('Doctor removed and active appointments cancelled.', 'error');
+        showToast('Doctor removed and active appointments cancelled.');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not delete doctor'), 'error');
     }
