@@ -1659,7 +1659,6 @@ async function confirmBooking() {
         showToast(`${message}${queueMsg}`);
         navigate('appointments');
         showAppointmentSuccess(appointment);
-        showToast('Appointment booked successfully');
     } catch (error) {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not book appointment'), 'error');
     } finally {
