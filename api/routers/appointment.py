@@ -93,7 +93,6 @@ _otp_store: dict[str, dict] = {}
 _otp_verified_store: dict[str, datetime] = {}
 _otp_daily_limits: dict[str, dict] = {}
 _otp_lock = Lock()
-_otp_lock = Lock()
 
 
 def _normalize_phone(value: str) -> str:
