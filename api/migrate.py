@@ -181,6 +181,35 @@ def migrate():
         else:
             print("✓ blood_group column already absent from appointment_users")
 
+        # Drop legacy appointment_doctors columns now superseded by working_schedule.
+        # The backfill above already copied any data into working_schedule, so
+        # these columns are safe to remove once present.
+        legacy_doctor_columns = ("working_days", "start_time", "end_time")
+        current_doctor_columns = {column["name"] for column in inspect(connection).get_columns("appointment_doctors")}
+        for legacy_col in legacy_doctor_columns:
+            if legacy_col in current_doctor_columns:
+                try:
+                    print(f"Dropping legacy {legacy_col} column from appointment_doctors...")
+                    connection.execute(text(f"ALTER TABLE appointment_doctors DROP COLUMN {legacy_col}"))
+                    print(f"✓ Dropped {legacy_col} column from appointment_doctors")
+                except Exception as e:
+                    print(f"Error dropping {legacy_col} column: {e}")
+            else:
+                print(f"✓ {legacy_col} column already absent from appointment_doctors")
+
+        # Drop legacy appointment_bookings.patient_address (column was added then
+        # removed from the model; not used by any current code path).
+        booking_columns = {column["name"] for column in inspect(connection).get_columns("appointment_bookings")}
+        if "patient_address" in booking_columns:
+            try:
+                print("Dropping legacy patient_address column from appointment_bookings...")
+                connection.execute(text("ALTER TABLE appointment_bookings DROP COLUMN patient_address"))
+                print("✓ Dropped patient_address column from appointment_bookings")
+            except Exception as e:
+                print(f"Error dropping patient_address column: {e}")
+        else:
+            print("✓ patient_address column already absent from appointment_bookings")
+
         connection.commit()
         print("\n✅ Migration completed successfully!")
 
