@@ -447,7 +447,7 @@ if (addStaffForm) {
 
             alert("Staff added!");
             addStaffForm.reset();
-            addStaffModal.hide();
+            bootstrap.Modal.getInstance(document.getElementById('addStaffModal'))?.hide();
             loadStaffs();
         } catch (err) {
             console.error(err);
