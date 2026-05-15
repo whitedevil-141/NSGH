@@ -65,9 +65,7 @@ async def update_staff(
     # ---------------- Handle photo ----------------
     
     if photo:
-        photo_url = upload_to_hosting(photo)
-        print(photo_url)
-        staff.photo_url = photo_url
+        staff.photo_url = upload_to_hosting(photo)
     # ---------------- Update staff ----------------
     staff.name = name
     staff.designation = designation
@@ -77,11 +75,11 @@ async def update_staff(
         db.commit()
         db.refresh(staff)
 
-        # Convert JSON strings back to Python lists for the response
         return {
             "id": staff.id,
             "name": staff.name,
             "designation": staff.designation,
+            "phone": staff.phone,
             "photo_url": staff.photo_url,
         }
     except Exception as e:
