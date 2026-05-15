@@ -627,10 +627,18 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
             | (AppointmentBooking.booked_by_id == current_user.id)
         )
 
+    appointments = [
+        _appointment_out(appointment)
+        for appointment in appointments_query.order_by(
+            AppointmentBooking.date.desc(),
+            AppointmentBooking.serial_number.asc(),
+        ).all()
+    ]
+
     return AppointmentDataResponse(
         users=users,
         doctors=doctors,
-        appointments=[],
+        appointments=appointments,
     )
 
 
