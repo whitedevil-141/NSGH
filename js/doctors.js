@@ -1,3 +1,13 @@
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
 async function loadDoctor() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
@@ -7,49 +17,45 @@ async function loadDoctor() {
     }
 
     try {
-        // fetch doctor info
-        const res = await fetch(`https://api.nsghbd.com/public/doctors/get/${id}`);
+        const res = await fetch(`https://api.nsghbd.com/public/doctors/get/${encodeURIComponent(id)}`);
 
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(errText);
-            }
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText);
+        }
 
         const doc = await res.json();
         let specs = [];
         try {
             specs = Array.isArray(doc.specialization)
                 ? doc.specialization
-                : JSON.parse(doc.specialization || '[]'); // parse JSON string
+                : JSON.parse(doc.specialization || '[]');
         } catch (err) {
             console.warn("Invalid specialization JSON:", doc.specialization);
             specs = [];
         }
         const specializationStr = specs.length ? specs.join(', ') : '-';
-        // normalize qualifications
         const qualifications = Array.isArray(doc.qualifications) ? doc.qualifications : [];
-
 
         document.getElementById('doctor-card-container').innerHTML = `
             <div class="doctor-card row align-items-center">
                 <div class="col-md-4 text-center">
-                    <img src="${doc.photo_url}" alt="Not Available" class="doctor-photo img-fluid">
+                    <img src="${escapeHTML(doc.photo_url || '')}" alt="Not Available" class="doctor-photo img-fluid">
                 </div>
                 <div class="col-md-8">
-                    <h2 class="doctor-name">${doc.name}</h2>
-                    <p class="doctor-speciality">${specializationStr}</p>
-                    <p class="doctor-description">${doc.description}</p>
-                    <p>${qualifications.map(q => `${q}<br>`).join('')}</p>
+                    <h2 class="doctor-name">${escapeHTML(doc.name)}</h2>
+                    <p class="doctor-speciality">${escapeHTML(specializationStr)}</p>
+                    <p class="doctor-description">${escapeHTML(doc.description || '')}</p>
+                    <p>${qualifications.map(q => `${escapeHTML(q)}<br>`).join('')}</p>
                     <div class="info-list mt-3">
-                        <p><i class="fas fa-hospital"></i> ${doc.hospital}</p>
-                        <p><i class="fas fa-door-open"></i>Room No: ${doc.room}</p>
-                        <p><i class="fas fa-clock"></i> ${doc.timing}</p>
+                        <p><i class="fas fa-hospital"></i> ${escapeHTML(doc.hospital || '')}</p>
+                        <p><i class="fas fa-door-open"></i>Room No: ${escapeHTML(doc.room || '')}</p>
+                        <p><i class="fas fa-clock"></i> ${escapeHTML(doc.timing || '')}</p>
                     </div>
-                    <a href="tel:${doc.phone}" class="btn ss-btn mt-3">📞 Call Now</a>
+                    <a href="tel:${encodeURIComponent(doc.phone || '')}" class="btn ss-btn mt-3">📞 Call Now</a>
                 </div>
             </div>`;
-        
-        // render conditions
+
         renderConditions(doc.conditions || []);
     } catch (err) {
         console.error("Error loading doctor:", err);
@@ -59,7 +65,7 @@ async function loadDoctor() {
 
 function renderConditions(conditions) {
     const container = document.getElementById("conditions-container");
-    container.innerHTML = ""; // clear previous
+    container.innerHTML = "";
 
     conditions.forEach(cond => {
         const card = document.createElement("div");
@@ -67,8 +73,8 @@ function renderConditions(conditions) {
         card.innerHTML = `
             <div class="card condition-card h-100 text-center">
                 <div class="card-body">
-                    <h5>${cond.icon || "🩺"} ${cond.title}</h5>
-                    <p>${cond.description}</p>
+                    <h5>${escapeHTML(cond.icon || "🩺")} ${escapeHTML(cond.title || '')}</h5>
+                    <p>${escapeHTML(cond.description || '')}</p>
                 </div>
             </div>`;
         container.appendChild(card);
