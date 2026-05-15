@@ -2,7 +2,7 @@
 const STORAGE_SESSION = 'medicare_session';
 const STORAGE_API_TOKEN = 'medicare_api_token';
 const STORAGE_VIEW = 'medicare_last_view';
-const API_BASE = window.NSGH_APPOINTMENT_API || 'https://api.nsmgh.com/appointment';
+const API_BASE = window.NSGH_APPOINTMENT_API || 'https://api.nsghbd.com/appointment';
 const SLOT_INTERVAL_MINUTES = 30;
 const BOOKING_WINDOW_DAYS = 7;
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
