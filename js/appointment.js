@@ -1446,7 +1446,7 @@ async function renderAppointments(action = null) {
                 ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}<div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
                 : `<strong>${escapeHTML(app.docName)}</strong><div class="row-subtle">Patient: ${escapeHTML(app.patientName)}</div><div class="row-subtle">Number: ${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
 
-        const pdfBtn = `<button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${Number(app.id)})">Download PDF</button>`;
+        const pdfBtn = `<button class="btn btn-outline btn-compact" onclick="viewAppointmentPdf(${Number(app.id)})">View Slip</button>`;
         const actionCol = role === ROLES.DOCTOR
             ? `
                 <div class="table-actions">
@@ -1666,37 +1666,26 @@ async function confirmBooking() {
     }
 }
 
-async function downloadAppointmentPdf(appId) {
+async function viewAppointmentPdf(appId) {
     if (!appState.authToken) {
-        showToast('Please sign in to download the appointment slip', 'error');
+        showToast('Please sign in to view the appointment slip', 'error');
         return;
     }
-    let blobUrl = null;
     try {
         const response = await fetch(`${API_BASE}/appointments/${Number(appId)}/pdf`, {
             headers: { Authorization: `Bearer ${appState.authToken}` }
         });
         if (!response.ok) {
-            let detail = 'Could not download appointment slip';
+            let detail = 'Could not load appointment slip';
             try { detail = (await response.json())?.detail || detail; } catch {}
             showToast(detail, 'error');
             return;
         }
         const blob = await response.blob();
-        blobUrl = URL.createObjectURL(blob);
-        const disposition = response.headers.get('Content-Disposition') || '';
-        const match = disposition.match(/filename="?([^"]+)"?/i);
-        const filename = match?.[1] || `appointment-${String(appId).padStart(6, '0')}.pdf`;
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
     } catch (error) {
-        showToast(error?.message || 'Could not download appointment slip', 'error');
-    } finally {
-        if (blobUrl) setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        showToast(error?.message || 'Could not load appointment slip', 'error');
     }
 }
 
@@ -2280,7 +2269,7 @@ async function renderAdminAppointments(action = null) {
                         <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
                         <option value="Cancelled" ${app.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                    <button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${Number(app.id)})">Download PDF</button>
+                    <button class="btn btn-outline btn-compact" onclick="viewAppointmentPdf(${Number(app.id)})">View Slip</button>
                 </div>
             </td>
         </tr>
@@ -2342,7 +2331,7 @@ async function renderAdminTodaySerials(action = null) {
                         <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
                         <option value="Cancelled" ${app.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                    <button class="btn btn-outline btn-compact" onclick="downloadAppointmentPdf(${Number(app.id)})">Download PDF</button>
+                    <button class="btn btn-outline btn-compact" onclick="viewAppointmentPdf(${Number(app.id)})">View Slip</button>
                 </div>
             </td>
         </tr>
