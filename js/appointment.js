@@ -2,7 +2,7 @@
 const STORAGE_SESSION = 'medicare_session';
 const STORAGE_API_TOKEN = 'medicare_api_token';
 const STORAGE_VIEW = 'medicare_last_view';
-const API_BASE = window.NSGH_APPOINTMENT_API || 'https://api.nsghbd.com/appointment';
+const API_BASE = (window.NSGH_APPOINTMENT_API || (window.NSGH_API_BASE + '/appointment'));
 const SLOT_INTERVAL_MINUTES = 30;
 const BOOKING_WINDOW_DAYS = 7;
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -26,15 +26,16 @@ const WEEKDAY_ALIASES = {
     sunday: 'Sunday'
 };
 
-const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor' };
+const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor', RECEPTIONIST: 'receptionist' };
 const VALID_APPOINTMENT_STATUSES = ['Booked', 'Completed', 'Cancelled'];
 
 const PERMISSIONS = {
     user: { dashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true },
     doctor: { doctorDashboard: true, viewAppointments: true },
-    admin: { adminPanel: true, manageUsers: true, manageDoctors: true, manageAppointments: true, manageMarketing: true },
+    admin: { adminPanel: true, manageUsers: true, manageDoctors: true, manageAppointments: true, manageMarketing: true, manageReceptionists: true },
     marketing: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true, changeOwnPassword: true },
-    commission_doctor: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true }
+    commission_doctor: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
+    receptionist: { receptionistDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true }
 };
 
 let appState = {
@@ -56,9 +57,9 @@ let authState = {
 // PDF preview/download removed
 
 let paginationState = {
-    myApp: { skip: 0, limit: 10 },
-    adminApp: { skip: 0, limit: 10 },
-    todaySerials: { skip: 0, limit: 10 }
+    myApp: { skip: 0, limit: 10, total: 0, page: 1 },
+    adminApp: { skip: 0, limit: 10, total: 0, page: 1 },
+    todaySerials: { skip: 0, limit: 10, total: 0, page: 1 }
 };
 
 let bookingDatePickerState = {
@@ -197,11 +198,27 @@ function renderBookingDatePicker(monthDate = null) {
     }
 }
 
-function toggleNav() {
-    const navLinks = getEl('nav-links');
-    const hamburgerBtn = document.querySelector('.hamburger-btn');
-    if (navLinks) navLinks.classList.toggle('active');
-    if (hamburgerBtn) hamburgerBtn.classList.toggle('active');
+function toggleSidebar() {
+    const sidebar = getEl('main-sidebar');
+    const overlay = getEl('sidebar-overlay');
+    if (!sidebar) return;
+    sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active');
+}
+
+function toggleSidebarCollapse() {
+    const sidebar = getEl('main-sidebar');
+    if (!sidebar) return;
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebar_collapsed', isCollapsed ? '1' : '0');
+}
+
+function restoreSidebarState() {
+    const sidebar = getEl('main-sidebar');
+    if (!sidebar) return;
+    if (window.innerWidth > 720 && localStorage.getItem('sidebar_collapsed') === '1') {
+        sidebar.classList.add('collapsed');
+    }
 }
 
 function togglePassword(inputId, btnEl) {
@@ -230,7 +247,8 @@ function roleLabel(role) {
         doctor: 'Doctor',
         admin: 'Admin',
         marketing: 'Marketing Officer',
-        commission_doctor: 'Commission Doctor'
+        commission_doctor: 'Commission Doctor',
+        receptionist: 'Receptionist'
     };
     return labels[role] || String(role || 'User').replace(/_/g, ' ');
 }
@@ -674,9 +692,31 @@ function showAppointmentSuccess(app) {
     setText('success-patient-name', app.patientName);
     setText('success-patient-number', app.patientPhone);
     setText('success-doctor-name', app.docName);
-    setText('success-date', formatDate(app.date));
+    setText('success-date', formatDateLike(app.date, app.time));
     setText('success-serial', app.serial_number ? `#${app.serial_number}` : '-');
     getEl('appointment-success-modal')?.classList.add('active');
+}
+
+function formatDateLike(dateStr, timeStr) {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    const day = parseInt(parts[2], 10);
+    const month = months[parseInt(parts[1], 10) - 1] || parts[1];
+    const year = parts[0];
+    let result = `${day} ${month} ${year}`;
+    if (timeStr) {
+        const mins = timeToMinutes(timeStr);
+        if (mins !== null) {
+            const hours = Math.floor(mins / 60);
+            const minutes = mins % 60;
+            const period = hours >= 12 ? 'pm' : 'am';
+            const displayHours = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+            result += ` at ${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+        }
+    }
+    return result;
 }
 
 function closeSuccessModal() {
@@ -722,7 +762,7 @@ function normalizeData() {
 }
 
 function normalizeAppointments(list) {
-    return (list || []).map(app => {
+    return ((list && list.items) || list || []).map(app => {
         const minutes = timeToMinutes(app.time);
         return {
             ...app,
@@ -789,9 +829,10 @@ function canAccess(view) {
         case 'dashboard': return role === ROLES.USER;
         case 'doctor-dashboard': return role === ROLES.DOCTOR;
         case 'marketing-dashboard': return role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR;
+        case 'receptionist-dashboard': return role === ROLES.RECEPTIONIST;
         case 'admin': return role === ROLES.ADMIN;
-        case 'doctors': return role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR;
-        case 'appointments': return role === ROLES.USER || role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR;
+        case 'doctors': return role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
+        case 'appointments': return role === ROLES.USER || role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
         default: return false;
     }
 }
@@ -801,6 +842,7 @@ function defaultViewFor(user) {
     if (role === ROLES.ADMIN) return 'admin';
     if (role === ROLES.DOCTOR) return 'doctor-dashboard';
     if (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR) return 'marketing-dashboard';
+    if (role === ROLES.RECEPTIONIST) return 'receptionist-dashboard';
     return 'dashboard';
 }
 
@@ -821,23 +863,39 @@ function navigateSafe(view) {
     appState.currentView = view;
     if (view === 'auth') localStorage.removeItem(STORAGE_VIEW);
     else localStorage.setItem(STORAGE_VIEW, view);
-    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'marketing-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view']
+    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view']
         .forEach(v => getEl(v)?.classList.add('hidden'));
     getEl(`${view}-view`)?.classList.remove('hidden');
-    getEl('nav-links')?.classList.remove('active');
-    document.querySelector('.hamburger-btn')?.classList.remove('active');
 
-    const navbar = getEl('main-nav');
+    // Close mobile sidebar
+    const overlay = getEl('sidebar-overlay');
+    const hamburger = getEl('mobile-hamburger');
+    if (overlay) overlay.classList.remove('active');
+
+    const sidebar = getEl('main-sidebar');
+    const topNav = getEl('top-navbar');
     if (view === 'auth') {
-        navbar?.classList.add('hidden');
+        sidebar?.classList.add('hidden');
+        sidebar?.classList.remove('open');
+        topNav?.classList.add('hidden');
+        if (hamburger) hamburger.classList.add('hidden');
     } else {
-        navbar?.classList.remove('hidden');
-        updateNavbar();
+        sidebar?.classList.remove('hidden');
+        topNav?.classList.remove('hidden');
+        updateSidebar();
+        if (window.innerWidth > 720) {
+            restoreSidebarState();
+            if (hamburger) hamburger.classList.add('hidden');
+        } else {
+            sidebar.classList.remove('open');
+            if (hamburger) hamburger.classList.remove('hidden');
+        }
     }
 
     if (view === 'dashboard') initDashboard();
     if (view === 'doctor-dashboard') initDoctorDashboard();
     if (view === 'marketing-dashboard') initMarketingDashboard();
+    if (view === 'receptionist-dashboard') initReceptionistDashboard();
     if (view === 'doctors') renderDoctors();
     if (view === 'appointments') {
         paginationState.myApp.skip = 0;
@@ -852,20 +910,406 @@ function goHome() {
     if (appState.currentUser) navigate(defaultViewFor(appState.currentUser));
 }
 
-function updateNavbar() {
+function updateSidebar() {
     if (!appState.currentUser) return;
     const role = getRole(appState.currentUser);
-    setText('nav-user-name', `${appState.currentUser.name} (${roleLabel(role)})`);
-    const adminTabs = getEl('admin-nav-tabs');
-    if (adminTabs) {
-        if (role === ROLES.ADMIN) {
-            adminTabs.classList.remove('hidden');
-            adminTabs.style.display = 'flex';
+    setText('navbar-user-name', `${appState.currentUser.name}`);
+    setText('navbar-role-badge', roleLabel(role));
+    buildSidebarNav(role);
+}
+
+function buildSidebarNav(role) {
+    const nav = getEl('sidebar-nav');
+    if (!nav) return;
+    const navItems = [];
+
+    if (role === ROLES.ADMIN) {
+        navItems.push({ type: 'label', text: 'Admin Panel' });
+        navItems.push({ type: 'item', id: 'admin-users', text: 'Manage Users', icon: '#users-icon' });
+        navItems.push({ type: 'item', id: 'admin-doctors', text: 'Manage Doctors', icon: '#doctor-icon' });
+        navItems.push({ type: 'item', id: 'admin-marketing', text: 'Marketing Officers', icon: '#marketing-icon' });
+        navItems.push({ type: 'item', id: 'admin-receptionists', text: 'Receptionists', icon: '#receptionist-icon' });
+        navItems.push({ type: 'item', id: 'admin-appointments', text: 'All Appointments', icon: '#appointments-icon' });
+        navItems.push({ type: 'item', id: 'admin-today-serials', text: "Today's Serials", icon: '#serials-icon' });
+        navItems.push({ type: 'item', id: 'admin-notices', text: 'Notices', icon: '#notices-icon' });
+        navItems.push({ type: 'item', id: 'admin-categories', text: 'Categories', icon: '#categories-icon' });
+    }
+
+    if (role === ROLES.USER) {
+        navItems.push({ type: 'label', text: 'Patient' });
+        navItems.push({ type: 'item', id: 'dashboard', text: 'Dashboard', icon: '#dashboard-icon' });
+    }
+
+    if (role === ROLES.DOCTOR) {
+        navItems.push({ type: 'label', text: 'Doctor' });
+        navItems.push({ type: 'item', id: 'doctor-dashboard', text: 'Doctor Dashboard', icon: '#doctor-icon' });
+    }
+
+    if (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR) {
+        navItems.push({ type: 'label', text: 'Marketing' });
+        navItems.push({ type: 'item', id: 'marketing-dashboard', text: 'Marketing Dashboard', icon: '#marketing-icon' });
+    }
+
+    if (role === ROLES.RECEPTIONIST) {
+        navItems.push({ type: 'label', text: 'Reception' });
+        navItems.push({ type: 'item', id: 'receptionist-dashboard', text: 'Reception Dashboard', icon: '#receptionist-icon' });
+    }
+
+    if (role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST) {
+        navItems.push({ type: 'label', text: 'General' });
+        navItems.push({ type: 'item', id: 'doctors', text: 'View Doctors', icon: '#doctor-icon' });
+        navItems.push({ type: 'item', id: 'appointments', text: 'My Appointments', icon: '#appointments-icon' });
+    }
+
+    nav.innerHTML = navItems.map(item => {
+        if (item.type === 'label') {
+            return `<div class="sidebar-label">${escapeHTML(item.text)}</div>`;
+        }
+        return `<div class="sidebar-item" id="tab-${item.id}" onclick="switchSidebarItem('${item.id}')">
+            <span class="sidebar-item-icon">${getIconFor(item.icon)}</span>
+            <span class="sidebar-item-text">${escapeHTML(item.text)}</span>
+        </div>`;
+    }).join('');
+}
+
+function switchSidebarItem(id) {
+    if (id === 'dashboard') { navigateSafe('dashboard'); initDashboard(); return; }
+    if (id === 'doctor-dashboard') { navigateSafe('doctor-dashboard'); initDoctorDashboard(); return; }
+    if (id === 'marketing-dashboard') { navigateSafe('marketing-dashboard'); initMarketingDashboard(); return; }
+    if (id === 'receptionist-dashboard') { navigateSafe('receptionist-dashboard'); initReceptionistDashboard(); return; }
+    if (id === 'doctors') { navigateSafe('doctors'); renderDoctors(); return; }
+    if (id === 'appointments') { navigateSafe('appointments'); paginationState.myApp.skip = 0; renderAppointments(); return; }
+    switchAdminTab(id);
+    // Close sidebar on mobile
+    if (window.innerWidth <= 720) toggleSidebar();
+}
+
+function getIconFor(type) {
+    const icons = {
+        '#users-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+        '#doctor-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>',
+        '#marketing-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 13Z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
+        '#receptionist-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+        '#appointments-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+        '#serials-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+        '#notices-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+        '#categories-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4z"></path><path d="M14 4h6v6h-6z"></path><path d="M4 14h6v6H4z"></path><path d="M14 14h6v6h-6z"></path></svg>',
+        '#dashboard-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    };
+    return icons[type] || '';
+}
+
+// --- Bulk selection for tables ---
+const bulkState = {};
+
+function getBulkState(tableId) {
+    if (!bulkState[tableId]) bulkState[tableId] = new Set();
+    return bulkState[tableId];
+}
+
+function toggleSelectAll(tableId) {
+    const tbody = getEl(tableId);
+    if (!tbody) return;
+    const checkboxes = tbody.querySelectorAll('input[type="checkbox"]');
+    const tableEl = tbody.closest('table');
+    const masterCb = tableEl?.querySelector('thead input[type="checkbox"]');
+    const isChecked = masterCb?.checked ?? false;
+
+    const state = getBulkState(tableId);
+    state.clear();
+
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+        const tr = cb.closest('tr');
+        if (isChecked && cb.value) {
+            state.add(cb.value);
+            tr?.classList.add('selected');
         } else {
-            adminTabs.classList.add('hidden');
-            adminTabs.style.display = 'none';
+            tr?.classList.remove('selected');
+        }
+    });
+
+    updateBulkToolbar(tableId);
+}
+
+function toggleRowSelect(tableId, el) {
+    const state = getBulkState(tableId);
+    const id = el.value;
+    const tr = el.closest('tr');
+
+    if (el.checked) {
+        state.add(id);
+        tr?.classList.add('selected');
+    } else {
+        state.delete(id);
+        tr?.classList.remove('selected');
+        const tableEl = tr?.closest('table');
+        const masterCb = tableEl?.querySelector('thead input[type="checkbox"]');
+        if (masterCb) masterCb.checked = false;
+    }
+
+    updateBulkToolbar(tableId);
+}
+
+function updateBulkToolbar(tableId) {
+    const state = getBulkState(tableId);
+    const count = state.size;
+    const toolbar = getEl('bulk-toolbar-' + tableId);
+    if (!toolbar) return;
+
+    if (count > 0) {
+        toolbar.classList.remove('hidden');
+        const countEl = toolbar.querySelector('.bulk-count-num');
+        if (countEl) countEl.textContent = count;
+        const actionBtns = toolbar.querySelectorAll('.bulk-actions button, .bulk-actions a');
+        actionBtns.forEach(b => b.disabled = false);
+    } else {
+        toolbar.classList.add('hidden');
+        const actionBtns = toolbar.querySelectorAll('.bulk-actions button, .bulk-actions a');
+        actionBtns.forEach(b => b.disabled = true);
+    }
+}
+
+function clearBulkSelection(tableId) {
+    const state = getBulkState(tableId);
+    state.clear();
+    const tbody = getEl(tableId);
+    if (tbody) {
+        tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+            cb.closest('tr')?.classList.remove('selected');
+        });
+        const tableEl = tbody.closest('table');
+        const masterCb = tableEl?.querySelector('thead input[type="checkbox"]');
+        if (masterCb) masterCb.checked = false;
+    }
+    updateBulkToolbar(tableId);
+}
+
+const bulkDeleteConfig = {
+    'admin-user-list': { path: '/users', idKey: 'id', label: 'patient', needsUserRefresh: true },
+    'admin-marketing-list': { path: '/marketing-officers', idKey: 'id', label: 'marketing officer', needsUserRefresh: true },
+    'admin-receptionist-list': { path: '/receptionists', idKey: 'id', label: 'receptionist', needsUserRefresh: true },
+    'admin-doctor-list': { path: '/doctors', idKey: 'id', label: 'doctor', needsUserRefresh: true },
+    'admin-all-appointments-list': { path: '/appointments', idKey: 'id', label: 'appointment', needsUserRefresh: false },
+    'admin-today-serials-list': { path: '/appointments', idKey: 'id', label: 'serial', needsUserRefresh: false },
+    'admin-notice-list': { path: '/notices', idKey: 'id', label: 'notice', needsUserRefresh: false },
+    'admin-category-list': { path: '/categories', idKey: 'id', label: 'category', needsUserRefresh: false },
+};
+
+async function bulkDeleteSelected(tableId) {
+    const state = getBulkState(tableId);
+    if (state.size === 0) return;
+
+    const cfg = bulkDeleteConfig[tableId];
+    const label = cfg?.label || 'item';
+    if (!confirm(`Delete ${state.size} selected ${label}${state.size > 1 ? 's' : ''}? This action cannot be undone.`)) return;
+
+    const ids = [...state];
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of ids) {
+        try {
+            await apiRequest(`${cfg.path}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            successCount++;
+        } catch (e) {
+            failCount++;
         }
     }
+
+    if (successCount > 0 && cfg.needsUserRefresh) {
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+    }
+    if (successCount > 0 && tableId === 'admin-notice-list') {
+        adminNoticesCache = [];
+    }
+    if (successCount > 0 && tableId === 'admin-category-list') {
+        await loadAdminCategories();
+        populateCategoryDropdown();
+    }
+
+    state.clear();
+
+    const renderMap = {
+        'admin-user-list': renderAdminUsers,
+        'admin-marketing-list': renderAdminMarketing,
+        'admin-receptionist-list': renderAdminReceptionists,
+        'admin-doctor-list': renderAdminDoctors,
+        'admin-all-appointments-list': () => renderAdminAppointments(),
+        'admin-today-serials-list': () => renderAdminTodaySerials(),
+        'admin-notice-list': renderAdminNotices,
+        'admin-category-list': renderAdminCategories,
+    };
+    const renderFn = renderMap[tableId];
+    if (renderFn) renderFn();
+
+    updateBulkToolbar(tableId);
+
+    const msg = failCount > 0
+        ? `Deleted ${successCount} ${label}${successCount > 1 ? 's' : ''}. ${failCount} failed.`
+        : `Deleted ${successCount} ${label}${successCount > 1 ? 's' : ''}.`;
+    showToast(msg, failCount > 0 ? 'warning' : 'success');
+}
+
+function bulkExportTable(tableId) {
+    const state = getBulkState(tableId);
+    const tbody = getEl(tableId);
+    if (!tbody) return;
+
+    const exportMap = {
+        'admin-user-list': exportUsersCSV,
+        'admin-marketing-list': exportMarketingCSV,
+        'admin-receptionist-list': exportReceptionistsCSV,
+        'admin-doctor-list': exportDoctorsCSV,
+        'admin-all-appointments-list': (items) => {
+            const data = collectAppointmentRows(items);
+            if (data.length) exportToCSV(data, todayISO() + '_Selected_Appointments.csv');
+        },
+        'admin-today-serials-list': (items) => {
+            const data = collectAppointmentRows(items);
+            if (data.length) exportToCSV(data, todayISO() + '_Selected_Serials.csv');
+        },
+        'appointments-list': (items) => {
+            const data = collectAppointmentRows(items);
+            if (data.length) exportToCSV(data, todayISO() + '_Appointments.csv');
+        },
+        'admin-notice-list': exportNoticesCSV,
+        'admin-category-list': exportCategoriesCSV,
+    };
+
+    const fn = exportMap[tableId];
+    if (fn) fn(state.size > 0 ? [...state] : null);
+}
+
+function collectAppointmentRows(selectedIds) {
+    if (!appState.appointments || !appState.appointments.length) return [];
+    if (!selectedIds || !selectedIds.length) return appState.appointments;
+    return appState.appointments.filter(a => selectedIds.includes(String(a.id)));
+}
+
+// --- Per-table CSV exports ---
+function exportUsersCSV(selectedIds) {
+    let data = appState.users.filter(u => getRole(u) === ROLES.USER);
+    if (selectedIds && selectedIds.length) data = data.filter(u => selectedIds.includes(u.id));
+    if (!data.length) { showToast('No data to export', 'error'); return; }
+
+    const headers = ['Name', 'Phone', 'Age', 'Gender', 'Email'];
+    const rows = [headers.join(',')];
+    data.forEach(u => {
+        rows.push([
+            `"${(u.name || '').replace(/"/g, '""')}"`,
+            u.phone || '',
+            u.age ?? '',
+            u.gender || '',
+            u.email || ''
+        ].join(','));
+    });
+    downloadCSV(rows.join('\n'), todayISO() + '_Patients.csv');
+}
+
+function exportMarketingCSV(selectedIds) {
+    let data = appState.users.filter(u => getRole(u) === ROLES.MARKETING);
+    if (selectedIds && selectedIds.length) data = data.filter(u => selectedIds.includes(u.id));
+    if (!data.length) { showToast('No data to export', 'error'); return; }
+
+    const headers = ['Name', 'Phone', 'Email', 'Role'];
+    const rows = [headers.join(',')];
+    data.forEach(u => {
+        rows.push([
+            `"${(u.name || '').replace(/"/g, '""')}"`,
+            u.phone || '',
+            u.email || '',
+            'Marketing Officer'
+        ].join(','));
+    });
+    downloadCSV(rows.join('\n'), todayISO() + '_Marketing_Officers.csv');
+}
+
+function exportReceptionistsCSV(selectedIds) {
+    let data = appState.users.filter(u => getRole(u) === ROLES.RECEPTIONIST);
+    if (selectedIds && selectedIds.length) data = data.filter(u => selectedIds.includes(u.id));
+    if (!data.length) { showToast('No data to export', 'error'); return; }
+
+    const headers = ['Name', 'Phone', 'Email', 'Role'];
+    const rows = [headers.join(',')];
+    data.forEach(u => {
+        rows.push([
+            `"${(u.name || '').replace(/"/g, '""')}"`,
+            u.phone || '',
+            u.email || '',
+            'Receptionist'
+        ].join(','));
+    });
+    downloadCSV(rows.join('\n'), todayISO() + '_Receptionists.csv');
+}
+
+function exportDoctorsCSV(selectedIds) {
+    let data = appState.doctors;
+    if (selectedIds && selectedIds.length) data = data.filter(d => selectedIds.includes(String(d.id)));
+    if (!data.length) { showToast('No data to export', 'error'); return; }
+
+    const headers = ['Name', 'Phone', 'Category', 'Room', 'Schedule', 'Status'];
+    const rows = [headers.join(',')];
+    data.forEach(d => {
+        rows.push([
+            `"${(d.name || '').replace(/"/g, '""')}"`,
+            d.phone || '',
+            `"${(d.categoryLabel || '').replace(/"/g, '""')}"`,
+            d.room || '',
+            `"${(d.workingScheduleLabel || '').replace(/"/g, '""')}"`,
+            d.is_available ? 'Available' : 'Unavailable'
+        ].join(','));
+    });
+    downloadCSV(rows.join('\n'), todayISO() + '_Doctors.csv');
+}
+
+function exportNoticesCSV(selectedIds) {
+    let data = adminNoticesCache;
+    if (selectedIds && selectedIds.length) data = data.filter(n => selectedIds.includes(String(n.id)));
+    if (!data.length) { showToast('No data to export', 'error'); return; }
+
+    const headers = ['Title', 'Content', 'Status', 'Created At'];
+    const rows = [headers.join(',')];
+    data.forEach(n => {
+        rows.push([
+            `"${(n.title || '').replace(/"/g, '""')}"`,
+            `"${(n.content || '').replace(/"/g, '""')}"`,
+            n.is_active ? 'Active' : 'Inactive',
+            n.created_at || '-'
+        ].join(','));
+    });
+    downloadCSV(rows.join('\n'), todayISO() + '_Notices.csv');
+}
+
+function exportCategoriesCSV(selectedIds) {
+    let data = adminCategories;
+    if (selectedIds && selectedIds.length) data = data.filter(c => selectedIds.includes(String(c.id)));
+    if (!data.length) { showToast('No data to export', 'error'); return; }
+
+    const headers = ['ID', 'Name'];
+    const rows = [headers.join(',')];
+    data.forEach(c => {
+        rows.push([
+            c.id,
+            `"${(c.name || '').replace(/"/g, '""')}"`
+        ].join(','));
+    });
+    downloadCSV(rows.join('\n'), todayISO() + '_Categories.csv');
+}
+
+function downloadCSV(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function redirectByRole(user, withToast = true) {
@@ -1211,12 +1655,26 @@ function logout() {
 }
 
 // --- Dashboards ---
+
 function initDashboard() {
     const u = appState.currentUser;
     setText('dash-user-name', u.name);
     setText('dash-user-phone', u.phone);
     setText('dash-user-gender', u.gender || '-');
     setText('dash-user-age', u.age || '-');
+    
+    // Fetch and display active notices
+    const noticesEl = getEl('dash-notices');
+    const bannerInner = getEl('notice-banner-inner');
+    fetch(window.NSGH_API_BASE + '/public/notices')
+        .then(res => res.json())
+        .then(notices => {
+            if (notices && notices.length) {
+                bannerInner.innerHTML = notices.map(n => `<div class="notice-banner-item" title="${escapeHTML(n.title)}: ${escapeHTML(n.content)}"><strong>${escapeHTML(n.title)}</strong><span>${escapeHTML(n.content)}</span></div>`).join('');
+                noticesEl.classList.remove('hidden');
+            }
+        })
+        .catch(() => {});
 }
 
 function initDoctorDashboard() {
@@ -1237,6 +1695,12 @@ function initMarketingDashboard() {
     setText('marketing-dash-under', role === ROLES.COMMISSION_DOCTOR ? (u.createdByName || 'Not assigned') : '-');
 
     getEl('marketing-password-card')?.classList.toggle('hidden', role !== ROLES.MARKETING);
+}
+
+function initReceptionistDashboard() {
+    const u = appState.currentUser;
+    setText('recep-dash-name', u.name);
+    setText('recep-dash-phone', u.phone);
 }
 
 // --- Doctor listing ---
@@ -1291,6 +1755,9 @@ function renderDoctors() {
 
     const listEl = getEl('doctor-list');
     listEl.innerHTML = '';
+
+    const rc = getEl('doctors-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} doctor${filtered.length !== 1 ? 's' : ''}` : '';
 
     if (filtered.length === 0) {
         getEl('doctor-empty').classList.remove('hidden');
@@ -1353,33 +1820,91 @@ function canCancelSerial(app) {
     if (app.status !== 'Booked' || isPastAppointment(app)) return false;
     if (role === ROLES.MARKETING) return app.marketingOfficerId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
     if (role === ROLES.COMMISSION_DOCTOR) return app.commissionDoctorId === appState.currentUser.id || app.bookedById === appState.currentUser.id;
+    if (role === ROLES.RECEPTIONIST) return app.bookedById === appState.currentUser.id;
     return false;
 }
 
-function renderPaginationControls(containerId, pagState, currentLength, callbackName) {
+function handlePaginationAction(action, pagState) {
+    if (action === 'first') pagState.skip = 0;
+    else if (action === 'last') pagState.skip = Math.max(0, (Math.ceil(pagState.total / pagState.limit) - 1) * pagState.limit);
+    else if (action === 'next') pagState.skip = Math.min(pagState.skip + pagState.limit, Math.max(0, pagState.total - pagState.limit));
+    else if (action === 'prev') pagState.skip = Math.max(0, pagState.skip - pagState.limit);
+    else if (typeof action === 'number') pagState.skip = (action - 1) * pagState.limit;
+}
+
+function renderPaginationControls(containerId, pagState, callbackName, pagKey) {
     const container = getEl(containerId);
     if (!container) return;
-    
-    const isFirstPage = pagState.skip === 0;
-    const hasNextPage = currentLength === pagState.limit;
-    
-    if (isFirstPage && !hasNextPage && currentLength === 0) {
+
+    const totalPages = Math.max(1, Math.ceil(pagState.total / pagState.limit));
+    const currentPage = Math.floor(pagState.skip / pagState.limit) + 1;
+
+    if (totalPages <= 1 && pagState.total === 0) {
         container.innerHTML = '';
         return;
     }
-    
-    const pageNum = Math.floor(pagState.skip / pagState.limit) + 1;
-    
-    container.innerHTML = `
-        <button class="btn btn-outline btn-compact" onclick="${callbackName}('prev')" ${isFirstPage ? 'disabled' : ''}>Previous</button>
-        <span class="text-sm" style="color:var(--text-muted)">Page ${pageNum}</span>
-        <button class="btn btn-outline btn-compact" onclick="${callbackName}('next')" ${!hasNextPage ? 'disabled' : ''}>Next</button>
-    `;
+
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    if (endPage - startPage + 1 < maxVisible) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    const startResult = pagState.total === 0 ? 0 : pagState.skip + 1;
+    const endResult = Math.min(pagState.skip + pagState.limit, pagState.total);
+
+    let html = '<div class="pagination-controls">';
+
+    html += `<div class="pagination-top">`;
+    html += `<span class="result-summary">Showing ${startResult}–${endResult} of ${pagState.total} results</span>`;
+    if (pagKey) {
+        html += `<span class="page-size-selector"><label>Rows per page:</label> <select onchange="changePageSize('${pagKey}', this.value)">
+            <option value="10" ${pagState.limit === 10 ? 'selected' : ''}>10</option>
+            <option value="25" ${pagState.limit === 25 ? 'selected' : ''}>25</option>
+            <option value="50" ${pagState.limit === 50 ? 'selected' : ''}>50</option>
+            <option value="100" ${pagState.limit === 100 ? 'selected' : ''}>100</option>
+        </select></span>`;
+    }
+    html += `</div>`;
+
+    html += `<div class="pagination-nav">`;
+    html += `<button class="page-btn" onclick="${callbackName}('first')" ${currentPage === 1 ? 'disabled' : ''} title="First Page">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+    </button>`;
+    html += `<button class="page-btn" onclick="${callbackName}('prev')" ${currentPage === 1 ? 'disabled' : ''} title="Previous">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>`;
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="${callbackName}(${i})">${i}</button>`;
+    }
+
+    html += `<button class="page-btn" onclick="${callbackName}('next')" ${currentPage === totalPages ? 'disabled' : ''} title="Next">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+    html += `<button class="page-btn" onclick="${callbackName}('last')" ${currentPage === totalPages ? 'disabled' : ''} title="Last Page">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+    </button>`;
+    html += `<span class="page-info">Page ${currentPage} of ${totalPages}</span>`;
+    html += `</div>`;
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function changePageSize(pagKey, newLimit) {
+    const pagState = paginationState[pagKey];
+    if (!pagState) return;
+    pagState.limit = parseInt(newLimit, 10);
+    pagState.skip = 0;
+    if (pagKey === 'myApp') renderAppointments();
+    else if (pagKey === 'adminApp') renderAdminAppointments();
+    else if (pagKey === 'todaySerials') renderAdminTodaySerials();
 }
 
 async function renderAppointments(action = null) {
-    if (action === 'next') paginationState.myApp.skip += paginationState.myApp.limit;
-    else if (action === 'prev') paginationState.myApp.skip = Math.max(0, paginationState.myApp.skip - paginationState.myApp.limit);
+    if (action !== null && action !== 'reset') handlePaginationAction(action, paginationState.myApp);
     else if (action === 'reset') paginationState.myApp.skip = 0;
 
     const role = getRole(appState.currentUser);
@@ -1401,6 +1926,13 @@ async function renderAppointments(action = null) {
         setText('appointments-empty-text', 'No serials have been created yet.');
         getEl('appointments-book-btn').classList.remove('hidden');
         getEl('filter-my-app-doctor-group')?.classList.remove('hidden');
+    } else if (role === ROLES.RECEPTIONIST) {
+        setText('appointments-heading', 'Serial List');
+        setText('appointments-th-1', 'Patient / Source');
+        getEl('appointments-back-btn').setAttribute('onclick', "navigate('receptionist-dashboard')");
+        setText('appointments-empty-text', 'No serials have been created yet.');
+        getEl('appointments-book-btn').classList.remove('hidden');
+        getEl('filter-my-app-doctor-group')?.classList.remove('hidden');
     } else {
         setText('appointments-heading', 'My Appointments');
         setText('appointments-th-1', 'Doctor');
@@ -1410,7 +1942,7 @@ async function renderAppointments(action = null) {
         getEl('filter-my-app-doctor-group')?.classList.remove('hidden');
     }
 
-    listEl.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+    listEl.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
     tableContainer.classList.remove('hidden');
     getEl('appointments-empty').classList.add('hidden');
 
@@ -1425,6 +1957,7 @@ async function renderAppointments(action = null) {
         if (docId) url += `&doctor_id=${docId}`;
 
         const rawData = await apiRequest(url);
+        paginationState.myApp.total = rawData.total || 0;
         const myApps = normalizeAppointments(rawData);
         appState.appointments = myApps;
 
@@ -1438,11 +1971,12 @@ async function renderAppointments(action = null) {
         tableContainer.classList.remove('hidden');
         getEl('appointments-empty').classList.add('hidden');
 
+        const selected = getBulkState('appointments-list');
         listEl.innerHTML = sortAppointments(myApps).map(app => {
         const canCancel = canCancelSerial(app);
         const firstCol = role === ROLES.DOCTOR
             ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
-            : (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR)
+            : (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST)
                 ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}<div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
                 : `<strong>${escapeHTML(app.docName)}</strong><div class="row-subtle">Patient: ${escapeHTML(app.patientName)}</div><div class="row-subtle">Number: ${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
 
@@ -1468,8 +2002,9 @@ async function renderAppointments(action = null) {
             `;
 
         return `
-            <tr>
-                <td data-label="${role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR ? 'Patient' : 'Doctor'}">${firstCol}</td>
+            <tr${selected.has(String(app.id)) ? ' class="selected"' : ''}>
+                <td class="checkbox-col" data-label=""><input type="checkbox" value="${app.id}" ${selected.has(String(app.id)) ? 'checked' : ''} onchange="toggleRowSelect('appointments-list', this)"></td>
+                <td data-label="${role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST ? 'Patient' : 'Doctor'}">${firstCol}</td>
                 <td data-label="Date">${formatDate(app.date)}</td>
                 <td data-label="Serial">${app.serial_number ? `#${app.serial_number}` : '-'}</td>
                 <td data-label="Room">${escapeHTML(app.room)}</td>
@@ -1480,9 +2015,10 @@ async function renderAppointments(action = null) {
             </tr>
         `;
     }).join('');
-        renderPaginationControls('my-app-pagination', paginationState.myApp, myApps.length, 'renderAppointments');
+        renderPaginationControls('my-app-pagination', paginationState.myApp, 'renderAppointments', 'myApp');
+        updateBulkToolbar('appointments-list');
     } catch (e) {
-        listEl.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load appointments</td></tr>';
+        listEl.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Failed to load appointments</td></tr>';
         getEl('my-app-pagination').innerHTML = '';
     }
 }
@@ -1511,9 +2047,9 @@ function openBookingModal(docId) {
     setText('modal-doc-room', doc.room);
     setText('modal-doc-initial', initial);
     getEl('booking-patient-fields')?.classList.remove('hidden');
-    getEl('booking-patient-name').value = appState.currentUser?.name || '';
-    getEl('booking-patient-age').value = appState.currentUser?.age || '';
-    getEl('booking-patient-phone').value = appState.currentUser?.phone || '';
+    getEl('booking-patient-name').value = '';
+    getEl('booking-patient-age').value = '';
+    getEl('booking-patient-phone').value = '';
     setText('booking-reason-label', 'Note');
     getEl('booking-reason').placeholder = 'Write a note for this appointment';
 
@@ -1625,13 +2161,13 @@ async function confirmBooking() {
         showToast('Enter a valid patient age', 'error');
         return;
     }
-    if (!isValidPhone(patientPhone)) {
+    if (patientPhone && !isValidPhone(patientPhone)) {
         showToast('Enter a valid patient number', 'error');
         return;
     }
     
     // Spam prevention: check for obviously invalid patterns (repeated digits)
-    if (/^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+)$/.test(patientPhone.replace(/\D/g, ''))) {
+    if (patientPhone && /^(0+|1+|2+|3+|4+|5+|6+|7+|8+|9+)$/.test(patientPhone.replace(/\D/g, ''))) {
         showToast('Invalid phone number format. Please enter a real number', 'error');
         return;
     }
@@ -1723,6 +2259,7 @@ function renderAdmin() {
         navigate(defaultViewFor(appState.currentUser));
         return;
     }
+    loadAdminCategories().then(populateCategoryDropdown);
     switchAdminTab('admin-users');
 }
 
@@ -1731,14 +2268,14 @@ function switchAdminTab(tabId) {
         navigateSafe('admin');
     }
 
-    getEl('nav-links')?.classList.remove('active');
-    document.querySelector('.hamburger-btn')?.classList.remove('active');
+    // Update sidebar item active states
+    document.querySelectorAll('.sidebar-nav .sidebar-item').forEach(el => el.classList.remove('active'));
+    const activeTab = getEl(`tab-${tabId}`);
+    if (activeTab) activeTab.classList.add('active');
 
-    ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-appointments', 'admin-today-serials'].forEach(t => {
-        getEl(`tab-${t}`)?.classList.remove('active');
+    ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-receptionists', 'admin-appointments', 'admin-today-serials', 'admin-notices', 'admin-categories'].forEach(t => {
         getEl(`${t}-content`)?.classList.add('hidden');
     });
-    getEl(`tab-${tabId}`)?.classList.add('active');
     getEl(`${tabId}-content`)?.classList.remove('hidden');
 
     if (tabId === 'admin-users') renderAdminUsers();
@@ -1752,18 +2289,35 @@ function switchAdminTab(tabId) {
         paginationState.todaySerials.skip = 0; 
         renderAdminTodaySerials(); 
     }
+    if (tabId === 'admin-notices') renderAdminNotices();
+    if (tabId === 'admin-receptionists') renderAdminReceptionists();
+    if (tabId === 'admin-categories') renderAdminCategories();
 }
 
 function renderAdminUsers() {
     const tbody = getEl('admin-user-list');
     tbody.innerHTML = '';
+    const query = (getEl('search-admin-users')?.value || '').trim().toLowerCase();
     const patients = appState.users.filter(u => getRole(u) === ROLES.USER);
-    if (patients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No patients have registered yet.</td></tr>';
+    const filtered = query
+        ? patients.filter(u =>
+            (u.name || '').toLowerCase().includes(query) ||
+            (u.phone || '').toLowerCase().includes(query) ||
+            (u.email || '').toLowerCase().includes(query) ||
+            (u.age || '').toString().includes(query) ||
+            (u.gender || '').toLowerCase().includes(query)
+          )
+        : patients;
+    const rc = getEl('admin-users-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} patient${filtered.length !== 1 ? 's' : ''}` : '';
+    const selected = getBulkState('admin-user-list');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-muted)">' + (query ? 'No patients found matching your search.' : 'No patients have registered yet.') + '</td></tr>';
         return;
     }
-    tbody.innerHTML = patients.map(user => `
-        <tr>
+    tbody.innerHTML = filtered.map(user => `
+        <tr${selected.has(user.id) ? ' class="selected"' : ''}>
+            <td class="checkbox-col" data-label=""><input type="checkbox" value="${escapeHTML(user.id)}" ${selected.has(user.id) ? 'checked' : ''} onchange="toggleRowSelect('admin-user-list', this)"></td>
             <td data-label="Name"><strong>${escapeHTML(user.name)}</strong></td>
             <td data-label="Phone">${escapeHTML(user.phone)}</td>
             <td data-label="Age">${escapeHTML(user.age || '-')}</td>
@@ -1777,6 +2331,15 @@ function renderAdminUsers() {
             </td>
         </tr>
     `).join('');
+    updateBulkToolbar('admin-user-list');
+}
+
+function filterAdminUsers() { renderAdminUsers(); }
+
+function clearAdminUsersFilters() {
+    const input = getEl('search-admin-users');
+    if (input) input.value = '';
+    renderAdminUsers();
 }
 
 function editUser(userId) {
@@ -1863,13 +2426,25 @@ async function deleteUser(userId) {
 function renderAdminMarketing() {
     const tbody = getEl('admin-marketing-list');
     if (!tbody) return;
+    const query = (getEl('search-admin-marketing')?.value || '').trim().toLowerCase();
     const officers = appState.users.filter(u => getRole(u) === ROLES.MARKETING);
-    if (!officers.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No marketing officers yet.</td></tr>';
+    const filtered = query
+        ? officers.filter(u =>
+            (u.name || '').toLowerCase().includes(query) ||
+            (u.phone || '').toLowerCase().includes(query) ||
+            (u.email || '').toLowerCase().includes(query)
+          )
+        : officers;
+    const rc = getEl('admin-marketing-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} marketing officer${filtered.length !== 1 ? 's' : ''}` : '';
+    const selected = getBulkState('admin-marketing-list');
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">' + (query ? 'No marketing officers found matching your search.' : 'No marketing officers yet.') + '</td></tr>';
         return;
     }
-    tbody.innerHTML = officers.map(user => `
-            <tr>
+    tbody.innerHTML = filtered.map(user => `
+            <tr${selected.has(user.id) ? ' class="selected"' : ''}>
+                <td class="checkbox-col" data-label=""><input type="checkbox" value="${escapeHTML(user.id)}" ${selected.has(user.id) ? 'checked' : ''} onchange="toggleRowSelect('admin-marketing-list', this)"></td>
                 <td data-label="Name"><strong>${escapeHTML(user.name)}</strong></td>
                 <td data-label="Phone">${escapeHTML(user.phone)}</td>
                 <td data-label="Email">${escapeHTML(user.email || '-')}</td>
@@ -1882,6 +2457,15 @@ function renderAdminMarketing() {
                 </td>
             </tr>
     `).join('');
+    updateBulkToolbar('admin-marketing-list');
+}
+
+function filterAdminMarketing() { renderAdminMarketing(); }
+
+function clearAdminMarketingFilters() {
+    const input = getEl('search-admin-marketing');
+    if (input) input.value = '';
+    renderAdminMarketing();
 }
 
 function editMarketingOfficer(userId) {
@@ -1990,6 +2574,158 @@ async function saveMarketingOfficer() {
     }
 }
 
+// --- Admin receptionists ---
+function renderAdminReceptionists() {
+    const tbody = getEl('admin-receptionist-list');
+    if (!tbody) return;
+    const query = (getEl('search-admin-receptionists')?.value || '').trim().toLowerCase();
+    const receptionists = appState.users.filter(u => getRole(u) === ROLES.RECEPTIONIST);
+    const filtered = query
+        ? receptionists.filter(u =>
+            (u.name || '').toLowerCase().includes(query) ||
+            (u.phone || '').toLowerCase().includes(query) ||
+            (u.email || '').toLowerCase().includes(query)
+          )
+        : receptionists;
+    const rc = getEl('admin-receptionists-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} receptionist${filtered.length !== 1 ? 's' : ''}` : '';
+    const selected = getBulkState('admin-receptionist-list');
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">' + (query ? 'No receptionists found matching your search.' : 'No receptionists yet.') + '</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filtered.map(user => `
+            <tr${selected.has(user.id) ? ' class="selected"' : ''}>
+                <td class="checkbox-col" data-label=""><input type="checkbox" value="${escapeHTML(user.id)}" ${selected.has(user.id) ? 'checked' : ''} onchange="toggleRowSelect('admin-receptionist-list', this)"></td>
+                <td data-label="Name"><strong>${escapeHTML(user.name)}</strong></td>
+                <td data-label="Phone">${escapeHTML(user.phone)}</td>
+                <td data-label="Email">${escapeHTML(user.email || '-')}</td>
+                <td data-label="Role"><span class="badge badge-info">Receptionist</span></td>
+                <td data-label="Actions">
+                    <div class="table-actions">
+                        <button class="btn btn-outline btn-compact" onclick="editReceptionist('${escapeHTML(user.id)}')">Edit</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteReceptionist('${escapeHTML(user.id)}')">Delete</button>
+                    </div>
+                </td>
+            </tr>
+    `).join('');
+    updateBulkToolbar('admin-receptionist-list');
+}
+
+function filterAdminReceptionists() { renderAdminReceptionists(); }
+
+function clearAdminReceptionistsFilters() {
+    const input = getEl('search-admin-receptionists');
+    if (input) input.value = '';
+    renderAdminReceptionists();
+}
+
+function editReceptionist(userId) {
+    const officer = appState.users.find(u => u.id === userId);
+    if (!officer || getRole(officer) !== ROLES.RECEPTIONIST) return;
+    getEl('edit-receptionist-id').value = officer.id;
+    getEl('edit-receptionist-name').value = officer.name || '';
+    getEl('edit-receptionist-phone').value = officer.phone || '';
+    getEl('edit-receptionist-email').value = officer.email || '';
+    getEl('admin-edit-receptionist-modal')?.classList.add('active');
+}
+
+async function saveEditedReceptionist() {
+    const userId = getEl('edit-receptionist-id').value;
+    const officer = appState.users.find(u => u.id === userId);
+    if (!officer) return;
+
+    const name = getEl('edit-receptionist-name').value.trim();
+    const email = getEl('edit-receptionist-email').value.trim();
+
+    if (name.length < 2) {
+        showToast('Receptionist name is required', 'error');
+        return;
+    }
+    if (email && !isValidEmail(email)) {
+        showToast('Enter a valid email address', 'error');
+        return;
+    }
+
+    setLoading('btn-save-edited-receptionist', true, 'Saving...');
+    try {
+        await apiRequest(`/receptionists/${encodeURIComponent(userId)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, email: email || null })
+        });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        showToast('Receptionist updated successfully');
+        closeModal('admin-edit-receptionist-modal');
+        renderAdminReceptionists();
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not update receptionist'), 'error');
+    } finally {
+        setLoading('btn-save-edited-receptionist', false);
+    }
+}
+
+async function deleteReceptionist(userId) {
+    const officer = appState.users.find(u => u.id === userId);
+    if (!officer || getRole(officer) !== ROLES.RECEPTIONIST) return;
+    if (!confirm(`Delete receptionist "${officer.name}"?`)) return;
+
+    try {
+        await apiRequest(`/receptionists/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        renderAdminReceptionists();
+        showToast('Receptionist deleted.');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not delete receptionist'), 'error');
+    }
+}
+
+function openAdminReceptionistModal() {
+    getEl('admin-receptionist-form')?.reset();
+    getEl('admin-receptionist-modal')?.classList.add('active');
+}
+
+async function saveReceptionist() {
+    const name = getEl('admin-receptionist-name').value.trim();
+    const phone = normalizePhone(getEl('admin-receptionist-phone').value);
+    const email = getEl('admin-receptionist-email').value.trim();
+    const password = getEl('admin-receptionist-password').value;
+
+    if (name.length < 2 || !isValidPhone(phone)) {
+        showToast('Enter receptionist name and valid phone', 'error');
+        return;
+    }
+    if (!isValidEmail(email)) {
+        showToast('Enter a valid email address', 'error');
+        return;
+    }
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    setLoading('btn-save-receptionist', true, 'Creating...');
+    try {
+        await apiRequest('/receptionists', {
+            method: 'POST',
+            body: JSON.stringify({ name, phone, email: email || null, password, specialty: 'Receptionist' })
+        });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        closeModal('admin-receptionist-modal');
+        renderAdminReceptionists();
+        showToast('Receptionist ID created');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not create receptionist'), 'error');
+    } finally {
+        setLoading('btn-save-receptionist', false);
+    }
+}
+
 // --- Admin doctors ---
 function buildTimeOptions(selectedValue = '') {
     const options = ['<option value="">Select</option>'];
@@ -2041,14 +2777,37 @@ function getWorkingScheduleForm() {
 function renderAdminDoctors() {
     const tbody = getEl('admin-doctor-list');
     tbody.innerHTML = '';
-    if (appState.doctors.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-muted)">No doctors yet. Click "+ Add Doctor".</td></tr>';
+    const query = (getEl('search-admin-doctors')?.value || '').trim().toLowerCase();
+    const categoryFilter = getEl('filter-admin-doctors-category')?.value || '';
+    const statusFilter = getEl('filter-admin-doctors-status')?.value || '';
+    let filtered = appState.doctors;
+    if (query) {
+        filtered = filtered.filter(d =>
+            (d.name || '').toLowerCase().includes(query) ||
+            (d.phone || '').toLowerCase().includes(query) ||
+            (d.categoryLabel || '').toLowerCase().includes(query) ||
+            (d.room || '').toLowerCase().includes(query)
+        );
+    }
+    if (categoryFilter) {
+        filtered = filtered.filter(d =>
+            Array.isArray(d.category) ? d.category.includes(categoryFilter) : d.category === categoryFilter
+        );
+    }
+    if (statusFilter === 'available') filtered = filtered.filter(d => d.is_available);
+    else if (statusFilter === 'unavailable') filtered = filtered.filter(d => !d.is_available);
+    const rc = getEl('admin-doctors-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} doctor${filtered.length !== 1 ? 's' : ''}` : '';
+    const selected = getBulkState('admin-doctor-list');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:var(--text-muted)">' + (query || categoryFilter || statusFilter ? 'No doctors found matching your filters.' : 'No doctors yet. Click "+ Add Doctor".') + '</td></tr>';
         return;
     }
-    tbody.innerHTML = appState.doctors.map(doc => {
+    tbody.innerHTML = filtered.map(doc => {
         const statusLabel = doc.is_available ? '<span class="badge badge-success">Available</span>' : '<span class="badge badge-warning">Unavailable</span>';
         return `
-        <tr>
+        <tr${selected.has(String(doc.id)) ? ' class="selected"' : ''}>
+            <td class="checkbox-col" data-label=""><input type="checkbox" value="${doc.id}" ${selected.has(String(doc.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-doctor-list', this)"></td>
             <td data-label="Name"><strong>${escapeHTML(doc.name)}</strong></td>
             <td data-label="Phone">${escapeHTML(doc.phone || '-')}</td>
             <td data-label="Category">${escapeHTML(doc.categoryLabel)}</td>
@@ -2064,12 +2823,26 @@ function renderAdminDoctors() {
         </tr>
     `
     }).join('');
+    updateBulkToolbar('admin-doctor-list');
+}
+
+function filterAdminDoctors() { renderAdminDoctors(); }
+
+function clearAdminDoctorsFilters() {
+    const search = getEl('search-admin-doctors');
+    const cat = getEl('filter-admin-doctors-category');
+    const status = getEl('filter-admin-doctors-status');
+    if (search) search.value = '';
+    if (cat) cat.value = '';
+    if (status) status.value = '';
+    renderAdminDoctors();
 }
 
 function openAdminDoctorModal(docId = null) {
     // Ensure time options are available before setting values
     generateTimeOptions('admin-doc-start-time');
     generateTimeOptions('admin-doc-end-time');
+    populateCategoryDropdown();
     
     const passwordGroup = getEl('admin-doc-password-group');
     if (docId) {
@@ -2219,12 +2992,11 @@ async function saveDoctor() {
 
 // --- Admin appointments ---
 async function renderAdminAppointments(action = null) {
-    if (action === 'next') paginationState.adminApp.skip += paginationState.adminApp.limit;
-    else if (action === 'prev') paginationState.adminApp.skip = Math.max(0, paginationState.adminApp.skip - paginationState.adminApp.limit);
+    if (action !== null && action !== 'reset') handlePaginationAction(action, paginationState.adminApp);
     else if (action === 'reset') paginationState.adminApp.skip = 0;
 
     const tbody = getEl('admin-all-appointments-list');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
     
     try {
         const date = getEl('filter-admin-app-date')?.value || '';
@@ -2237,18 +3009,21 @@ async function renderAdminAppointments(action = null) {
         if (docId) url += `&doctor_id=${docId}`;
 
         const rawData = await apiRequest(url);
+        paginationState.adminApp.total = rawData.total || 0;
         const data = normalizeAppointments(rawData);
         appState.appointments = data;
 
         if (data.length === 0 && paginationState.adminApp.skip === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No appointments found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No appointments found.</td></tr>';
             getEl('admin-app-pagination').innerHTML = '';
             return;
         }
         
+        const selected = getBulkState('admin-all-appointments-list');
         const sorted = sortAppointments(data);
         tbody.innerHTML = sorted.map(app => `
-        <tr>
+        <tr${selected.has(String(app.id)) ? ' class="selected"' : ''}>
+            <td class="checkbox-col" data-label=""><input type="checkbox" value="${app.id}" ${selected.has(String(app.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-all-appointments-list', this)"></td>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
@@ -2274,20 +3049,20 @@ async function renderAdminAppointments(action = null) {
             </td>
         </tr>
     `).join('');
-        renderPaginationControls('admin-app-pagination', paginationState.adminApp, data.length, 'renderAdminAppointments');
+        renderPaginationControls('admin-app-pagination', paginationState.adminApp, 'renderAdminAppointments', 'adminApp');
+        updateBulkToolbar('admin-all-appointments-list');
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load appointments</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load appointments</td></tr>';
         getEl('admin-app-pagination').innerHTML = '';
     }
 }
 
 async function renderAdminTodaySerials(action = null) {
-    if (action === 'next') paginationState.todaySerials.skip += paginationState.todaySerials.limit;
-    else if (action === 'prev') paginationState.todaySerials.skip = Math.max(0, paginationState.todaySerials.skip - paginationState.todaySerials.limit);
+    if (action !== null && action !== 'reset') handlePaginationAction(action, paginationState.todaySerials);
     else if (action === 'reset') paginationState.todaySerials.skip = 0;
 
     const tbody = getEl('admin-today-serials-list');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
 
     try {
         const today = todayISO();
@@ -2299,18 +3074,21 @@ async function renderAdminTodaySerials(action = null) {
         if (docId) url += `&doctor_id=${docId}`;
 
         const rawData = await apiRequest(url);
+        paginationState.todaySerials.total = rawData.total || 0;
         const data = normalizeAppointments(rawData);
         appState.appointments = data;
 
         if (data.length === 0 && paginationState.todaySerials.skip === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No serials found for today.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No serials found for today.</td></tr>';
             getEl('today-serials-pagination').innerHTML = '';
             return;
         }
         
+        const selected = getBulkState('admin-today-serials-list');
         const sorted = sortAppointments(data);
         tbody.innerHTML = sorted.map(app => `
-        <tr>
+        <tr${selected.has(String(app.id)) ? ' class="selected"' : ''}>
+            <td class="checkbox-col" data-label=""><input type="checkbox" value="${app.id}" ${selected.has(String(app.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-today-serials-list', this)"></td>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
@@ -2336,9 +3114,10 @@ async function renderAdminTodaySerials(action = null) {
             </td>
         </tr>
     `).join('');
-        renderPaginationControls('today-serials-pagination', paginationState.todaySerials, data.length, 'renderAdminTodaySerials');
+        renderPaginationControls('today-serials-pagination', paginationState.todaySerials, 'renderAdminTodaySerials', 'todaySerials');
+        updateBulkToolbar('admin-today-serials-list');
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load serials</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load serials</td></tr>';
         getEl('today-serials-pagination').innerHTML = '';
     }
 }
@@ -2588,6 +3367,29 @@ function clearAdminAppFilters() {
     renderAdminAppointments('reset');
 }
 
+async function downloadSerialsPdf() {
+    if (!appState.authToken) {
+        showToast('Please sign in', 'error');
+        return;
+    }
+    try {
+        const response = await fetch(`${API_BASE}/serials/pdf`, {
+            headers: { Authorization: `Bearer ${appState.authToken}` }
+        });
+        if (!response.ok) {
+            let detail = 'Could not generate PDF';
+            try { detail = (await response.json())?.detail || detail; } catch {}
+            showToast(detail, 'error');
+            return;
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+    } catch (error) {
+        showToast(error?.message || 'Could not generate PDF', 'error');
+    }
+}
+
 function clearTodaySerialsFilters() {
     if(getEl('filter-admin-today-status')) getEl('filter-admin-today-status').value = '';
     if(getEl('filter-admin-today-doctor')) getEl('filter-admin-today-doctor').value = '';
@@ -2601,24 +3403,361 @@ async function exportAppointmentsHelper(date, status, docId, filename) {
     if (docId) url += `&doctor_id=${docId}`;
     try {
         const rawData = await apiRequest(url);
-        exportToCSV(sortAppointments(normalizeAppointments(rawData)), filename);
+        exportToCSV(sortAppointments(normalizeAppointments(rawData.items || rawData)), filename);
     } catch(e) {
         showToast('Export failed', 'error');
     }
 }
 
-function exportMyAppointments() { 
-    exportAppointmentsHelper(getEl('filter-my-app-date')?.value, getEl('filter-my-app-status')?.value, getEl('filter-my-app-doctor')?.value, 'my-appointments.csv'); 
-}
 function exportAdminAppointments() { 
-    exportAppointmentsHelper(getEl('filter-admin-app-date')?.value, getEl('filter-admin-app-status')?.value, getEl('filter-admin-app-doctor')?.value, 'all-appointments.csv'); 
+    exportAppointmentsHelper(getEl('filter-admin-app-date')?.value, getEl('filter-admin-app-status')?.value, getEl('filter-admin-app-doctor')?.value, todayISO() + '_All_Appointments.csv'); 
 }
 function exportTodaySerials() { 
-    exportAppointmentsHelper(todayISO(), getEl('filter-admin-today-status')?.value, getEl('filter-admin-today-doctor')?.value, 'today-serials.csv'); 
+    exportAppointmentsHelper(todayISO(), getEl('filter-admin-today-status')?.value, getEl('filter-admin-today-doctor')?.value, todayISO() + '_Serials.csv'); 
 }
+
+// --- Admin Notices ---
+let adminNoticesCache = [];
+
+function renderAdminNotices() {
+    const tbody = getEl('admin-notice-list');
+    tbody.innerHTML = '';
+
+    const doRender = (notices) => {
+        adminNoticesCache = notices || [];
+        const query = (getEl('search-admin-notices')?.value || '').trim().toLowerCase();
+        const statusFilter = getEl('filter-admin-notices-status')?.value || '';
+        let filtered = adminNoticesCache;
+        if (query) {
+            filtered = filtered.filter(n =>
+                (n.title || '').toLowerCase().includes(query) ||
+                (n.content || '').toLowerCase().includes(query)
+            );
+        }
+        if (statusFilter === 'active') filtered = filtered.filter(n => n.is_active);
+        else if (statusFilter === 'inactive') filtered = filtered.filter(n => !n.is_active);
+        const rc = getEl('admin-notices-result-count');
+        if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} notice${filtered.length !== 1 ? 's' : ''}` : '';
+        const selected = getBulkState('admin-notice-list');
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">' + (query || statusFilter ? 'No notices found matching your filters.' : 'No notices yet.') + '</td></tr>';
+            return;
+        }
+        tbody.innerHTML = filtered.map(n => `
+            <tr${selected.has(String(n.id)) ? ' class="selected"' : ''}>
+                <td class="checkbox-col" data-label=""><input type="checkbox" value="${n.id}" ${selected.has(String(n.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-notice-list', this)"></td>
+                <td data-label="Title"><strong>${escapeHTML(n.title)}</strong></td>
+                <td data-label="Content">${escapeHTML(n.content)}</td>
+                <td data-label="Status"><span class="badge ${n.is_active ? 'badge-success' : 'badge-warning'}">${n.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td data-label="Created">${escapeHTML(n.created_at || '-')}</td>
+                <td data-label="Actions">
+                    <div class="table-actions">
+                        <button class="btn btn-outline btn-compact" onclick="editNotice(${n.id})">Edit</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteNotice(${n.id})">Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        updateBulkToolbar('admin-notice-list');
+    };
+
+    try {
+        const token = appState.authToken;
+        if (adminNoticesCache.length > 0) {
+            doRender(adminNoticesCache);
+            return;
+        }
+        fetch(`${API_BASE}/notices`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(notices => doRender(notices))
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load notices</td></tr>';
+        });
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load notices</td></tr>';
+    }
+}
+
+function filterAdminNotices() { renderAdminNotices(); }
+
+function clearAdminNoticesFilters() {
+    const search = getEl('search-admin-notices');
+    const status = getEl('filter-admin-notices-status');
+    if (search) search.value = '';
+    if (status) status.value = '';
+    renderAdminNotices();
+}
+
+function openAdminNoticeModal(noticeId = null) {
+    if (noticeId) {
+        const token = appState.authToken;
+        fetch(`${API_BASE}/notices`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(notices => {
+            const n = notices.find(x => x.id === noticeId);
+            if (!n) return;
+            setText('admin-notice-modal-title', 'Edit Notice');
+            getEl('admin-notice-id').value = n.id;
+            getEl('admin-notice-title').value = n.title;
+            getEl('admin-notice-content').value = n.content;
+            getEl('admin-notice-active').checked = !!n.is_active;
+            getEl('admin-notice-modal').classList.add('active');
+        });
+    } else {
+        setText('admin-notice-modal-title', 'Add Notice');
+        getEl('admin-notice-form').reset();
+        getEl('admin-notice-id').value = '';
+        getEl('admin-notice-active').checked = true;
+        getEl('admin-notice-modal').classList.add('active');
+    }
+}
+
+function editNotice(id) { openAdminNoticeModal(id); }
+
+async function saveNotice() {
+    const idVal = getEl('admin-notice-id').value;
+    const title = getEl('admin-notice-title').value.trim();
+    const content = getEl('admin-notice-content').value.trim();
+    const isActive = getEl('admin-notice-active').checked;
+
+    if (!title || !content) {
+        showToast('Title and content are required', 'error');
+        return;
+    }
+
+    setLoading('btn-save-notice', true, 'Saving...');
+    try {
+        const payload = { title, content, is_active: isActive };
+        if (idVal) {
+            await apiRequest(`/notices/${Number(idVal)}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+            showToast('Notice updated');
+        } else {
+            await apiRequest('/notices', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            showToast('Notice created');
+        }
+        closeModal('admin-notice-modal');
+        adminNoticesCache = [];
+        renderAdminNotices();
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not save notice'), 'error');
+    } finally {
+        setLoading('btn-save-notice', false);
+    }
+}
+
+async function deleteNotice(id) {
+    if (!confirm('Delete this notice?')) return;
+    try {
+        await apiRequest(`/notices/${Number(id)}`, { method: 'DELETE' });
+        adminNoticesCache = [];
+        renderAdminNotices();
+        showToast('Notice deleted.');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not delete notice'), 'error');
+    }
+}
+
+// --- Admin categories ---
+
+let adminCategories = [];
+
+async function loadAdminCategories() {
+    try {
+        const cats = await apiRequest('/categories');
+        adminCategories = cats || [];
+        populateAdminFilterCategoryDropdowns();
+    } catch (err) {
+        adminCategories = [];
+    }
+}
+
+async function loadPublicCategories() {
+    try {
+        const url = (window.NSGH_API_BASE || 'https://api.nsghbd.com') + '/public/categories';
+        const res = await fetch(url);
+        if (res.ok) {
+            const cats = await res.json();
+            adminCategories = cats || [];
+            populateAdminFilterCategoryDropdowns();
+        }
+    } catch (err) {
+        // fallback
+    }
+}
+
+function populateCategoryDropdown() {
+    const sel = document.getElementById('admin-doc-category');
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">Select Category</option>';
+    adminCategories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        if (c.name === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function populateAdminFilterCategoryDropdowns() {
+    const targets = ['filter-admin-doctors-category', 'filter-category'];
+    targets.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const currentVal = sel.value;
+        sel.innerHTML = id === 'filter-category'
+            ? '<option value="all">All Categories</option>'
+            : '<option value="">All Categories</option>';
+        adminCategories.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.name;
+            opt.textContent = c.name;
+            sel.appendChild(opt);
+        });
+        sel.value = currentVal;
+    });
+}
+
+function renderAdminCategories() {
+    const tbody = document.getElementById('admin-category-list');
+    if (!tbody) return;
+    const query = (getEl('search-admin-categories')?.value || '').trim().toLowerCase();
+    const filtered = query
+        ? adminCategories.filter(c =>
+            (c.name || '').toLowerCase().includes(query) ||
+            String(c.id).includes(query)
+          )
+        : adminCategories;
+    const rc = getEl('admin-categories-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} categor${filtered.length !== 1 ? 'ies' : 'y'}` : '';
+    const selected = getBulkState('admin-category-list');
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="color:var(--text-muted)">' + (query ? 'No categories found matching your search.' : 'No categories yet.') + '</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filtered.map(c => `
+        <tr${selected.has(String(c.id)) ? ' class="selected"' : ''}>
+            <td class="checkbox-col" data-label=""><input type="checkbox" value="${c.id}" ${selected.has(String(c.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-category-list', this)"></td>
+            <td data-label="ID">${c.id}</td>
+            <td data-label="Name"><strong>${escapeHTML(c.name)}</strong></td>
+            <td data-label="Actions">
+                <div class="table-actions">
+                    <button class="btn btn-outline btn-compact" onclick="openEditCategoryModal(${c.id})">Edit</button>
+                    <button class="btn btn-danger btn-compact" onclick="deleteCategory(${c.id})">Delete</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    updateBulkToolbar('admin-category-list');
+}
+
+function filterAdminCategories() { renderAdminCategories(); }
+
+function clearAdminCategoriesFilters() {
+    const input = getEl('search-admin-categories');
+    if (input) input.value = '';
+    renderAdminCategories();
+}
+
+function openAdminCategoryModal() {
+    document.getElementById('admin-category-form').reset();
+    document.getElementById('admin-category-modal').classList.add('active');
+}
+
+async function saveCategory() {
+    const name = document.getElementById('admin-category-name').value.trim();
+    if (!name) { showToast('Category name is required', 'error'); return; }
+    setLoading('btn-save-category', true, 'Saving...');
+    try {
+        await apiRequest('/categories', {
+            method: 'POST',
+            body: JSON.stringify({ name })
+        });
+        closeModal('admin-category-modal');
+        await loadAdminCategories();
+        populateCategoryDropdown();
+        renderAdminCategories();
+        showToast('Category added');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not add category'), 'error');
+    } finally {
+        setLoading('btn-save-category', false);
+    }
+}
+
+function openEditCategoryModal(id) {
+    const cat = adminCategories.find(c => c.id === id);
+    if (!cat) return;
+    document.getElementById('edit-category-id').value = cat.id;
+    document.getElementById('edit-category-name').value = cat.name;
+    document.getElementById('admin-edit-category-modal').classList.add('active');
+}
+
+async function saveEditedCategory() {
+    const id = Number(document.getElementById('edit-category-id').value);
+    const name = document.getElementById('edit-category-name').value.trim();
+    if (!name) { showToast('Category name is required', 'error'); return; }
+    setLoading('btn-save-edited-category', true, 'Saving...');
+    try {
+        await apiRequest(`/categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name })
+        });
+        closeModal('admin-edit-category-modal');
+        await loadAdminCategories();
+        populateCategoryDropdown();
+        renderAdminCategories();
+        showToast('Category updated');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not update category'), 'error');
+    } finally {
+        setLoading('btn-save-edited-category', false);
+    }
+}
+
+async function deleteCategory(id) {
+    const cat = adminCategories.find(c => c.id === id);
+    if (!cat) return;
+    if (!confirm(`Delete category "${cat.name}"?`)) return;
+    try {
+        await apiRequest(`/categories/${id}`, { method: 'DELETE' });
+        await loadAdminCategories();
+        populateCategoryDropdown();
+        renderAdminCategories();
+        showToast('Category deleted.');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not delete category'), 'error');
+    }
+}
+
+// Handle sidebar on resize
+window.addEventListener('resize', () => {
+    const sidebar = getEl('main-sidebar');
+    const hamburger = getEl('mobile-hamburger');
+    if (!sidebar) return;
+    if (window.innerWidth > 720) {
+        sidebar.classList.remove('open');
+        if (hamburger) hamburger.classList.add('hidden');
+        restoreSidebarState();
+    } else {
+        if (!appState.currentUser && hamburger) hamburger.classList.add('hidden');
+        else if (appState.currentUser && hamburger) hamburger.classList.remove('hidden');
+    }
+});
 
 // Boot
 generateTimeOptions('admin-doc-start-time');
 generateTimeOptions('admin-doc-end-time');
 bindUIEvents();
+loadPublicCategories();
 loadData();

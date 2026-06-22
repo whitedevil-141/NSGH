@@ -26,41 +26,51 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Navigation -->
-    <nav class="navbar hidden" id="main-nav">
-        <div class="nav-brand">
-            <div class="logo" onclick="goHome()">
-                <!-- <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> -->
-                <img width="70px" src="img/logo/logo.png" alt="NSGH Logo">
-                Appointment Portal
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar hidden" id="main-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo" onclick="goHome()">
+                <img width="36px" src="img/logo/logo.png" alt="NSGH Logo">
+                <span class="sidebar-brand-text">Appointment Portal</span>
             </div>
-            <button class="hamburger-btn" onclick="toggleNav()" aria-label="Toggle navigation">
-                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="Close sidebar">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" aria-label="Collapse sidebar" id="sidebar-collapse-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
         </div>
-        <div class="nav-links" id="nav-links">
-            <div id="admin-nav-tabs" class="hidden">
-                <div class="sidebar-item active" onclick="switchAdminTab('admin-users')" id="tab-admin-users">Manage Users</div>
-                <div class="sidebar-item" onclick="switchAdminTab('admin-doctors')" id="tab-admin-doctors">Manage Doctors</div>
-                <div class="sidebar-item" onclick="switchAdminTab('admin-marketing')" id="tab-admin-marketing">Marketing Officers</div>
-                <div class="sidebar-item" onclick="switchAdminTab('admin-appointments')" id="tab-admin-appointments">All Appointments</div>
-                <div class="sidebar-item" onclick="switchAdminTab('admin-today-serials')" id="tab-admin-today-serials">Today's Serials</div>
-            </div>
-            <div class="user-profile-badge">
-                <div class="user-avatar">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
-                <span id="nav-user-name" class="font-medium"></span>
-            </div>
-            <button class="btn btn-outline btn-compact" onclick="logout()">
+
+        <nav class="sidebar-nav" id="sidebar-nav">
+            <!-- Role-specific items are shown/hidden via JS -->
+        </nav>
+    </aside>
+
+    <!-- Top Navbar -->
+    <header class="top-navbar hidden" id="top-navbar">
+        <div class="top-navbar-left">
+            
+        </div>
+        <div class="top-navbar-right">
+            <span id="navbar-user-name" class="navbar-user-text"></span>
+            <span class="navbar-role-badge" id="navbar-role-badge"></span>
+            <button class="btn btn-outline btn-compact navbar-logout-btn" onclick="logout()">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                Logout
+                <span>Logout</span>
             </button>
         </div>
-    </nav>
+    </header>
+
+    <!-- Mobile hamburger -->
+    <button class="mobile-hamburger hidden" id="mobile-hamburger" onclick="toggleSidebar()" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
 
     <!-- Main Content -->
-    <main class="container">
+    <main class="main-content" id="main-content">
 
         <!-- View 1: Authentication -->
         <section id="auth-view" class="card">
@@ -78,15 +88,15 @@
             <!-- LOGIN TAB -->
             <div id="login-content">
                 <h2 class="text-center mb-4">Welcome Back</h2>
-                <form id="login-form" onsubmit="event.preventDefault(); loginWithPassword();">
+                <form id="login-form" onsubmit="event.preventDefault(); loginWithPassword();" autocomplete="off">
                     <div class="input-group">
                         <label>Phone Number</label>
-                        <input type="tel" id="login-phone" placeholder="e.g. 1112223333" autocomplete="username">
+                        <input type="tel" id="login-phone" placeholder="e.g. 1112223333" autocomplete="off">
                     </div>
                     <div class="input-group">
                         <label>Password</label>
                     <div class="password-wrapper">
-                        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password">
+                        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="off">
                         <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('login-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                     </div>
                     </div>
@@ -232,6 +242,10 @@
 
         <!-- View 2: User Dashboard -->
         <section id="dashboard-view" class="hidden">
+            <div id="dash-notices" class="hidden">
+                <div class="notice-banner-inner" id="notice-banner-inner"></div>
+            </div>
+
             <h1 class="mb-2">Welcome, <span id="dash-user-name"></span>!</h1>
             <p class="mb-4">Manage your healthcare journey easily.</p>
 
@@ -244,6 +258,7 @@
                 </div>
             </div>
 
+            
             <div class="dashboard-grid">
                 <div class="card action-card" onclick="navigate('doctors')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M16 11h6"/></svg>
@@ -276,6 +291,37 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     <h3>View Appointments</h3>
                     <p class="mt-1">See all scheduled appointments with your patients.</p>
+                </div>
+                <div class="card action-card" onclick="downloadSerialsPdf()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <h3>View Serials</h3>
+                    <p class="mt-1">Download all serials as PDF.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- View 2C2: Receptionist Dashboard -->
+        <section id="receptionist-dashboard-view" class="hidden">
+            <h1 class="mb-2">Welcome, <span id="recep-dash-name"></span>!</h1>
+            <p class="mb-4">Create serials for patients.</p>
+
+            <div class="card mb-4">
+                <h3>Your Profile</h3>
+                <div class="flex gap-4 mt-2" style="flex-wrap: wrap;">
+                    <div style="flex:1; min-width:150px;"><strong>Phone:</strong> <span id="recep-dash-phone"></span></div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card action-card" onclick="navigate('doctors')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+                    <h3>Give Serial</h3>
+                    <p class="mt-1">Choose a doctor, patient, time, and note.</p>
+                </div>
+                <div class="card action-card" onclick="navigate('appointments')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <h3>Serial List</h3>
+                    <p class="mt-1">View created serials.</p>
                 </div>
             </div>
         </section>
@@ -362,6 +408,7 @@
                 <h3>No doctors found</h3>
                 <p>Try adjusting your search filters.</p>
             </div>
+            <div id="doctors-result-count" class="result-count"></div>
         </section>
 
         <!-- View 4: Appointments -->
@@ -370,7 +417,6 @@
                 <h2 id="appointments-heading" class="mb-4">My Appointments</h2>
                 <div class="flex gap-2">
                     <button class="btn btn-outline" id="appointments-back-btn" onclick="navigate('dashboard')">Back to Dashboard</button>
-                    <button class="btn btn-outline" id="appointments-export-btn" onclick="exportMyAppointments()">Export CSV</button>
                 </div>
             </div>
 
@@ -395,9 +441,19 @@
             </div>
 
             <div class="table-container">
+                <div class="bulk-toolbar hidden" id="bulk-toolbar-appointments-list">
+                    <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                    <div class="bulk-actions">
+                        <button class="btn btn-outline btn-compact" onclick="bulkExportTable('appointments-list')">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export Selected
+                        </button>
+                    </div>
+                </div>
                 <table id="appointments-table">
                     <thead>
                         <tr>
+                            <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('appointments-list')"></th>
                             <th id="appointments-th-1">Doctor</th>
                             <th>Date</th>
                             <th>Serial</th>
@@ -411,7 +467,7 @@
                     </tbody>
                 </table>
             </div>
-            <div id="my-app-pagination" class="flex justify-between items-center mt-4"></div>
+            <div id="my-app-pagination" class="mt-4"></div>
             <div id="appointments-empty" class="empty-state hidden">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <h3>No appointments yet</h3>
@@ -434,10 +490,30 @@
                             <h3>Patients Directory</h3>
                             <span class="text-sm" style="color:var(--text-muted)">Patients self-register from the login page.</span>
                         </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-users" placeholder="Search by name, phone, email..." oninput="filterAdminUsers()">
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminUsersFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-user-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-user-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-user-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-user-list')"></th>
                                         <th>Name</th>
                                         <th>Phone</th>
                                         <th>Age</th>
@@ -451,6 +527,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div id="admin-users-result-count" class="result-count"></div>
                     </div>
 
                     <!-- Admin Doctors Sub-view -->
@@ -459,10 +536,42 @@
                             <h3 class="mb-4">Doctors Directory</h3>
                             <button class="btn btn-primary" onclick="openAdminDoctorModal()">+ Add Doctor</button>
                         </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-doctors" placeholder="Search by name, phone, category..." oninput="filterAdminDoctors()">
+                            </div>
+                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                                <select id="filter-admin-doctors-category" onchange="filterAdminDoctors()">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                                <select id="filter-admin-doctors-status" onchange="filterAdminDoctors()">
+                                    <option value="">All Status</option>
+                                    <option value="available">Available</option>
+                                    <option value="unavailable">Unavailable</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminDoctorsFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-doctor-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-doctor-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-doctor-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-doctor-list')"></th>
                                         <th>Name</th>
                                         <th>Phone</th>
                                         <th>Category</th>
@@ -477,6 +586,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div id="admin-doctors-result-count" class="result-count"></div>
                     </div>
 
                     <!-- Admin Marketing Officers Sub-view -->
@@ -485,10 +595,30 @@
                             <h3 class="mb-4">Marketing Officers</h3>
                             <button class="btn btn-primary" onclick="openAdminMarketingModal()">+ Add Marketing Officer</button>
                         </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-marketing" placeholder="Search by name, phone, email..." oninput="filterAdminMarketing()">
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminMarketingFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-marketing-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-marketing-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-marketing-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-marketing-list')"></th>
                                         <th>Name</th>
                                         <th>Phone</th>
                                         <th>Email</th>
@@ -501,6 +631,52 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div id="admin-marketing-result-count" class="result-count"></div>
+                    </div>
+
+                    <!-- Admin Receptionists Sub-view -->
+                    <div id="admin-receptionists-content" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="mb-4">Receptionists</h3>
+                            <button class="btn btn-primary" onclick="openAdminReceptionistModal()">+ Add Receptionist</button>
+                        </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-receptionists" placeholder="Search by name, phone, email..." oninput="filterAdminReceptionists()">
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminReceptionistsFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-receptionist-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-receptionist-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-receptionist-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-receptionist-list')"></th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-receptionist-list">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="admin-receptionists-result-count" class="result-count"></div>
                     </div>
 
                     <!-- Admin Appointments Sub-view -->
@@ -530,10 +706,24 @@
                             <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminAppFilters()">Clear</button>
                         </div>
 
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-all-appointments-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-all-appointments-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-all-appointments-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-container mt-4">
                             <table>
                                 <thead>
                                     <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-all-appointments-list')"></th>
                                         <th>Patient</th>
                                         <th>Doctor</th>
                                         <th>Date/Time</th>
@@ -546,14 +736,17 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="admin-app-pagination" class="flex justify-between items-center mt-4"></div>
+                        <div id="admin-app-pagination" class="mt-4"></div>
                     </div>
 
                     <!-- Admin Today's Serials Sub-view -->
                     <div id="admin-today-serials-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="mb-4">Today's Serials</h3>
-                            <button class="btn btn-outline" onclick="exportTodaySerials()">Export CSV</button>
+                            <div class="flex gap-2">
+                                <button class="btn btn-outline" onclick="exportTodaySerials()">Export CSV</button>
+                                <button class="btn btn-outline" onclick="downloadSerialsPdf()">PDF</button>
+                            </div>
                         </div>
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
@@ -573,10 +766,24 @@
                             <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearTodaySerialsFilters()">Clear</button>
                         </div>
 
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-today-serials-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-today-serials-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-today-serials-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
                         <div class="table-container mt-4">
                             <table>
                                 <thead>
                                     <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-today-serials-list')"></th>
                                         <th>Patient</th>
                                         <th>Doctor</th>
                                         <th>Serial / Date</th>
@@ -589,7 +796,102 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="today-serials-pagination" class="flex justify-between items-center mt-4"></div>
+                        <div id="today-serials-pagination" class="mt-4"></div>
+                    </div>
+
+                    <!-- Admin Notices Sub-view -->
+                    <div id="admin-notices-content" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="mb-4">Notices</h3>
+                            <button class="btn btn-primary" onclick="openAdminNoticeModal()">+ Add Notice</button>
+                        </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-notices" placeholder="Search by title, content..." oninput="filterAdminNotices()">
+                            </div>
+                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                                <select id="filter-admin-notices-status" onchange="filterAdminNotices()">
+                                    <option value="">All Status</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminNoticesFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-notice-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-notice-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-notice-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-notice-list')"></th>
+                                        <th>Title</th>
+                                        <th>Content</th>
+                                        <th>Status</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-notice-list">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="admin-notices-result-count" class="result-count"></div>
+                    </div>
+
+                    <!-- Admin Categories Sub-view -->
+                    <div id="admin-categories-content" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="mb-4">Categories</h3>
+                            <button class="btn btn-primary" onclick="openAdminCategoryModal()">+ Add Category</button>
+                        </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-categories" placeholder="Search by name..." oninput="filterAdminCategories()">
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminCategoriesFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-category-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-category-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-category-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export Selected
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-category-list')"></th>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-category-list">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="admin-categories-result-count" class="result-count"></div>
                     </div>
                 </div>
             </div>
@@ -615,21 +917,21 @@
                 <!-- <p class="text-sm"><strong>Working Days:</strong> <span id="modal-doc-days"></span></p> -->
             </div>
 
-            <form id="booking-form" onsubmit="event.preventDefault(); confirmBooking();">
+            <form id="booking-form" onsubmit="event.preventDefault(); confirmBooking();" autocomplete="off">
                 <input type="hidden" id="booking-doc-id">
                 <div id="booking-patient-fields">
                     <div class="input-group">
                         <label>Patient Name</label>
-                        <input type="text" id="booking-patient-name" required placeholder="e.g. Patient full name">
+                        <input type="text" id="booking-patient-name" required placeholder="e.g. Patient full name" autocomplete="off">
                     </div>
                     <div class="booking-patient-grid">
                         <div class="input-group">
                             <label>Patient Age</label>
-                            <input type="number" id="booking-patient-age" required min="0" max="120" inputmode="numeric" placeholder="e.g. 35">
+                            <input type="number" id="booking-patient-age" required min="0" max="120" inputmode="numeric" placeholder="e.g. 35" autocomplete="off">
                         </div>
                         <div class="input-group">
                             <label>Patient Number</label>
-                            <input type="tel" id="booking-patient-phone" required placeholder="e.g. 01700000000">
+                            <input type="tel" id="booking-patient-phone" placeholder="e.g. 01700000000 (optional)" autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -654,7 +956,7 @@
                 
                 <div class="input-group">
                     <label><span id="booking-reason-label">Note</span></label>
-                    <textarea id="booking-reason" rows="3" maxlength="180" placeholder="Write a note for this appointment"></textarea>
+                    <textarea id="booking-reason" rows="3" maxlength="180" placeholder="Write a note for this appointment" autocomplete="off"></textarea>
                 </div>
                 <div class="flex gap-2 mt-4">
                     <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('booking-modal')">Cancel</button>
@@ -734,23 +1036,7 @@
                 <div class="input-group">
                     <label>Specialty / Category</label>
                     <select id="admin-doc-category" required>
-                        <option value="Cardiologist">Cardiologist</option>
-                        <option value="Chest Medicine">Chest Medicine</option>
-                        <option value="ENT & Head-Neck Surgeon">ENT & Head-Neck Surgeon</option>
-                        <option value="Emergency Medical Officer">Emergency Medical Officer</option>
-                        <option value="Gastroenterology">Gastroenterology</option>
-                        <option value="Gaynee & Obs Gynecology Obstetrics">Gaynee & Obs Gynecology Obstetrics</option>
-                        <option value="General & Colorectal Surgeon">General & Colorectal Surgeon</option>
-                        <option value="Medicine Specialist">Medicine Specialist</option>
-                        <option value="Neuro Medicine">Neuro Medicine</option>
-                        <option value="Orthopedics">Orthopedics</option>
-                        <option value="Pain Medicine Specialist">Pain Medicine Specialist</option>
-                        <option value="Pediatric Doctor">Pediatric Doctor</option>
-                        <option value="Physical Medicine Specialist">Physical Medicine Specialist</option>
-                        <option value="Physiotherapy">Physiotherapy</option>
-                        <option value="Skin Sex & VD Specialist">Skin Sex & VD Specialist</option>
-                        <option value="Ultrasonography USG">Ultrasonography USG</option>
-                        <option value="Urologist">Urologist</option>
+                        <option value="">Select Category</option>
                     </select>
                 </div>
                 <div class="input-group">
@@ -862,6 +1148,70 @@
         </div>
     </div>
 
+    <!-- Modal: Add Receptionist (Admin only) -->
+    <div id="admin-receptionist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="mb-4">Add Receptionist</h3>
+                <button class="close-btn" onclick="closeModal('admin-receptionist-modal')">&times;</button>
+            </div>
+            <form id="admin-receptionist-form" onsubmit="event.preventDefault(); saveReceptionist();">
+                <div class="input-group">
+                    <label>Receptionist Name</label>
+                    <input type="text" id="admin-receptionist-name" required placeholder="e.g. Receptionist Name">
+                </div>
+                <div class="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="admin-receptionist-phone" required placeholder="e.g. 01700000000">
+                </div>
+                <div class="input-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="admin-receptionist-email" placeholder="e.g. receptionist@nsghcare.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="admin-receptionist-password" required placeholder="Initial password">
+                    <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('admin-receptionist-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-receptionist-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-receptionist">Create ID</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Receptionist (Admin only) -->
+    <div id="admin-edit-receptionist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="mb-4">Edit Receptionist</h3>
+                <button class="close-btn" onclick="closeModal('admin-edit-receptionist-modal')">&times;</button>
+            </div>
+            <form id="admin-edit-receptionist-form" onsubmit="event.preventDefault(); saveEditedReceptionist();">
+                <input type="hidden" id="edit-receptionist-id">
+                <div class="input-group">
+                    <label>Receptionist Name</label>
+                    <input type="text" id="edit-receptionist-name" required placeholder="e.g. Receptionist Name">
+                </div>
+                <div class="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="edit-receptionist-phone" required disabled>
+                </div>
+                <div class="input-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="edit-receptionist-email" placeholder="e.g. receptionist@nsghcare.com">
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-edit-receptionist-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-edited-receptionist">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal: Edit Marketing Officer (Admin only) -->
     <div id="admin-edit-marketing-modal" class="modal-overlay">
         <div class="modal-content">
@@ -929,7 +1279,77 @@
         </div>
     </div>
 
-    <!-- PDF viewer removed -->
+    <!-- Modal: Add / Edit Notice (Admin only) -->
+    <div id="admin-notice-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="admin-notice-modal-title">Add Notice</h3>
+                <button class="close-btn" onclick="closeModal('admin-notice-modal')">&times;</button>
+            </div>
+            <form id="admin-notice-form" onsubmit="event.preventDefault(); saveNotice();">
+                <input type="hidden" id="admin-notice-id">
+                <div class="input-group">
+                    <label>Title</label>
+                    <input type="text" id="admin-notice-title" required placeholder="Notice title">
+                </div>
+                <div class="input-group">
+                    <label>Content</label>
+                    <textarea id="admin-notice-content" rows="4" required placeholder="Notice content"></textarea>
+                </div>
+                <div class="input-group">
+                    <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0;">
+                        <input type="checkbox" id="admin-notice-active" style="width:auto; margin:0;" checked>
+                        <span>Active</span>
+                    </label>
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-notice-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-notice">Save Notice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Category (Admin only) -->
+    <div id="admin-category-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="mb-4">Add Category</h3>
+                <button class="close-btn" onclick="closeModal('admin-category-modal')">&times;</button>
+            </div>
+            <form id="admin-category-form" onsubmit="event.preventDefault(); saveCategory();">
+                <div class="input-group">
+                    <label>Category Name</label>
+                    <input type="text" id="admin-category-name" required placeholder="e.g. Cardiologist">
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-category-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-category">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Category (Admin only) -->
+    <div id="admin-edit-category-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="mb-4">Edit Category</h3>
+                <button class="close-btn" onclick="closeModal('admin-edit-category-modal')">&times;</button>
+            </div>
+            <form id="admin-edit-category-form" onsubmit="event.preventDefault(); saveEditedCategory();">
+                <input type="hidden" id="edit-category-id">
+                <div class="input-group">
+                    <label>Category Name</label>
+                    <input type="text" id="edit-category-name" required placeholder="e.g. Cardiologist">
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-edit-category-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-edited-category">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Modal: Appointment Success -->
     <div id="appointment-success-modal" class="modal-overlay">
@@ -959,6 +1379,7 @@
     </div>
 
     <!-- External JavaScript -->
+    <script src="js/config.js"></script>
     <script src="js/appointment.js"></script>
 </body>
 </html>
