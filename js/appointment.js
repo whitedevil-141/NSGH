@@ -3400,7 +3400,8 @@ async function sendManualSms() {
     if (!doctorName) { showToast('Select a doctor', 'error'); return; }
     if (patientName.length < 2) { showToast('Enter patient name', 'error'); return; }
     if (!isValidPhone(patientPhone)) { showToast('Enter a valid patient phone number', 'error'); return; }
-    if (!appointmentSchedule) { showToast('No appointment schedule available for this doctor', 'error'); return; }
+    if (!serialNumber) { showToast('Enter serial number', 'error'); return; }
+    if (!appointmentSchedule) { showToast('Select an appointment schedule', 'error'); return; }
 
     setLoading('btn-send-sms', true, 'Sending SMS...');
     try {
