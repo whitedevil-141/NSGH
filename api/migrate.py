@@ -199,6 +199,32 @@ def migrate():
 
         # Drop legacy appointment_bookings.patient_address (column was added then
         # removed from the model; not used by any current code path).
+        try:
+            print("Checking created_at column on appointment_bookings...")
+            connection.execute(text("""
+                ALTER TABLE appointment_bookings
+                ADD COLUMN created_at VARCHAR(30) NULL
+            """))
+            print("✓ Added created_at column to appointment_bookings")
+        except Exception as e:
+            if "Duplicate column name" in str(e) or "created_at" in str(e):
+                print("✓ created_at column already exists in appointment_bookings")
+            else:
+                print(f"Error adding created_at column: {e}")
+
+        # Backfill created_at for records where it is still NULL
+        try:
+            result = connection.execute(
+                text("UPDATE appointment_bookings SET created_at = CONCAT(date, ' 00:00:00') WHERE created_at IS NULL")
+            )
+            affected = result.rowcount
+            if affected:
+                print(f"✓ Backfilled created_at for {affected} old appointment(s)")
+            else:
+                print("✓ No old appointments need created_at backfill")
+        except Exception as e:
+            print(f"Note: could not backfill created_at (non-critical): {e}")
+
         booking_columns = {column["name"] for column in inspect(connection).get_columns("appointment_bookings")}
         if "patient_address" in booking_columns:
             try:

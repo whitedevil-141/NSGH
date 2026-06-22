@@ -292,10 +292,10 @@
                     <h3>View Appointments</h3>
                     <p class="mt-1">See all scheduled appointments with your patients.</p>
                 </div>
-                <div class="card action-card" onclick="downloadSerialsPdf()">
+                <div class="card action-card" onclick="navigate('appointments')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     <h3>View Serials</h3>
-                    <p class="mt-1">Download all serials as PDF.</p>
+                    <p class="mt-1">See all serials with date selection.</p>
                 </div>
             </div>
         </section>
@@ -444,10 +444,6 @@
                 <div class="bulk-toolbar hidden" id="bulk-toolbar-appointments-list">
                     <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
                     <div class="bulk-actions">
-                        <button class="btn btn-outline btn-compact" onclick="bulkExportTable('appointments-list')">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Export Selected
-                        </button>
                     </div>
                 </div>
                 <table id="appointments-table">
@@ -503,10 +499,6 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
                                 </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-user-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
-                                </button>
                             </div>
                         </div>
                         <div class="table-container">
@@ -561,10 +553,6 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
                                 </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-doctor-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
-                                </button>
                             </div>
                         </div>
                         <div class="table-container">
@@ -608,10 +596,6 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
                                 </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-marketing-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
-                                </button>
                             </div>
                         </div>
                         <div class="table-container">
@@ -653,10 +637,6 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
                                 </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-receptionist-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
-                                </button>
                             </div>
                         </div>
                         <div class="table-container">
@@ -683,7 +663,7 @@
                     <div id="admin-appointments-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="mb-4">System Appointments</h3>
-                            <button class="btn btn-outline" onclick="exportAdminAppointments()">Export CSV</button>
+                            <button class="btn btn-outline" onclick="exportAdminAppointmentsPdf()">Export as PDF</button>
                         </div>
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
@@ -713,10 +693,6 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
                                 </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-all-appointments-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
-                                </button>
                             </div>
                         </div>
                         <div class="table-container mt-4">
@@ -742,14 +718,14 @@
                     <!-- Admin Today's Serials Sub-view -->
                     <div id="admin-today-serials-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="mb-4">Today's Serials</h3>
-                            <div class="flex gap-2">
-                                <button class="btn btn-outline" onclick="exportTodaySerials()">Export CSV</button>
-                                <button class="btn btn-outline" onclick="downloadSerialsPdf()">PDF</button>
-                            </div>
+                            <h3 class="mb-4">Serials</h3>
+                            <button class="btn btn-outline" onclick="exportTodaySerialsPdf()">Export as PDF</button>
                         </div>
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                                <input type="date" id="filter-admin-today-date" onchange="renderAdminTodaySerials('reset')">
+                            </div>
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
                                 <select id="filter-admin-today-status" onchange="renderAdminTodaySerials('reset')">
                                     <option value="">All Statuses</option>
@@ -772,10 +748,6 @@
                                 <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-today-serials-list')">
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
-                                </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-today-serials-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
                                 </button>
                             </div>
                         </div>
@@ -825,10 +797,6 @@
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
                                 </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-notice-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
-                                </button>
                             </div>
                         </div>
                         <div class="table-container">
@@ -869,10 +837,6 @@
                                 <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-category-list')">
                                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     Delete Selected
-                                </button>
-                                <button class="btn btn-outline btn-compact" onclick="bulkExportTable('admin-category-list')">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                    Export Selected
                                 </button>
                             </div>
                         </div>

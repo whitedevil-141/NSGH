@@ -399,6 +399,7 @@ def _appointment_out(appointment: AppointmentBooking) -> AppointmentOut:
         marketingOfficerName=getattr(appointment, "marketing_officer_name", None),
         commissionDoctorId=getattr(appointment, "commission_doctor_id", None),
         commissionDoctorName=getattr(appointment, "commission_doctor_name", None),
+        createdAt=getattr(appointment, "created_at", None),
     )
 
 
@@ -1245,6 +1246,8 @@ def create_appointment(
         marketing_officer_id = current_user.created_by_id
         marketing_officer_name = current_user.created_by_name
 
+    now_local = datetime.utcnow() + timedelta(hours=6)
+
     appointment = AppointmentBooking(
         patient_name=patient_name,
         patient_phone=patient_phone,
@@ -1264,6 +1267,7 @@ def create_appointment(
         marketing_officer_name=marketing_officer_name,
         commission_doctor_id=commission_doctor_id,
         commission_doctor_name=commission_doctor_name,
+        created_at=now_local.strftime("%Y-%m-%d %H:%M:%S"),
     )
     db.add(appointment)
     db.commit()
@@ -1489,8 +1493,13 @@ def download_appointment_pdf(
     start_y -= 20
     c.setFont("Helvetica", 10)
     c.setFillColor(colors.gray)
-    now_local = datetime.utcnow() + timedelta(hours=6)
-    c.drawString(col1_x, start_y, f"Issued At: {now_local.day} {now_local.strftime('%B').lower()} {now_local.year} at {now_local.strftime('%I:%M %p').lower()}")
+    if appointment.created_at:
+        issued_dt = datetime.strptime(appointment.created_at, "%Y-%m-%d %H:%M:%S")
+        issued_text = f"Issued At: {issued_dt.day} {issued_dt.strftime('%B').lower()} {issued_dt.year} at {issued_dt.strftime('%I:%M %p').lower()}"
+    else:
+        now_local = datetime.utcnow() + timedelta(hours=6)
+        issued_text = f"Issued At: {now_local.day} {now_local.strftime('%B').lower()} {now_local.year} at {now_local.strftime('%I:%M %p').lower()}"
+    c.drawString(col1_x, start_y, issued_text)
 
     c.setFont("Helvetica-Oblique", 10)
     c.setFillColor(colors.gray)
@@ -1521,6 +1530,7 @@ def download_appointment_pdf(
 def download_serials_pdf(
     doctor_id: Optional[int] = Query(None),
     date: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: AppointmentUser = Depends(_current_user),
 ):
@@ -1532,12 +1542,13 @@ def download_serials_pdf(
         if doctor:
             doctor_id = doctor.id
     
-    if not date:
-        date = datetime.now().strftime("%Y-%m-%d")
-    
-    query = db.query(AppointmentBooking).filter(AppointmentBooking.date == date)
+    query = db.query(AppointmentBooking)
+    if date:
+        query = query.filter(AppointmentBooking.date == date)
     if doctor_id:
         query = query.filter(AppointmentBooking.doctor_id == doctor_id)
+    if status:
+        query = query.filter(AppointmentBooking.status == status)
     query = query.order_by(AppointmentBooking.serial_number.asc())
     appointments = query.all()
     
@@ -1560,18 +1571,18 @@ def download_serials_pdf(
     
     c.setFont("Helvetica-Bold", 14)
     c.setFillColor(colors.black)
-    c.drawCentredString(width / 2.0, height - 80, f"SERIAL LIST - {date}")
+    draw_bilingual_centered(c, width / 2.0, height - 80, f"SERIAL LIST - {date}", 14, bold=True)
     if doctor_id:
         doctor_name = appointments[0].doctor_name if appointments else ""
-        c.drawCentredString(width / 2.0, height - 95, f"Doctor: {doctor_name}")
+        draw_bilingual_centered(c, width / 2.0, height - 95, f"Doctor: {doctor_name}", 14, bold=True)
     
     c.setLineWidth(1)
     c.setStrokeColor(colors.lightgrey)
     c.line(50, height - 105, width - 50, height - 105)
     
     # Table headers
-    x_positions = [50, 120, 250, 380, 480]
-    headers = ["Serial", "Patient", "Phone", "Note", "Issue Time"]
+    x_positions = [50, 155, 265, 345, 425]
+    headers = ["ID", "Patient", "Doctor", "Phone", "Issued At"]
     c.setFont("Helvetica-Bold", 10)
     c.setFillColor(colors.HexColor("#4a5764"))
     y = height - 125
@@ -1586,8 +1597,6 @@ def download_serials_pdf(
     c.setFillColor(colors.black)
     y -= 20
     
-    now_local_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-    
     for app in appointments:
         if y < 50:
             c.showPage()
@@ -1596,15 +1605,22 @@ def download_serials_pdf(
             c.setFillColor(colors.black)
         
         serial = str(app.serial_number) if app.serial_number else "-"
-        patient = str(app.patient_name)[:25] if app.patient_name else "-"
+        patient = str(app.patient_name)[:20] if app.patient_name else "-"
+        doctor = str(app.doctor_name)[:14] if app.doctor_name else "-"
         phone = str(app.patient_phone) if app.patient_phone else "-"
-        note = str(app.reason or "")[:20]
-        issue = str(app.booked_by_name or "Self")[:15]
+        if app.created_at:
+            try:
+                issued_dt = datetime.strptime(app.created_at, "%Y-%m-%d %H:%M:%S")
+                issue = issued_dt.strftime("%Y-%m-%d %H:%M")
+            except ValueError:
+                issue = app.created_at[-16:]
+        else:
+            issue = "-"
         
         draw_bilingual_string(c, x_positions[0], y, serial, 10)
         draw_bilingual_string(c, x_positions[1], y, patient, 10)
-        draw_bilingual_string(c, x_positions[2], y, phone, 10)
-        draw_bilingual_string(c, x_positions[3], y, note, 10)
+        draw_bilingual_string(c, x_positions[2], y, doctor, 10)
+        draw_bilingual_string(c, x_positions[3], y, phone, 10)
         draw_bilingual_string(c, x_positions[4], y, issue, 10)
         y -= 18
     

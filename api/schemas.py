@@ -289,6 +289,7 @@ class AppointmentOut(BaseModel):
     marketingOfficerName: Optional[str] = None
     commissionDoctorId: Optional[str] = None
     commissionDoctorName: Optional[str] = None
+    createdAt: Optional[str] = None
 
 
 class PaginatedAppointmentResponse(BaseModel):

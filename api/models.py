@@ -143,3 +143,4 @@ class AppointmentBooking(Base):
     commission_doctor_id = Column(String(32), nullable=True, index=True)
     commission_doctor_name = Column(String(100), nullable=True)
     doctor_status_changed = Column(Integer, nullable=False, default=0)  # 1 = doctor has changed status once
+    created_at = Column(String(30), nullable=True)  # When the booking was made (YYYY-MM-DD HH:MM:SS)

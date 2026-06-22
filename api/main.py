@@ -34,6 +34,7 @@ def ensure_appointment_schema() -> None:
             "commission_doctor_id": "VARCHAR(32) NULL",
             "commission_doctor_name": "VARCHAR(100) NULL",
             "serial_number": "INT NULL",
+            "created_at": "VARCHAR(30) NULL",
         },
         "appointment_doctors": {
             "is_available": "INT NOT NULL DEFAULT 1",
@@ -61,6 +62,12 @@ def ensure_appointment_schema() -> None:
                         conn.execute(text("ALTER TABLE appointment_bookings MODIFY COLUMN time VARCHAR(5) NULL"))
                     elif dialect == "postgresql":
                         conn.execute(text("ALTER TABLE appointment_bookings ALTER COLUMN time DROP NOT NULL"))
+            except Exception:
+                pass
+            try:
+                conn.execute(
+                    text("UPDATE appointment_bookings SET created_at = CONCAT(date, ' 00:00:00') WHERE created_at IS NULL")
+                )
             except Exception:
                 pass
 

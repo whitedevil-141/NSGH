@@ -1154,164 +1154,6 @@ async function bulkDeleteSelected(tableId) {
     showToast(msg, failCount > 0 ? 'warning' : 'success');
 }
 
-function bulkExportTable(tableId) {
-    const state = getBulkState(tableId);
-    const tbody = getEl(tableId);
-    if (!tbody) return;
-
-    const exportMap = {
-        'admin-user-list': exportUsersCSV,
-        'admin-marketing-list': exportMarketingCSV,
-        'admin-receptionist-list': exportReceptionistsCSV,
-        'admin-doctor-list': exportDoctorsCSV,
-        'admin-all-appointments-list': (items) => {
-            const data = collectAppointmentRows(items);
-            if (data.length) exportToCSV(data, todayISO() + '_Selected_Appointments.csv');
-        },
-        'admin-today-serials-list': (items) => {
-            const data = collectAppointmentRows(items);
-            if (data.length) exportToCSV(data, todayISO() + '_Selected_Serials.csv');
-        },
-        'appointments-list': (items) => {
-            const data = collectAppointmentRows(items);
-            if (data.length) exportToCSV(data, todayISO() + '_Appointments.csv');
-        },
-        'admin-notice-list': exportNoticesCSV,
-        'admin-category-list': exportCategoriesCSV,
-    };
-
-    const fn = exportMap[tableId];
-    if (fn) fn(state.size > 0 ? [...state] : null);
-}
-
-function collectAppointmentRows(selectedIds) {
-    if (!appState.appointments || !appState.appointments.length) return [];
-    if (!selectedIds || !selectedIds.length) return appState.appointments;
-    return appState.appointments.filter(a => selectedIds.includes(String(a.id)));
-}
-
-// --- Per-table CSV exports ---
-function exportUsersCSV(selectedIds) {
-    let data = appState.users.filter(u => getRole(u) === ROLES.USER);
-    if (selectedIds && selectedIds.length) data = data.filter(u => selectedIds.includes(u.id));
-    if (!data.length) { showToast('No data to export', 'error'); return; }
-
-    const headers = ['Name', 'Phone', 'Age', 'Gender', 'Email'];
-    const rows = [headers.join(',')];
-    data.forEach(u => {
-        rows.push([
-            `"${(u.name || '').replace(/"/g, '""')}"`,
-            u.phone || '',
-            u.age ?? '',
-            u.gender || '',
-            u.email || ''
-        ].join(','));
-    });
-    downloadCSV(rows.join('\n'), todayISO() + '_Patients.csv');
-}
-
-function exportMarketingCSV(selectedIds) {
-    let data = appState.users.filter(u => getRole(u) === ROLES.MARKETING);
-    if (selectedIds && selectedIds.length) data = data.filter(u => selectedIds.includes(u.id));
-    if (!data.length) { showToast('No data to export', 'error'); return; }
-
-    const headers = ['Name', 'Phone', 'Email', 'Role'];
-    const rows = [headers.join(',')];
-    data.forEach(u => {
-        rows.push([
-            `"${(u.name || '').replace(/"/g, '""')}"`,
-            u.phone || '',
-            u.email || '',
-            'Marketing Officer'
-        ].join(','));
-    });
-    downloadCSV(rows.join('\n'), todayISO() + '_Marketing_Officers.csv');
-}
-
-function exportReceptionistsCSV(selectedIds) {
-    let data = appState.users.filter(u => getRole(u) === ROLES.RECEPTIONIST);
-    if (selectedIds && selectedIds.length) data = data.filter(u => selectedIds.includes(u.id));
-    if (!data.length) { showToast('No data to export', 'error'); return; }
-
-    const headers = ['Name', 'Phone', 'Email', 'Role'];
-    const rows = [headers.join(',')];
-    data.forEach(u => {
-        rows.push([
-            `"${(u.name || '').replace(/"/g, '""')}"`,
-            u.phone || '',
-            u.email || '',
-            'Receptionist'
-        ].join(','));
-    });
-    downloadCSV(rows.join('\n'), todayISO() + '_Receptionists.csv');
-}
-
-function exportDoctorsCSV(selectedIds) {
-    let data = appState.doctors;
-    if (selectedIds && selectedIds.length) data = data.filter(d => selectedIds.includes(String(d.id)));
-    if (!data.length) { showToast('No data to export', 'error'); return; }
-
-    const headers = ['Name', 'Phone', 'Category', 'Room', 'Schedule', 'Status'];
-    const rows = [headers.join(',')];
-    data.forEach(d => {
-        rows.push([
-            `"${(d.name || '').replace(/"/g, '""')}"`,
-            d.phone || '',
-            `"${(d.categoryLabel || '').replace(/"/g, '""')}"`,
-            d.room || '',
-            `"${(d.workingScheduleLabel || '').replace(/"/g, '""')}"`,
-            d.is_available ? 'Available' : 'Unavailable'
-        ].join(','));
-    });
-    downloadCSV(rows.join('\n'), todayISO() + '_Doctors.csv');
-}
-
-function exportNoticesCSV(selectedIds) {
-    let data = adminNoticesCache;
-    if (selectedIds && selectedIds.length) data = data.filter(n => selectedIds.includes(String(n.id)));
-    if (!data.length) { showToast('No data to export', 'error'); return; }
-
-    const headers = ['Title', 'Content', 'Status', 'Created At'];
-    const rows = [headers.join(',')];
-    data.forEach(n => {
-        rows.push([
-            `"${(n.title || '').replace(/"/g, '""')}"`,
-            `"${(n.content || '').replace(/"/g, '""')}"`,
-            n.is_active ? 'Active' : 'Inactive',
-            n.created_at || '-'
-        ].join(','));
-    });
-    downloadCSV(rows.join('\n'), todayISO() + '_Notices.csv');
-}
-
-function exportCategoriesCSV(selectedIds) {
-    let data = adminCategories;
-    if (selectedIds && selectedIds.length) data = data.filter(c => selectedIds.includes(String(c.id)));
-    if (!data.length) { showToast('No data to export', 'error'); return; }
-
-    const headers = ['ID', 'Name'];
-    const rows = [headers.join(',')];
-    data.forEach(c => {
-        rows.push([
-            c.id,
-            `"${(c.name || '').replace(/"/g, '""')}"`
-        ].join(','));
-    });
-    downloadCSV(rows.join('\n'), todayISO() + '_Categories.csv');
-}
-
-function downloadCSV(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
 function redirectByRole(user, withToast = true) {
     if (withToast) showToast(`Welcome, ${user.name}!`);
     navigate(defaultViewFor(user));
@@ -3065,11 +2907,11 @@ async function renderAdminTodaySerials(action = null) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
 
     try {
-        const today = todayISO();
+        const date = getEl('filter-admin-today-date')?.value || todayISO();
         const status = getEl('filter-admin-today-status')?.value || '';
         const docId = getEl('filter-admin-today-doctor')?.value || '';
 
-        let url = `/appointments?skip=${paginationState.todaySerials.skip}&limit=${paginationState.todaySerials.limit}&date=${today}`;
+        let url = `/appointments?skip=${paginationState.todaySerials.skip}&limit=${paginationState.todaySerials.limit}&date=${date}`;
         if (status) url += `&status=${status}`;
         if (docId) url += `&doctor_id=${docId}`;
 
@@ -3079,7 +2921,7 @@ async function renderAdminTodaySerials(action = null) {
         appState.appointments = data;
 
         if (data.length === 0 && paginationState.todaySerials.skip === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No serials found for today.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No serials found.</td></tr>';
             getEl('today-serials-pagination').innerHTML = '';
             return;
         }
@@ -3298,47 +3140,6 @@ function bindUIEvents() {
 }
 
 // --- Export and Filter Utils ---
-function exportToCSV(appointments, filename) {
-    if (!appointments || !appointments.length) {
-        showToast('No data to export', 'error');
-        return;
-    }
-
-    const headers = ['Appointment ID', 'Date', 'Time/Serial', 'Patient Name', 'Patient Age', 'Patient Number', 'Doctor', 'Room', 'Status', 'Note', 'Source'];
-    const csvRows = [headers.join(',')];
-
-    appointments.forEach(app => {
-        const id = formatAppointmentId(app.id);
-        const date = app.date || '-';
-        const timeSerial = app.serial_number ? `Serial #${app.serial_number}` : (formatTime(app.time) || '-');
-        const patientName = `"${(app.patientName || '').replace(/"/g, '""')}"`;
-        const patientAge = app.patientAge ?? '-';
-        const patientPhone = app.patientPhone || '-';
-        const doctor = `"${(app.docName || '').replace(/"/g, '""')}"`;
-        const room = app.room || '-';
-        const status = app.status || '-';
-        const reason = `"${(app.reason || '').replace(/"/g, '""')}"`;
-        
-        let source = 'Patient';
-        if (app.commissionDoctorName) source = `Commission Doctor: ${app.commissionDoctorName}`;
-        else if (app.marketingOfficerName) source = `Marketing Officer: ${app.marketingOfficerName}`;
-        else if (app.bookedByName && (app.bookedByRole !== ROLES.USER || app.bookedByName !== app.patientName)) source = `${app.bookedByName} (${roleLabel(app.bookedByRole)})`;
-        source = `"${source.replace(/"/g, '""')}"`;
-
-        csvRows.push([id, date, timeSerial, patientName, patientAge, patientPhone, doctor, room, status, reason, source].join(','));
-    });
-
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
 function populateFilterDropdowns() {
     const doctorOptions = '<option value="">All Doctors</option>' + 
         appState.doctors.map(d => `<option value="${d.id}">${escapeHTML(d.name)}</option>`).join('');
@@ -3367,13 +3168,20 @@ function clearAdminAppFilters() {
     renderAdminAppointments('reset');
 }
 
-async function downloadSerialsPdf() {
+async function downloadSerialsPdf(date = '', docId = '', status = '') {
     if (!appState.authToken) {
         showToast('Please sign in', 'error');
         return;
     }
     try {
-        const response = await fetch(`${API_BASE}/serials/pdf`, {
+        let url = `${API_BASE}/serials/pdf`;
+        const params = new URLSearchParams();
+        if (date) params.append('date', date);
+        if (docId) params.append('doctor_id', docId);
+        if (status) params.append('status', status);
+        const qs = params.toString();
+        if (qs) url += '?' + qs;
+        const response = await fetch(url, {
             headers: { Authorization: `Bearer ${appState.authToken}` }
         });
         if (!response.ok) {
@@ -3391,29 +3199,22 @@ async function downloadSerialsPdf() {
 }
 
 function clearTodaySerialsFilters() {
+    if(getEl('filter-admin-today-date')) getEl('filter-admin-today-date').value = '';
     if(getEl('filter-admin-today-status')) getEl('filter-admin-today-status').value = '';
     if(getEl('filter-admin-today-doctor')) getEl('filter-admin-today-doctor').value = '';
     renderAdminTodaySerials('reset');
 }
 
-async function exportAppointmentsHelper(date, status, docId, filename) {
-    let url = `/appointments?skip=0&limit=1000`;
-    if (date) url += `&date=${date}`;
-    if (status) url += `&status=${status}`;
-    if (docId) url += `&doctor_id=${docId}`;
-    try {
-        const rawData = await apiRequest(url);
-        exportToCSV(sortAppointments(normalizeAppointments(rawData.items || rawData)), filename);
-    } catch(e) {
-        showToast('Export failed', 'error');
-    }
+function exportAdminAppointmentsPdf() {
+    const date = getEl('filter-admin-app-date')?.value || '';
+    const docId = getEl('filter-admin-app-doctor')?.value || '';
+    const status = getEl('filter-admin-app-status')?.value || '';
+    downloadSerialsPdf(date, docId, status);
 }
-
-function exportAdminAppointments() { 
-    exportAppointmentsHelper(getEl('filter-admin-app-date')?.value, getEl('filter-admin-app-status')?.value, getEl('filter-admin-app-doctor')?.value, todayISO() + '_All_Appointments.csv'); 
-}
-function exportTodaySerials() { 
-    exportAppointmentsHelper(todayISO(), getEl('filter-admin-today-status')?.value, getEl('filter-admin-today-doctor')?.value, todayISO() + '_Serials.csv'); 
+function exportTodaySerialsPdf() {
+    const date = getEl('filter-admin-today-date')?.value || todayISO();
+    const docId = getEl('filter-admin-today-doctor')?.value || '';
+    downloadSerialsPdf(date, docId);
 }
 
 // --- Admin Notices ---
