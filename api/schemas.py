@@ -128,6 +128,40 @@ class ContactOut(ContactBase):
         from_attributes = True
 
 
+# Category
+class CategoryBase(BaseModel):
+    name: str
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class CategoryOut(CategoryBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+
+# Notice
+class NoticeBase(BaseModel):
+    title: str
+    content: str
+    is_active: bool = True
+
+class NoticeCreate(NoticeBase):
+    pass
+
+class NoticeUpdate(BaseModel):
+    title: str
+    content: str
+    is_active: bool = True
+
+class NoticeOut(NoticeBase):
+    id: int
+    created_at: str
+    class Config:
+        from_attributes = True
+
+
 # Appointment portal
 class AppointmentLoginRequest(BaseModel):
     phone: str
@@ -256,6 +290,10 @@ class AppointmentOut(BaseModel):
     commissionDoctorId: Optional[str] = None
     commissionDoctorName: Optional[str] = None
 
+
+class PaginatedAppointmentResponse(BaseModel):
+    items: List[AppointmentOut]
+    total: int
 
 class AppointmentSuccessResponse(BaseModel):
     message: str

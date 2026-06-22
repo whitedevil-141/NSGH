@@ -7,7 +7,7 @@ if __package__ is None or __package__ == "":
 from fastapi import FastAPI, Request, Response
 from api.database import engine, Base
 from sqlalchemy import inspect, text
-from api.routers import auth, public, doctors, staffs, appointment
+from api.routers import auth, public, doctors, staffs, appointment, notice
 from api.limiter import limiter
 from api.utils.init_db import initialize_database
 from slowapi.errors import RateLimitExceeded
@@ -96,6 +96,7 @@ app.include_router(public.router, prefix="/public")
 app.include_router(doctors.router, prefix="/doctors")
 app.include_router(staffs.router, prefix="/staffs")
 app.include_router(appointment.router, prefix="/appointment")
+app.include_router(notice.router, prefix="/appointment")
 # app.include_router(gallery.router)
 # app.include_router(machineries.router)
 # app.include_router(departments.router)

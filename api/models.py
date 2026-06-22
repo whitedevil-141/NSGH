@@ -103,6 +103,23 @@ class AppointmentDoctor(Base):
     is_available = Column(Integer, nullable=False, default=1)  # 1 for available, 0 for unavailable
 
 
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+
+
+class Notice(Base):
+    __tablename__ = "notices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    is_active = Column(Integer, nullable=False, default=1)
+    created_at = Column(String(30), nullable=False)
+
+
 class AppointmentBooking(Base):
     __tablename__ = "appointment_bookings"
 

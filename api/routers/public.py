@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.models import Doctor, Staff, Message
+from api.models import Category, Doctor, Staff, Message, Notice
 from api.database import get_db
 from api.schemas import DoctorPublic, DoctorsDataResponse, DoctorOut, StaffPublic, StaffsDataResponse, ContactBase
 from api.limiter import limiter
@@ -103,6 +103,20 @@ def fetch_public_staffs(request: Request, db: Session = Depends(get_db)):
     )
     
 
+
+
+@router.get("/notices")
+def get_active_notices(db: Session = Depends(get_db)):
+    notices = db.query(Notice).filter(Notice.is_active == 1).order_by(Notice.id.desc()).all()
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "content": n.content,
+            "created_at": n.created_at,
+        }
+        for n in notices
+    ]
 
 
 @router.post("/contact")
