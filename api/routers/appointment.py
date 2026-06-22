@@ -61,7 +61,7 @@ from api.utils.security import hash_password, verify_password
 router = APIRouter(tags=["Appointment Portal"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="appointment/login")
 
-VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor"}
+VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor", "receptionist"}
 VALID_STATUSES = {"Booked", "Completed", "Cancelled"}
 SLOT_INTERVAL_MINUTES = 30
 BOOKING_WINDOW_DAYS = 1
@@ -603,6 +603,8 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
         users = [_user_out(user) for user in db.query(AppointmentUser).filter(
             (AppointmentUser.id == current_user.id) | (AppointmentUser.created_by_id == current_user.id)
         ).all()]
+    elif current_user.role == "receptionist":
+        users = [_user_out(current_user)]
     else:
         users = [_user_out(current_user)]
 
@@ -626,6 +628,10 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
         appointments_query = appointments_query.filter(
             (AppointmentBooking.commission_doctor_id == current_user.id)
             | (AppointmentBooking.booked_by_id == current_user.id)
+        )
+    elif current_user.role == "receptionist":
+        appointments_query = appointments_query.filter(
+            AppointmentBooking.booked_by_id == current_user.id
         )
 
     appointments = [
@@ -794,6 +800,74 @@ def update_marketing_officer(
     db.commit()
     db.refresh(officer)
     return _user_out(officer)
+
+
+@router.post("/receptionists", response_model=AppointmentUserOut, status_code=status.HTTP_201_CREATED)
+def create_receptionist(
+    data: AppointmentStaffCreate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    return _user_out(_create_staff_user(db, data, "receptionist"))
+
+
+@router.put("/receptionists/{user_id}", response_model=AppointmentUserOut)
+def update_receptionist(
+    user_id: str,
+    data: AppointmentUserUpdate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    officer = (
+        db.query(AppointmentUser)
+        .filter(AppointmentUser.id == user_id, AppointmentUser.role == "receptionist")
+        .first()
+    )
+    if not officer:
+        raise HTTPException(status_code=404, detail="Receptionist not found")
+
+    name = (data.name or "").strip()
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="Receptionist name is required")
+
+    officer.name = name
+    officer.email = data.email
+    db.query(AppointmentBooking).filter(
+        AppointmentBooking.booked_by_id == officer.id
+    ).update({AppointmentBooking.booked_by_name: officer.name})
+    db.commit()
+    db.refresh(officer)
+    return _user_out(officer)
+
+
+@router.delete("/receptionists/{user_id}")
+def delete_receptionist(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    officer = (
+        db.query(AppointmentUser)
+        .filter(AppointmentUser.id == user_id, AppointmentUser.role == "receptionist")
+        .first()
+    )
+    if not officer:
+        raise HTTPException(status_code=404, detail="Receptionist not found")
+
+    db.query(AppointmentBooking).filter(
+        AppointmentBooking.booked_by_id == officer.id
+    ).update(
+        {
+            AppointmentBooking.booked_by_id: None,
+            AppointmentBooking.booked_by_name: None,
+        }
+    )
+    db.delete(officer)
+    db.commit()
+    return {"message": "Receptionist deleted successfully"}
 
 
 @router.delete("/marketing-officers/{user_id}")
@@ -1040,11 +1114,15 @@ def list_appointments(
             (AppointmentBooking.marketing_officer_id == current_user.id)
             | (AppointmentBooking.booked_by_id == current_user.id)
         )
+    elif current_user.role == "receptionist":
+        query = query.filter(AppointmentBooking.booked_by_id == current_user.id)
     elif current_user.role == "commission_doctor":
         query = query.filter(
             (AppointmentBooking.commission_doctor_id == current_user.id)
             | (AppointmentBooking.booked_by_id == current_user.id)
         )
+    elif current_user.role == "receptionist":
+        query = query.filter(AppointmentBooking.booked_by_id == current_user.id)
     elif current_user.role != "admin":
         raise HTTPException(status_code=403, detail="You do not have permission for this action")
 
@@ -1070,7 +1148,7 @@ def create_appointment(
     current_user: AppointmentUser = Depends(_current_user),
 ):
     """Create a new appointment using queue system"""
-    _require_role(current_user, "user", "admin", "marketing", "commission_doctor")
+    _require_role(current_user, "user", "admin", "marketing", "commission_doctor", "receptionist")
     _validate_booking_date(data.date)
     selected_date = _parse_date(data.date)
     
@@ -1266,6 +1344,8 @@ def _can_view_appointment(user: AppointmentUser, appointment: AppointmentBooking
         return appointment.marketing_officer_id == user.id or appointment.booked_by_id == user.id
     if user.role == "commission_doctor":
         return appointment.commission_doctor_id == user.id or appointment.booked_by_id == user.id
+    if user.role == "receptionist":
+        return True
     return False
 
 
@@ -1424,6 +1504,10 @@ def cancel_appointment(
         raise HTTPException(status_code=403, detail="You can only cancel your own serials")
     if current_user.role == "commission_doctor" and not (
         appointment.commission_doctor_id == current_user.id or appointment.booked_by_id == current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="You can only cancel your own serials")
+    if current_user.role == "receptionist" and not (
+        appointment.booked_by_id == current_user.id
     ):
         raise HTTPException(status_code=403, detail="You can only cancel your own serials")
 
