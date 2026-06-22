@@ -1104,7 +1104,7 @@
                     }
                 });
 
-                fetch('https://api.nsghbd.com/public/doctors/data')
+                fetch((window.NSGH_API_BASE || 'https://api.nsghbd.com') + '/public/doctors/data')
                     .then(res => res.json())
                     .then(data => {
                         window.doctorsData = data.doctors || [];
@@ -1381,7 +1381,8 @@
                     const data = Object.fromEntries(formData.entries());
 
                     try {
-                    const response = await fetch("https://api.nsghbd.com/public/contact", {
+                    const apiBase = window.NSGH_API_BASE || 'https://api.nsghbd.com';
+                    const response = await fetch(apiBase + "/public/contact", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(data),

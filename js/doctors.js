@@ -17,7 +17,8 @@ async function loadDoctor() {
     }
 
     try {
-        const res = await fetch(`https://api.nsghbd.com/public/doctors/get/${encodeURIComponent(id)}`);
+        const apiBase = window.NSGH_API_BASE || 'https://api.nsghbd.com';
+        const res = await fetch(apiBase + `/public/doctors/get/${encodeURIComponent(id)}`);
 
         if (!res.ok) {
             const errText = await res.text();

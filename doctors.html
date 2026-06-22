@@ -338,7 +338,8 @@
             // Fetch data from API
             async function loadData() {
                 try {
-                    const res = await fetch('https://api.nsghbd.com/public/doctors/data');
+                    const apiBase = window.NSGH_API_BASE || 'https://api.nsghbd.com';
+                    const res = await fetch(apiBase + '/public/doctors/data');
 
                 if (!res.ok) {
                     // Handle non-200 responses gracefully

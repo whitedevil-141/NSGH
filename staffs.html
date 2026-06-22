@@ -323,7 +323,8 @@
             // Load staff data
             async function loadStaffs() {
                 try {
-                    const res = await fetch('https://api.nsghbd.com/public/staffs/data');
+                    const apiBase = window.NSGH_API_BASE || 'https://api.nsghbd.com';
+                    const res = await fetch(apiBase + '/public/staffs/data');
                     if (!res.ok) {
                         container.innerHTML = `<p>Failed to load staff members.</p>`;
                         return;
