@@ -91,9 +91,14 @@ OTP_TTL_SECONDS = 300
 OTP_RESEND_COOLDOWN_SECONDS = 60
 OTP_MAX_VERIFY_ATTEMPTS = 3
 OTP_VERIFIED_TTL_SECONDS = 600
+MAX_GLOBAL_REGISTRATIONS_PER_DAY = 100
+MAX_GLOBAL_OTPS_PER_DAY = 120
 _otp_store: dict[str, dict] = {}
 _otp_verified_store: dict[str, datetime] = {}
 _otp_daily_limits: dict[str, dict] = {}
+_global_registration_count: dict = {"date": None, "count": 0}
+_global_otp_count: dict = {"date": None, "count": 0}
+_global_lock = Lock()
 _otp_lock = Lock()
 
 
@@ -512,6 +517,12 @@ def send_otp(request: Request, data: OtpSendRequest, db: Session = Depends(get_d
         _cleanup_expired_otps(now)
         _cleanup_daily_limits(today)
 
+        if _global_otp_count["date"] != today:
+            _global_otp_count["date"] = today
+            _global_otp_count["count"] = 0
+        if _global_otp_count["count"] >= MAX_GLOBAL_OTPS_PER_DAY:
+            raise HTTPException(status_code=429, detail="Global daily OTP limit reached. Try again tomorrow.")
+
         record = _otp_daily_limits.get(phone)
         if record and record["count"] >= 2:
             raise HTTPException(status_code=429, detail="Daily OTP limit reached for this number (Max 2 per day)")
@@ -524,6 +535,8 @@ def send_otp(request: Request, data: OtpSendRequest, db: Session = Depends(get_d
             _otp_daily_limits[phone] = {"date": today, "count": 1}
         else:
             record["count"] += 1
+
+        _global_otp_count["count"] += 1
 
         otp = f"{random.SystemRandom().randint(0, 999999):06d}"
         _otp_store[phone] = {
@@ -543,6 +556,8 @@ def send_otp(request: Request, data: OtpSendRequest, db: Session = Depends(get_d
             rec = _otp_daily_limits.get(phone)
             if rec and rec["date"] == today and rec["count"] > 0:
                 rec["count"] -= 1
+            if _global_otp_count["count"] > 0:
+                _global_otp_count["count"] -= 1
             existing = _otp_store.get(phone)
             if existing and hmac.compare_digest(existing["otp_hash"], _hash_otp(otp)):
                 _otp_store.pop(phone, None)
@@ -657,6 +672,15 @@ def create_patient(data: AppointmentUserCreate, db: Session = Depends(get_db)):
     if len(data.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
+    today = datetime.utcnow().date()
+    with _global_lock:
+        if _global_registration_count["date"] != today:
+            _global_registration_count["date"] = today
+            _global_registration_count["count"] = 0
+        if _global_registration_count["count"] >= MAX_GLOBAL_REGISTRATIONS_PER_DAY:
+            raise HTTPException(status_code=429, detail="Global daily registration limit reached. Try again tomorrow.")
+        _global_registration_count["count"] += 1
+
     user = AppointmentUser(
         id="usr_" + uuid4().hex[:12],
         name=data.name.strip(),
@@ -673,6 +697,9 @@ def create_patient(data: AppointmentUserCreate, db: Session = Depends(get_db)):
         db.refresh(user)
     except IntegrityError:
         db.rollback()
+        with _global_lock:
+            if _global_registration_count["count"] > 0:
+                _global_registration_count["count"] -= 1
         raise HTTPException(status_code=400, detail="This phone is already registered")
     return _user_out(user)
 
