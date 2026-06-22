@@ -659,6 +659,47 @@
                         <div id="admin-receptionists-result-count" class="result-count"></div>
                     </div>
 
+                    <!-- Admin SMS Admins Sub-view -->
+                    <div id="admin-sms-admins-content" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="mb-4">SMS Admins</h3>
+                            <button class="btn btn-primary" onclick="openAdminSmsAdminModal()">+ Add SMS Admin</button>
+                        </div>
+                        <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:200px;">
+                                <input type="text" id="search-admin-sms-admins" placeholder="Search by name, phone, email..." oninput="filterAdminSmsAdmins()">
+                            </div>
+                            <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearAdminSmsAdminsFilters()">Clear</button>
+                        </div>
+                        <div class="bulk-toolbar hidden" id="bulk-toolbar-admin-sms-admin-list">
+                            <span class="bulk-count"><span class="bulk-count-num">0</span> selected</span>
+                            <div class="bulk-actions">
+                                <button class="btn btn-danger btn-compact" onclick="bulkDeleteSelected('admin-sms-admin-list')">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    Delete Selected
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-col"><input type="checkbox" onchange="toggleSelectAll('admin-sms-admin-list')"></th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-sms-admin-list">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="admin-sms-admins-result-count" class="result-count"></div>
+                    </div>
+
                     <!-- Admin Appointments Sub-view -->
                     <div id="admin-appointments-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
@@ -856,6 +897,82 @@
                             </table>
                         </div>
                         <div id="admin-categories-result-count" class="result-count"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- View 6: SMS Admin Portal -->
+        <section id="sms-admin-view" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2>SMS Portal</h2>
+            </div>
+
+            <div class="admin-layout">
+                <div class="admin-content card">
+                    <!-- Send SMS -->
+                    <div id="sms-send-content">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="mb-4">Send Manual Appointment SMS</h3>
+                        </div>
+                        <form id="send-sms-form" onsubmit="event.preventDefault(); sendManualSms();">
+                            <div class="input-group">
+                                <label>Doctor Name</label>
+                                <select id="sms-doctor-select" required onchange="updateSmsSchedule()">
+                                    <option value="">Select Doctor</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="input-group" style="flex:1">
+                                    <label>Patient Name</label>
+                                    <input type="text" id="sms-patient-name" required placeholder="Patient full name">
+                                </div>
+                                <div class="input-group" style="flex:1">
+                                    <label>Patient Phone</label>
+                                    <input type="tel" id="sms-patient-phone" required placeholder="e.g. 01700000000">
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="input-group" style="flex:1">
+                                    <label>Serial Number</label>
+                                    <input type="text" id="sms-serial-number" placeholder="e.g. 12">
+                                </div>
+                                <div class="input-group" style="flex:1">
+                                    <label>Appointment Schedule</label>
+                                    <input type="hidden" id="sms-appointment-schedule">
+                                    <select id="sms-date-list" class="input" onchange="selectSmsDate(this)">
+                                        <option value="">Select a doctor first</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary" style="flex:1" id="btn-send-sms">Send SMS</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- SMS History -->
+                    <div id="sms-history-content" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="mb-4">SMS History</h3>
+                            <button class="btn btn-outline" onclick="renderSmsHistory()">Refresh</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Doctor</th>
+                                        <th>Patient</th>
+                                        <th>Phone</th>
+                                        <th>Serial</th>
+                                        <th>Schedule</th>
+                                        <th>Sent At</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sms-history-list">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1289,6 +1406,70 @@
                 <div class="flex gap-2 mt-4">
                     <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-category-modal')">Cancel</button>
                     <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-category">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add SMS Admin (Admin only) -->
+    <div id="admin-sms-admin-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="mb-4">Add SMS Admin</h3>
+                <button class="close-btn" onclick="closeModal('admin-sms-admin-modal')">&times;</button>
+            </div>
+            <form id="admin-sms-admin-form" onsubmit="event.preventDefault(); saveSmsAdmin();">
+                <div class="input-group">
+                    <label>SMS Admin Name</label>
+                    <input type="text" id="admin-sms-admin-name" required placeholder="e.g. SMS Admin Name">
+                </div>
+                <div class="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="admin-sms-admin-phone" required placeholder="e.g. 01700000000">
+                </div>
+                <div class="input-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="admin-sms-admin-email" placeholder="e.g. sms@nsghcare.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="admin-sms-admin-password" required placeholder="Initial password">
+                    <button type="button" class="password-toggle" tabindex="-1" aria-label="Toggle password visibility" onclick="togglePassword('admin-sms-admin-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                </div>
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-sms-admin-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-sms-admin">Create ID</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit SMS Admin (Admin only) -->
+    <div id="admin-edit-sms-admin-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="mb-4">Edit SMS Admin</h3>
+                <button class="close-btn" onclick="closeModal('admin-edit-sms-admin-modal')">&times;</button>
+            </div>
+            <form id="admin-edit-sms-admin-form" onsubmit="event.preventDefault(); saveEditedSmsAdmin();">
+                <input type="hidden" id="edit-sms-admin-id">
+                <div class="input-group">
+                    <label>SMS Admin Name</label>
+                    <input type="text" id="edit-sms-admin-name" required placeholder="e.g. SMS Admin Name">
+                </div>
+                <div class="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="edit-sms-admin-phone" required disabled>
+                </div>
+                <div class="input-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="edit-sms-admin-email" placeholder="e.g. sms@nsghcare.com">
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-outline" style="flex:1" onclick="closeModal('admin-edit-sms-admin-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:2" id="btn-save-edited-sms-admin">Save Changes</button>
                 </div>
             </form>
         </div>

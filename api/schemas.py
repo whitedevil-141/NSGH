@@ -307,6 +307,27 @@ class AppointmentSlotOut(BaseModel):
     label: str
 
 
+class ManualSmsSendRequest(BaseModel):
+    doctorName: str
+    patientName: str
+    patientPhone: str
+    serialNumber: Optional[str] = None
+    appointmentSchedule: Optional[str] = None
+
+
+class ManualSmsOut(BaseModel):
+    id: int
+    doctorName: str
+    patientName: str
+    patientPhone: str
+    serialNumber: Optional[str] = None
+    appointmentSchedule: Optional[str] = None
+    message: Optional[str] = None
+    sentById: Optional[str] = None
+    sentByName: Optional[str] = None
+    createdAt: Optional[str] = None
+
+
 class AppointmentDataResponse(BaseModel):
     users: List[AppointmentUserOut]
     doctors: List[AppointmentDoctorOut]

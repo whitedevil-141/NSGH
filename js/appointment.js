@@ -26,7 +26,7 @@ const WEEKDAY_ALIASES = {
     sunday: 'Sunday'
 };
 
-const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor', RECEPTIONIST: 'receptionist' };
+const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor', RECEPTIONIST: 'receptionist', SMS_ADMIN: 'sms_admin' };
 const VALID_APPOINTMENT_STATUSES = ['Booked', 'Completed', 'Cancelled'];
 
 const PERMISSIONS = {
@@ -35,7 +35,8 @@ const PERMISSIONS = {
     admin: { adminPanel: true, manageUsers: true, manageDoctors: true, manageAppointments: true, manageMarketing: true, manageReceptionists: true },
     marketing: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true, changeOwnPassword: true },
     commission_doctor: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
-    receptionist: { receptionistDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true }
+    receptionist: { receptionistDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
+    sms_admin: { smsPortal: true }
 };
 
 let appState = {
@@ -248,7 +249,8 @@ function roleLabel(role) {
         admin: 'Admin',
         marketing: 'Marketing Officer',
         commission_doctor: 'Commission Doctor',
-        receptionist: 'Receptionist'
+        receptionist: 'Receptionist',
+        sms_admin: 'SMS Admin'
     };
     return labels[role] || String(role || 'User').replace(/_/g, ' ');
 }
@@ -833,6 +835,7 @@ function canAccess(view) {
         case 'admin': return role === ROLES.ADMIN;
         case 'doctors': return role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
         case 'appointments': return role === ROLES.USER || role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
+        case 'sms-admin': return role === ROLES.SMS_ADMIN;
         default: return false;
     }
 }
@@ -843,6 +846,7 @@ function defaultViewFor(user) {
     if (role === ROLES.DOCTOR) return 'doctor-dashboard';
     if (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR) return 'marketing-dashboard';
     if (role === ROLES.RECEPTIONIST) return 'receptionist-dashboard';
+    if (role === ROLES.SMS_ADMIN) return 'sms-admin';
     return 'dashboard';
 }
 
@@ -863,7 +867,7 @@ function navigateSafe(view) {
     appState.currentView = view;
     if (view === 'auth') localStorage.removeItem(STORAGE_VIEW);
     else localStorage.setItem(STORAGE_VIEW, view);
-    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view']
+    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view', 'sms-admin-view']
         .forEach(v => getEl(v)?.classList.add('hidden'));
     getEl(`${view}-view`)?.classList.remove('hidden');
 
@@ -902,6 +906,7 @@ function navigateSafe(view) {
         renderAppointments();
     }
     if (view === 'admin') renderAdmin();
+    if (view === 'sms-admin') initSmsPortal();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -931,6 +936,7 @@ function buildSidebarNav(role) {
         navItems.push({ type: 'item', id: 'admin-receptionists', text: 'Receptionists', icon: '#receptionist-icon' });
         navItems.push({ type: 'item', id: 'admin-appointments', text: 'All Appointments', icon: '#appointments-icon' });
         navItems.push({ type: 'item', id: 'admin-today-serials', text: "Today's Serials", icon: '#serials-icon' });
+        navItems.push({ type: 'item', id: 'admin-sms-admins', text: 'SMS Admins', icon: '#sms-icon' });
         navItems.push({ type: 'item', id: 'admin-notices', text: 'Notices', icon: '#notices-icon' });
         navItems.push({ type: 'item', id: 'admin-categories', text: 'Categories', icon: '#categories-icon' });
     }
@@ -953,6 +959,12 @@ function buildSidebarNav(role) {
     if (role === ROLES.RECEPTIONIST) {
         navItems.push({ type: 'label', text: 'Reception' });
         navItems.push({ type: 'item', id: 'receptionist-dashboard', text: 'Reception Dashboard', icon: '#receptionist-icon' });
+    }
+
+    if (role === ROLES.SMS_ADMIN) {
+        navItems.push({ type: 'label', text: 'SMS Portal' });
+        navItems.push({ type: 'item', id: 'sms-send', text: 'Send SMS', icon: '#sms-icon' });
+        navItems.push({ type: 'item', id: 'sms-history', text: 'SMS History', icon: '#history-icon' });
     }
 
     if (role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST) {
@@ -979,6 +991,8 @@ function switchSidebarItem(id) {
     if (id === 'receptionist-dashboard') { navigateSafe('receptionist-dashboard'); initReceptionistDashboard(); return; }
     if (id === 'doctors') { navigateSafe('doctors'); renderDoctors(); return; }
     if (id === 'appointments') { navigateSafe('appointments'); paginationState.myApp.skip = 0; renderAppointments(); return; }
+    if (id === 'sms-send') { navigateSafe('sms-admin'); switchSmsTab('sms-send'); return; }
+    if (id === 'sms-history') { navigateSafe('sms-admin'); switchSmsTab('sms-history'); return; }
     switchAdminTab(id);
     // Close sidebar on mobile
     if (window.innerWidth <= 720) toggleSidebar();
@@ -995,6 +1009,8 @@ function getIconFor(type) {
         '#notices-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
         '#categories-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4z"></path><path d="M14 4h6v6h-6z"></path><path d="M4 14h6v6H4z"></path><path d="M14 14h6v6h-6z"></path></svg>',
         '#dashboard-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+        '#sms-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="12" y1="13" x2="16" y2="13"/></svg>',
+        '#history-icon': '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     };
     return icons[type] || '';
 }
@@ -1090,6 +1106,7 @@ const bulkDeleteConfig = {
     'admin-user-list': { path: '/users', idKey: 'id', label: 'patient', needsUserRefresh: true },
     'admin-marketing-list': { path: '/marketing-officers', idKey: 'id', label: 'marketing officer', needsUserRefresh: true },
     'admin-receptionist-list': { path: '/receptionists', idKey: 'id', label: 'receptionist', needsUserRefresh: true },
+    'admin-sms-admin-list': { path: '/sms-admins', idKey: 'id', label: 'SMS admin', needsUserRefresh: true },
     'admin-doctor-list': { path: '/doctors', idKey: 'id', label: 'doctor', needsUserRefresh: true },
     'admin-all-appointments-list': { path: '/appointments', idKey: 'id', label: 'appointment', needsUserRefresh: false },
     'admin-today-serials-list': { path: '/appointments', idKey: 'id', label: 'serial', needsUserRefresh: false },
@@ -1137,6 +1154,7 @@ async function bulkDeleteSelected(tableId) {
         'admin-user-list': renderAdminUsers,
         'admin-marketing-list': renderAdminMarketing,
         'admin-receptionist-list': renderAdminReceptionists,
+        'admin-sms-admin-list': renderAdminSmsAdmins,
         'admin-doctor-list': renderAdminDoctors,
         'admin-all-appointments-list': () => renderAdminAppointments(),
         'admin-today-serials-list': () => renderAdminTodaySerials(),
@@ -2115,7 +2133,7 @@ function switchAdminTab(tabId) {
     const activeTab = getEl(`tab-${tabId}`);
     if (activeTab) activeTab.classList.add('active');
 
-    ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-receptionists', 'admin-appointments', 'admin-today-serials', 'admin-notices', 'admin-categories'].forEach(t => {
+    ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-receptionists', 'admin-sms-admins', 'admin-appointments', 'admin-today-serials', 'admin-notices', 'admin-categories'].forEach(t => {
         getEl(`${t}-content`)?.classList.add('hidden');
     });
     getEl(`${tabId}-content`)?.classList.remove('hidden');
@@ -2133,6 +2151,7 @@ function switchAdminTab(tabId) {
     }
     if (tabId === 'admin-notices') renderAdminNotices();
     if (tabId === 'admin-receptionists') renderAdminReceptionists();
+    if (tabId === 'admin-sms-admins') renderAdminSmsAdmins();
     if (tabId === 'admin-categories') renderAdminCategories();
 }
 
@@ -2565,6 +2584,158 @@ async function saveReceptionist() {
         showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not create receptionist'), 'error');
     } finally {
         setLoading('btn-save-receptionist', false);
+    }
+}
+
+// --- Admin SMS admins ---
+function renderAdminSmsAdmins() {
+    const tbody = getEl('admin-sms-admin-list');
+    if (!tbody) return;
+    const query = (getEl('search-admin-sms-admins')?.value || '').trim().toLowerCase();
+    const smsAdmins = appState.users.filter(u => getRole(u) === ROLES.SMS_ADMIN);
+    const filtered = query
+        ? smsAdmins.filter(u =>
+            (u.name || '').toLowerCase().includes(query) ||
+            (u.phone || '').toLowerCase().includes(query) ||
+            (u.email || '').toLowerCase().includes(query)
+          )
+        : smsAdmins;
+    const rc = getEl('admin-sms-admins-result-count');
+    if (rc) rc.textContent = filtered.length ? `Showing ${filtered.length} SMS admin${filtered.length !== 1 ? 's' : ''}` : '';
+    const selected = getBulkState('admin-sms-admin-list');
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">' + (query ? 'No SMS admins found matching your search.' : 'No SMS admins yet.') + '</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filtered.map(user => `
+            <tr${selected.has(user.id) ? ' class="selected"' : ''}>
+                <td class="checkbox-col" data-label=""><input type="checkbox" value="${escapeHTML(user.id)}" ${selected.has(user.id) ? 'checked' : ''} onchange="toggleRowSelect('admin-sms-admin-list', this)"></td>
+                <td data-label="Name"><strong>${escapeHTML(user.name)}</strong></td>
+                <td data-label="Phone">${escapeHTML(user.phone)}</td>
+                <td data-label="Email">${escapeHTML(user.email || '-')}</td>
+                <td data-label="Role"><span class="badge badge-info">SMS Admin</span></td>
+                <td data-label="Actions">
+                    <div class="table-actions">
+                        <button class="btn btn-outline btn-compact" onclick="editSmsAdmin('${escapeHTML(user.id)}')">Edit</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteSmsAdmin('${escapeHTML(user.id)}')">Delete</button>
+                    </div>
+                </td>
+            </tr>
+    `).join('');
+    updateBulkToolbar('admin-sms-admin-list');
+}
+
+function filterAdminSmsAdmins() { renderAdminSmsAdmins(); }
+
+function clearAdminSmsAdminsFilters() {
+    const input = getEl('search-admin-sms-admins');
+    if (input) input.value = '';
+    renderAdminSmsAdmins();
+}
+
+function openAdminSmsAdminModal() {
+    getEl('admin-sms-admin-form')?.reset();
+    getEl('admin-sms-admin-modal')?.classList.add('active');
+}
+
+async function saveSmsAdmin() {
+    const name = getEl('admin-sms-admin-name').value.trim();
+    const phone = normalizePhone(getEl('admin-sms-admin-phone').value);
+    const email = getEl('admin-sms-admin-email').value.trim();
+    const password = getEl('admin-sms-admin-password').value;
+
+    if (name.length < 2 || !isValidPhone(phone)) {
+        showToast('Enter SMS admin name and valid phone', 'error');
+        return;
+    }
+    if (!isValidEmail(email)) {
+        showToast('Enter a valid email address', 'error');
+        return;
+    }
+    if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+
+    setLoading('btn-save-sms-admin', true, 'Creating...');
+    try {
+        await apiRequest('/sms-admins', {
+            method: 'POST',
+            body: JSON.stringify({ name, phone, email: email || null, password, specialty: 'SMS Admin' })
+        });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        closeModal('admin-sms-admin-modal');
+        renderAdminSmsAdmins();
+        showToast('SMS admin ID created');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not create SMS admin'), 'error');
+    } finally {
+        setLoading('btn-save-sms-admin', false);
+    }
+}
+
+function editSmsAdmin(userId) {
+    const smsUser = appState.users.find(u => u.id === userId);
+    if (!smsUser || getRole(smsUser) !== ROLES.SMS_ADMIN) return;
+    getEl('edit-sms-admin-id').value = smsUser.id;
+    getEl('edit-sms-admin-name').value = smsUser.name || '';
+    getEl('edit-sms-admin-phone').value = smsUser.phone || '';
+    getEl('edit-sms-admin-email').value = smsUser.email || '';
+    getEl('admin-edit-sms-admin-modal')?.classList.add('active');
+}
+
+async function saveEditedSmsAdmin() {
+    const userId = getEl('edit-sms-admin-id').value;
+    const smsUser = appState.users.find(u => u.id === userId);
+    if (!smsUser) return;
+
+    const name = getEl('edit-sms-admin-name').value.trim();
+    const email = getEl('edit-sms-admin-email').value.trim();
+
+    if (name.length < 2) {
+        showToast('SMS admin name is required', 'error');
+        return;
+    }
+    if (email && !isValidEmail(email)) {
+        showToast('Enter a valid email address', 'error');
+        return;
+    }
+
+    setLoading('btn-save-edited-sms-admin', true, 'Saving...');
+    try {
+        await apiRequest(`/sms-admins/${encodeURIComponent(userId)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, email: email || null })
+        });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        showToast('SMS admin updated successfully');
+        closeModal('admin-edit-sms-admin-modal');
+        renderAdminSmsAdmins();
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not update SMS admin'), 'error');
+    } finally {
+        setLoading('btn-save-edited-sms-admin', false);
+    }
+}
+
+async function deleteSmsAdmin(userId) {
+    const smsUser = appState.users.find(u => u.id === userId);
+    if (!smsUser || getRole(smsUser) !== ROLES.SMS_ADMIN) return;
+    if (!confirm(`Delete SMS admin "${smsUser.name}"?`)) return;
+
+    try {
+        await apiRequest(`/sms-admins/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+        await refreshDataFromApi();
+        appState.currentUser = appState.users.find(u => u.id === appState.currentUser.id) || appState.currentUser;
+        persistSession();
+        renderAdminSmsAdmins();
+        showToast('SMS admin deleted.');
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not delete SMS admin'), 'error');
     }
 }
 
@@ -3093,6 +3264,193 @@ async function changeMarketingPassword() {
         showToast(error.isNetworkError ? 'Could not connect to the appointment API' : (error.message || 'Could not change password'), 'error');
     } finally {
         setLoading('btn-change-marketing-password', false);
+    }
+}
+
+// --- SMS Portal ---
+function initSmsPortal() {
+    if (!hasPermission('smsPortal')) {
+        showToast('SMS Portal access required', 'error');
+        navigate(defaultViewFor(appState.currentUser));
+        return;
+    }
+    switchSmsTab('sms-send');
+}
+
+function switchSmsTab(tabId) {
+    if (appState.currentView !== 'sms-admin') {
+        navigateSafe('sms-admin');
+    }
+    document.querySelectorAll('.sidebar-nav .sidebar-item').forEach(el => el.classList.remove('active'));
+    const activeTab = getEl(`tab-${tabId}`);
+    if (activeTab) activeTab.classList.add('active');
+
+    ['sms-send', 'sms-history'].forEach(t => {
+        getEl(`${t}-content`)?.classList.add('hidden');
+    });
+    getEl(`${tabId}-content`)?.classList.remove('hidden');
+
+    if (tabId === 'sms-send') initSmsSendForm();
+    if (tabId === 'sms-history') renderSmsHistory();
+}
+
+function initSmsSendForm() {
+    const doctorSelect = getEl('sms-doctor-select');
+    if (!doctorSelect) return;
+    if (doctorSelect.options.length <= 1) {
+        doctorSelect.innerHTML = '<option value="">Select Doctor</option>' +
+            appState.doctors.map(d => `<option value="${escapeHTML(d.name)}">${escapeHTML(d.name)}</option>`).join('');
+    }
+    doctorSelect.value = '';
+    getEl('sms-appointment-schedule').value = '';
+    const list = getEl('sms-date-list');
+    if (list) {
+        list.innerHTML = '<option value="">Select a doctor first</option>';
+        list.disabled = true;
+    }
+}
+
+function getWorkingDatesForDoctor(doc) {
+    const dates = [];
+    const today = todayISO();
+    for (let i = 0; i <= 7; i++) {
+        const candidate = i === 0 ? today : addDaysISO(i);
+        if (isDoctorWorkingOnDate(doc, candidate)) {
+            const schedule = getScheduleEntryForDate(doc, candidate);
+            if (schedule) dates.push({ dateStr: candidate, schedule });
+        }
+    }
+    return dates;
+}
+
+function formatScheduleItem(doc, dateStr, schedule) {
+    const parts = dateStr.split('-');
+    const formattedDate = toBnDigits(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    const timeRangeBn = `${formatTimeBn(schedule.startTime)} - ${formatTimeBn(schedule.endTime)}`;
+    const roomBn = toBnDigits(doc.room || '');
+    const weekday = getWeekdayNameFromISO(dateStr);
+    const dayBn = BN_DAY_SHORT[weekday] || weekday;
+    return { formattedDate, timeRangeBn, roomBn, dayBn, weekday };
+}
+
+function buildScheduleText(formattedDate, timeRangeBn, roomBn) {
+    let text = formattedDate;
+    if (timeRangeBn) text += `, ${timeRangeBn}`;
+    if (roomBn) text += `, কক্ষ-${roomBn}`;
+    return text;
+}
+
+function updateSmsSchedule() {
+    const doctorName = getEl('sms-doctor-select').value;
+    const list = getEl('sms-date-list');
+    const hiddenInput = getEl('sms-appointment-schedule');
+
+    if (!doctorName) {
+        list.innerHTML = '<option value="">Select a doctor first</option>';
+        list.disabled = true;
+        hiddenInput.value = '';
+        return;
+    }
+
+    const doc = appState.doctors.find(d => d.name === doctorName);
+    if (!doc) {
+        list.innerHTML = '<option value="">Doctor not found</option>';
+        list.disabled = true;
+        hiddenInput.value = '';
+        return;
+    }
+
+    const workingDates = getWorkingDatesForDoctor(doc);
+    if (workingDates.length === 0) {
+        list.innerHTML = '<option value="">No available dates in next 7 days</option>';
+        list.disabled = true;
+        hiddenInput.value = '';
+        return;
+    }
+
+    list.disabled = false;
+    list.innerHTML = '<option value="">Select a date...</option>' +
+        workingDates.map(({ dateStr, schedule }) => {
+            const { formattedDate, timeRangeBn, roomBn, dayBn } = formatScheduleItem(doc, dateStr, schedule);
+            const scheduleText = buildScheduleText(formattedDate, timeRangeBn, roomBn);
+            return `<option value="${escapeHTML(scheduleText)}">${dayBn} - ${scheduleText}</option>`;
+        }).join('');
+
+    // Auto-select first available date
+    list.selectedIndex = 1;
+    selectSmsDate(list);
+}
+
+function selectSmsDate(selectEl) {
+    const hiddenInput = getEl('sms-appointment-schedule');
+    hiddenInput.value = selectEl.value;
+}
+
+function computeSmsSchedule(doc, dateStr) {
+    // Kept for compatibility but no longer used directly
+}
+
+async function sendManualSms() {
+    const doctorName = getEl('sms-doctor-select').value;
+    const patientName = getEl('sms-patient-name').value.trim();
+    const patientPhone = normalizePhone(getEl('sms-patient-phone').value);
+    const serialNumber = getEl('sms-serial-number').value.trim();
+    const appointmentSchedule = getEl('sms-appointment-schedule').value.trim();
+
+    if (!doctorName) { showToast('Select a doctor', 'error'); return; }
+    if (patientName.length < 2) { showToast('Enter patient name', 'error'); return; }
+    if (!isValidPhone(patientPhone)) { showToast('Enter a valid patient phone number', 'error'); return; }
+    if (!appointmentSchedule) { showToast('No appointment schedule available for this doctor', 'error'); return; }
+
+    setLoading('btn-send-sms', true, 'Sending SMS...');
+    try {
+        await apiRequest('/sms/send', {
+            method: 'POST',
+            body: JSON.stringify({
+                doctorName,
+                patientName,
+                patientPhone,
+                serialNumber: serialNumber || null,
+                appointmentSchedule
+            })
+        });
+        showToast('SMS sent successfully');
+        getEl('send-sms-form').reset();
+        if (getEl('sms-doctor-select')) getEl('sms-doctor-select').value = '';
+        initSmsSendForm();
+
+        // Auto-refresh history if on that tab
+        if (!getEl('sms-history-content')?.classList.contains('hidden')) renderSmsHistory();
+    } catch (error) {
+        showToast(error.isNetworkError ? 'Could not connect' : (error.message || 'Could not send SMS'), 'error');
+    } finally {
+        setLoading('btn-send-sms', false);
+    }
+}
+
+async function renderSmsHistory() {
+    const tbody = getEl('sms-history-list');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+
+    try {
+        const records = await apiRequest('/sms/history');
+        if (records.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No SMS sent yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = records.map(r => `
+            <tr>
+                <td data-label="Doctor">${escapeHTML(r.doctorName)}</td>
+                <td data-label="Patient">${escapeHTML(r.patientName)}</td>
+                <td data-label="Phone">${escapeHTML(r.patientPhone)}</td>
+                <td data-label="Serial">${escapeHTML(r.serialNumber || '-')}</td>
+                <td data-label="Schedule">${escapeHTML(r.appointmentSchedule || '-')}</td>
+                <td data-label="Sent At">${escapeHTML(r.createdAt || '-')}</td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load SMS history</td></tr>';
     }
 }
 

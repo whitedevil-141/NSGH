@@ -18,11 +18,11 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from api.database import get_db
-from api.models import AppointmentBooking, AppointmentDoctor, AppointmentUser, Category
+from api.models import AppointmentBooking, AppointmentDoctor, AppointmentUser, Category, ManualSms
 from api.schemas import (
     AppointmentCreate,
     AppointmentDataResponse,
@@ -38,6 +38,8 @@ from api.schemas import (
     AppointmentUserOut,
     AppointmentUserPasswordChange,
     AppointmentUserPasswordReset,
+    ManualSmsOut,
+    ManualSmsSendRequest,
     PaginatedAppointmentResponse,
     AppointmentUserUpdate,
     CategoryCreate,
@@ -61,7 +63,7 @@ from api.utils.security import hash_password, verify_password
 router = APIRouter(tags=["Appointment Portal"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="appointment/login")
 
-VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor", "receptionist"}
+VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor", "receptionist", "sms_admin"}
 VALID_STATUSES = {"Booked", "Completed", "Cancelled"}
 SLOT_INTERVAL_MINUTES = 30
 BOOKING_WINDOW_DAYS = 1
@@ -619,7 +621,7 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
         users = [_user_out(user) for user in db.query(AppointmentUser).filter(
             (AppointmentUser.id == current_user.id) | (AppointmentUser.created_by_id == current_user.id)
         ).all()]
-    elif current_user.role == "receptionist":
+    elif current_user.role == "sms_admin":
         users = [_user_out(current_user)]
     else:
         users = [_user_out(current_user)]
@@ -649,6 +651,8 @@ def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depe
         appointments_query = appointments_query.filter(
             AppointmentBooking.booked_by_id == current_user.id
         )
+    elif current_user.role == "sms_admin":
+        appointments_query = appointments_query.filter(text("1=0"))
 
     appointments = [
         _appointment_out(appointment)
@@ -1672,3 +1676,159 @@ def cancel_appointment(
     db.commit()
     db.refresh(appointment)
     return _appointment_out(appointment)
+
+
+# --- SMS Admin endpoints ---
+
+@router.post("/sms-admins", response_model=AppointmentUserOut, status_code=status.HTTP_201_CREATED)
+def create_sms_admin(
+    data: AppointmentStaffCreate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    return _user_out(_create_staff_user(db, data, "sms_admin"))
+
+
+@router.put("/sms-admins/{user_id}", response_model=AppointmentUserOut)
+def update_sms_admin(
+    user_id: str,
+    data: AppointmentUserUpdate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    sms_user = (
+        db.query(AppointmentUser)
+        .filter(AppointmentUser.id == user_id, AppointmentUser.role == "sms_admin")
+        .first()
+    )
+    if not sms_user:
+        raise HTTPException(status_code=404, detail="SMS admin not found")
+
+    name = (data.name or "").strip()
+    if len(name) < 2:
+        raise HTTPException(status_code=400, detail="SMS admin name is required")
+
+    sms_user.name = name
+    sms_user.email = data.email
+    db.commit()
+    db.refresh(sms_user)
+    return _user_out(sms_user)
+
+
+@router.delete("/sms-admins/{user_id}")
+def delete_sms_admin(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    sms_user = (
+        db.query(AppointmentUser)
+        .filter(AppointmentUser.id == user_id, AppointmentUser.role == "sms_admin")
+        .first()
+    )
+    if not sms_user:
+        raise HTTPException(status_code=404, detail="SMS admin not found")
+    db.delete(sms_user)
+    db.commit()
+    return {"message": "SMS admin deleted successfully"}
+
+
+@router.post("/sms/send", response_model=ManualSmsOut)
+def send_manual_sms(
+    data: ManualSmsSendRequest,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "sms_admin", "admin")
+
+    patient_phone = _normalize_phone(data.patientPhone)
+    if not _is_valid_phone_for_sms(patient_phone):
+        raise HTTPException(status_code=400, detail="Invalid patient phone number")
+
+    patient_name = (data.patientName or "").strip()
+    if len(patient_name) < 2:
+        raise HTTPException(status_code=400, detail="Patient name is required")
+
+    doctor_name = (data.doctorName or "").strip()
+    if len(doctor_name) < 2:
+        raise HTTPException(status_code=400, detail="Doctor name is required")
+
+    serial_number = (data.serialNumber or "").strip()
+    appointment_schedule = (data.appointmentSchedule or "").strip()
+
+    now_local = datetime.utcnow() + timedelta(hours=6)
+
+    sms_message = (
+        f"আপনার অনলাইন অ্যাপয়েন্টমেন্ট সফলভাবে বুক করা হয়েছে।\n"
+        f"ডাক্তার: {doctor_name},\n"
+        f"রোগী: {patient_name},\n"
+        f"সিরিয়াল: {to_bn_digits(serial_number) if serial_number else '-'},\n"
+        f"{appointment_schedule},\n"
+        f"নিউ সফিপুর জেনারেল হাসপাতাল"
+    )
+
+    try:
+        send_sms(number=_sms_phone_number(patient_phone), message=sms_message)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"SMS sending failed: {str(e)}")
+
+    record = ManualSms(
+        doctor_name=doctor_name,
+        patient_name=patient_name,
+        patient_phone=patient_phone,
+        serial_number=serial_number,
+        appointment_schedule=appointment_schedule,
+        message=sms_message,
+        sent_by_id=current_user.id,
+        sent_by_name=current_user.name,
+        created_at=now_local.strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    return ManualSmsOut(
+        id=record.id,
+        doctorName=record.doctor_name,
+        patientName=record.patient_name,
+        patientPhone=record.patient_phone,
+        serialNumber=record.serial_number,
+        appointmentSchedule=record.appointment_schedule,
+        message=record.message,
+        sentById=record.sent_by_id,
+        sentByName=record.sent_by_name,
+        createdAt=record.created_at,
+    )
+
+
+@router.get("/sms/history", response_model=list[ManualSmsOut])
+def list_sms_history(
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "sms_admin", "admin")
+
+    query = db.query(ManualSms)
+    if current_user.role == "sms_admin":
+        query = query.filter(ManualSms.sent_by_id == current_user.id)
+
+    records = query.order_by(ManualSms.created_at.desc()).limit(100).all()
+
+    return [
+        ManualSmsOut(
+            id=r.id,
+            doctorName=r.doctor_name,
+            patientName=r.patient_name,
+            patientPhone=r.patient_phone,
+            serialNumber=r.serial_number,
+            appointmentSchedule=r.appointment_schedule,
+            message=r.message,
+            sentById=r.sent_by_id,
+            sentByName=r.sent_by_name,
+            createdAt=r.created_at,
+        )
+        for r in records
+    ]

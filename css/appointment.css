@@ -1880,6 +1880,25 @@ tr.selected td {
     }
 }
 
+.schedule-display {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+}
+.schedule-display.has-schedule {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
