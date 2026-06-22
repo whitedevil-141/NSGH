@@ -22,7 +22,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from api.database import get_db
-from api.models import AppointmentBooking, AppointmentDoctor, AppointmentUser
+from api.models import AppointmentBooking, AppointmentDoctor, AppointmentUser, Category
 from api.schemas import (
     AppointmentCreate,
     AppointmentDataResponse,
@@ -38,7 +38,9 @@ from api.schemas import (
     AppointmentUserOut,
     AppointmentUserPasswordChange,
     AppointmentUserPasswordReset,
+    PaginatedAppointmentResponse,
     AppointmentUserUpdate,
+    CategoryCreate,
     OtpSendRequest,
     OtpVerifyRequest,
 )
@@ -828,6 +830,66 @@ def delete_marketing_officer(
     db.delete(officer)
     db.commit()
     return {"message": "Marketing officer deleted successfully"}
+
+
+# --- Category CRUD (appointment portal admin) ---
+
+@router.get("/categories")
+def list_categories(db: Session = Depends(get_db)):
+    cats = db.query(Category).order_by(Category.name).all()
+    return [{"id": c.id, "name": c.name} for c in cats]
+
+
+@router.post("/categories", status_code=201)
+def create_category(
+    data: CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    existing = db.query(Category).filter(Category.name == data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists")
+    cat = Category(name=data.name)
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return {"id": cat.id, "name": cat.name}
+
+
+@router.put("/categories/{category_id}")
+def update_category(
+    category_id: int,
+    data: CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    existing = db.query(Category).filter(Category.name == data.name, Category.id != category_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category name already exists")
+    cat.name = data.name
+    db.commit()
+    db.refresh(cat)
+    return {"id": cat.id, "name": cat.name}
+
+
+@router.delete("/categories/{category_id}")
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    _require_role(current_user, "admin")
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(cat)
+    db.commit()
+    return {"message": "Category deleted successfully"}
 
 
 @router.get("/doctors", response_model=list[AppointmentDoctorOut])

@@ -1,4 +1,5 @@
-// ---------------- Logout ----------------
+const API_BASE = window.NSGH_API_BASE || 'https://api.nsghbd.com';
+
 document.getElementById('logoutBtn').addEventListener('click', () => {
     sessionStorage.removeItem('token');
     window.location.href = 'login.html';
@@ -14,21 +15,18 @@ function escapeHTML(value) {
     }[char]));
 }
 
-// ---------------- Doctors Tab ----------------
 const perPage = 8;
 let currentPage = 1;
 let currentCategory = 'all';
 let doctors = [];
-let categories = [];
+let categoriesList = [];
 
 const container = document.getElementById('doctorsContainer');
 const filter = document.getElementById('doctorFilter');
 
-// Initialize modal once
 const editModalEl = document.getElementById('editDoctorModal');
 const editModal = new bootstrap.Modal(editModalEl);
 
-// ---------------- Staffs Tab ----------------
 const staffPerPage = 8;
 let staffCurrentPage = 1;
 let staffs = [];
@@ -36,20 +34,15 @@ let staffs = [];
 const staffContainer = document.getElementById('staffsContainer');
 const staffPagination = document.getElementById('staffsPagination');
 
-// Initialize modals
 const editStaffModalEl = document.getElementById('editStaffModal');
 const editStaffModal = new bootstrap.Modal(editStaffModalEl);
 
-
-// ---------------- Load doctors from API ----------------
 async function loadDoctors() {
     try {
-        const res = await fetch('https://api.nsghbd.com/public/doctors/data');
+        const res = await fetch(API_BASE + '/public/doctors/data');
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         doctors = data.doctors;
-        categories = data.categories;
-        loadFilterOptions();
         renderDoctors();
     } catch (err) {
         console.error("Fetch error:", err);
@@ -57,10 +50,9 @@ async function loadDoctors() {
     }
 }
 
-// ---------------- Load staffs from API ----------------
 async function loadStaffs() {
     try {
-        const res = await fetch('https://api.nsghbd.com/public/staffs/data');
+        const res = await fetch(API_BASE + '/public/staffs/data');
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         staffs = data.staffs || [];
@@ -71,13 +63,14 @@ async function loadStaffs() {
     }
 }
 
-// ---------------- Filter options ----------------
 function loadFilterOptions() {
-    filter.innerHTML = `<option value="all">All Categories</option>`;
-    categories.forEach(c => {
+    const filter = document.getElementById('doctorFilter');
+    if (!filter) return;
+    filter.innerHTML = '<option value="all">All Categories</option>';
+    categoriesList.forEach(c => {
         const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
+        opt.value = c.name;
+        opt.textContent = c.name;
         filter.appendChild(opt);
     });
 }
@@ -88,9 +81,7 @@ filter.addEventListener('change', e => {
     renderDoctors();
 });
 
-// ---------------- Render doctors ----------------
 function renderDoctors() {
-    // Filter doctors by category
     const filtered = doctors.filter(d => 
         currentCategory === 'all' || (d.category && d.category.includes(currentCategory))
     );
@@ -107,7 +98,7 @@ function renderDoctors() {
         try {
             specs = Array.isArray(d.specialization)
                 ? d.specialization
-                : JSON.parse(d.specialization || '[]'); // parse JSON string
+                : JSON.parse(d.specialization || '[]');
         } catch (err) {
             console.warn("Invalid specialization JSON:", d.specialization);
             specs = [];
@@ -127,15 +118,14 @@ function renderDoctors() {
     renderPagination(filtered.length);
 }
 
-// ---------------- Pagination ----------------
 function renderPagination(total) {
     const totalPages = Math.ceil(total / perPage);
     const ul = document.getElementById('pagination');
     ul.innerHTML = '';
     for (let i = 1; i <= totalPages; i++) {
         const li = document.createElement('li');
-        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
+        li.className = 'page-item ' + (i === currentPage ? 'active' : '');
+        li.innerHTML = '<a href="#" class="page-link">' + i + '</a>';
         li.addEventListener('click', e => {
             e.preventDefault();
             currentPage = i;
@@ -145,8 +135,8 @@ function renderPagination(total) {
     }
 }
 
-// ---------------- Dynamic Fields ----------------
-function addQualificationField(containerId='qualificationsContainer', value='') {
+function addQualificationField(containerId, value) {
+    containerId = containerId || 'qualificationsContainer';
     const container = document.getElementById(containerId);
     const div = document.createElement('div');
     div.className = 'd-flex mb-1';
@@ -155,7 +145,7 @@ function addQualificationField(containerId='qualificationsContainer', value='') 
     input.type = 'text';
     input.name = 'qualifications[]';
     input.className = 'form-control form-control-sm me-2';
-    input.value = value;  // safer than innerHTML
+    input.value = value || '';
     input.placeholder = 'Qualification';
 
     const btn = document.createElement('button');
@@ -169,27 +159,25 @@ function addQualificationField(containerId='qualificationsContainer', value='') 
     container.appendChild(div);
 }
 
-
-function addConditionField(containerId='conditionsContainer', condition={icon:'',title:'',description:''}) {
+function addConditionField(containerId, condition) {
+    containerId = containerId || 'conditionsContainer';
+    condition = condition || {};
     const container = document.getElementById(containerId);
     const div = document.createElement('div');
     div.className = 'row g-1 mb-1 align-items-center';
-    div.innerHTML = `
-        <div class="col-1"><input type="text" name="condition_icon[]" class="form-control form-control-sm" placeholder="Icon" value="${escapeHTML(condition.icon || '')}"></div>
-        <div class="col-4"><input type="text" name="condition_title[]" class="form-control form-control-sm" placeholder="Title" value="${escapeHTML(condition.title || '')}"></div>
-        <div class="col-6"><input type="text" name="condition_description[]" class="form-control form-control-sm" placeholder="Description" value="${escapeHTML(condition.description || '')}"></div>
-        <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()">X</button></div>
-    `;
+    div.innerHTML =
+        '<div class="col-1"><input type="text" name="condition_icon[]" class="form-control form-control-sm" placeholder="Icon" value="' + escapeHTML(condition.icon || '') + '"></div>' +
+        '<div class="col-4"><input type="text" name="condition_title[]" class="form-control form-control-sm" placeholder="Title" value="' + escapeHTML(condition.title || '') + '"></div>' +
+        '<div class="col-6"><input type="text" name="condition_description[]" class="form-control form-control-sm" placeholder="Description" value="' + escapeHTML(condition.description || '') + '"></div>' +
+        '<div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest(\'.row\').remove()">X</button></div>';
     container.appendChild(div);
 }
 
-// ---------------- Initialize dynamic fields ----------------
 document.addEventListener('DOMContentLoaded', () => {
     addQualificationField();
     addConditionField();
-    loadDoctors(); // initial load
+    loadDoctors();
 });
-
 
 const addForm = document.getElementById('addDoctorForm');
 if (addForm) {
@@ -198,18 +186,13 @@ if (addForm) {
 
         const form = new FormData(addForm);
 
-        // ---------------- Parse specialties ----------------
-        const specialties = (form.get('specialties') || '')
-            .split(',')
-            .map(s => s.trim())
-            .filter(Boolean);
+        const category = form.get('category_id') || '';
+        const specialties = category ? [category] : [];
 
-        // ---------------- Parse qualifications ----------------
         const qualifications = form.getAll('qualifications[]')
             .map(q => q.trim())
             .filter(Boolean);
 
-        // ---------------- Parse conditions ----------------
         const icons = form.getAll('condition_icon[]');
         const titles = form.getAll('condition_title[]');
         const descriptions = form.getAll('condition_description[]');
@@ -224,7 +207,6 @@ if (addForm) {
             }
         }
         
-        // ---------------- Build FormData ----------------
         const uploadData = new FormData();
         uploadData.append('name', form.get('name') || '');
         uploadData.append('description', form.get('description') || '');
@@ -236,17 +218,15 @@ if (addForm) {
         uploadData.append('qualifications', JSON.stringify(qualifications));
         uploadData.append('conditions', JSON.stringify(conditions));
 
-        // ---------------- Optional photo ----------------
         const photoFile = form.get('photo');
         if (photoFile && photoFile.size > 0) {
             uploadData.append('photo', photoFile);
         }
 
-        // ---------------- Send to backend ----------------
         try {
-            const res = await fetch('https://api.nsghbd.com/doctors/add', {
+            const res = await fetch(API_BASE + '/doctors/add', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }, // keep auth if needed
+                headers: { 'Authorization': 'Bearer ' + token },
                 body: uploadData
             });
 
@@ -266,9 +246,6 @@ if (addForm) {
     });
 }
 
-
-
-// ---------------- Edit Doctor Modal ----------------
 function editDoctor(id) {
     const d = doctors.find(x => x.id == id);
     if (!d) return;
@@ -290,7 +267,7 @@ function editDoctor(id) {
         specs = [];
     }
 
-    document.getElementById('editSpecialties').value = specs.join(', ');
+    document.getElementById('editSpecialties').value = specs.length ? specs[0] : '';
 
     const qualContainer = document.getElementById('editQualificationsContainer');
     qualContainer.innerHTML = '';
@@ -303,7 +280,6 @@ function editDoctor(id) {
     editModal.show();
 }
 
-// ---------------- Edit Doctor Submit ----------------
 const editForm = document.getElementById('editDoctorForm');
 if (editForm) {
     editForm.addEventListener('submit', async e => {
@@ -311,18 +287,13 @@ if (editForm) {
         const form = new FormData(editForm);
         const id = form.get('editDoctorId');
 
-        // ---------------- Parse specialties ----------------
-        const specialties = (form.get('editSpecialties') || '')
-            .split(',')
-            .map(s => s.trim())
-            .filter(Boolean);
+        const category = (form.get('editSpecialties') || '').trim();
+        const specialties = category ? [category] : [];
 
-        // ---------------- Parse qualifications ----------------
         const qualifications = form.getAll('qualifications[]')
             .map(q => q.trim())
             .filter(Boolean);
 
-        // ---------------- Parse conditions ----------------
         const icons = form.getAll('condition_icon[]');
         const titles = form.getAll('condition_title[]');
         const descriptions = form.getAll('condition_description[]');
@@ -337,7 +308,6 @@ if (editForm) {
             }
         }
 
-        // ---------------- Build FormData ----------------
         const uploadData = new FormData();
         uploadData.append('name', form.get('editName') || '');
         uploadData.append('hospital', form.get('editHospital') || '');
@@ -349,17 +319,15 @@ if (editForm) {
         uploadData.append('qualifications', JSON.stringify(qualifications));
         uploadData.append('conditions', JSON.stringify(conditions));
 
-        // ---------------- Optional photo ----------------
         const photoFile = form.get('editPhoto');
         if (photoFile && photoFile.size > 0) {
             uploadData.append('photo', photoFile);
         }
 
-        // ---------------- Send to backend ----------------
         try {
-            const res = await fetch(`https://api.nsghbd.com/doctors/update/${id}`, {
+            const res = await fetch(API_BASE + '/doctors/update/' + id, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }, 
+                headers: { 'Authorization': 'Bearer ' + token },
                 body: uploadData
             });
 
@@ -378,15 +346,12 @@ if (editForm) {
     });
 }
 
-
-
-// ---------------- Delete Doctor ----------------
 async function deleteDoctor(id) {
     if (!confirm("Delete this doctor?")) return;
     try {
-        await fetch(`https://api.nsghbd.com/doctors/${id}`, {
+        await fetch(API_BASE + '/doctors/' + id, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': 'Bearer ' + token }
         });
         alert("Deleted");
         loadDoctors();
@@ -396,7 +361,6 @@ async function deleteDoctor(id) {
     }
 }
 
-// ---------------- Render staffs ----------------
 function renderStaffs() {
     const start = (staffCurrentPage - 1) * staffPerPage;
     const paginated = staffs.slice(start, start + staffPerPage);
@@ -419,14 +383,13 @@ function renderStaffs() {
     renderStaffPagination();
 }
 
-// ---------------- Staff Pagination ----------------
 function renderStaffPagination() {
     const totalPages = Math.ceil(staffs.length / staffPerPage);
     staffPagination.innerHTML = '';
     for (let i = 1; i <= totalPages; i++) {
         const li = document.createElement('li');
-        li.className = `page-item ${i === staffCurrentPage ? 'active' : ''}`;
-        li.innerHTML = `<a href="#" class="page-link">${i}</a>`;
+        li.className = 'page-item ' + (i === staffCurrentPage ? 'active' : '');
+        li.innerHTML = '<a href="#" class="page-link">' + i + '</a>';
         li.addEventListener('click', e => {
             e.preventDefault();
             staffCurrentPage = i;
@@ -436,7 +399,6 @@ function renderStaffPagination() {
     }
 }
 
-// ---------------- Add Staff ----------------
 const addStaffForm = document.getElementById('addStaffForm');
 if (addStaffForm) {
     addStaffForm.addEventListener('submit', async e => {
@@ -444,9 +406,9 @@ if (addStaffForm) {
         const form = new FormData(addStaffForm);
 
         try {
-            const res = await fetch('https://api.nsghbd.com/staffs/add', {
+            const res = await fetch(API_BASE + '/staffs/add', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                headers: { 'Authorization': 'Bearer ' + token },
                 body: form
             });
 
@@ -466,7 +428,6 @@ if (addStaffForm) {
     });
 }
 
-// ---------------- Edit Staff ----------------
 function editStaff(id) {
     const s = staffs.find(x => x.id == id);
     if (!s) return;
@@ -494,16 +455,15 @@ if (editStaffForm) {
         form.append('designation', designation);
         form.append('phone', phone);
 
-        // Only append photo if a file is selected
         const photoInput = document.getElementById('editStaffPhoto');
         if (photoInput.files.length > 0) {
             form.append('photo', photoInput.files[0]);
         }
 
         try {
-            const res = await fetch(`https://api.nsghbd.com/staffs/update/${id}`, {
+            const res = await fetch(API_BASE + '/staffs/update/' + id, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` },
+                headers: { 'Authorization': 'Bearer ' + token },
                 body: form
             });
 
@@ -523,13 +483,12 @@ if (editStaffForm) {
     });
 }
 
-// ---------------- Delete Staff ----------------
 async function deleteStaff(id) {
     if (!confirm("Delete this staff?")) return;
     try {
-        await fetch(`https://api.nsghbd.com/staffs/${id}`, {
+        await fetch(API_BASE + '/staffs/' + id, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': 'Bearer ' + token }
         });
         alert("Deleted");
         loadStaffs();
@@ -539,5 +498,134 @@ async function deleteStaff(id) {
     }
 }
 
-// ---------------- Initialize ----------------
-document.addEventListener('DOMContentLoaded', loadStaffs);
+function loadCategoryDropdowns() {
+    const selects = ['add-doc-category', 'editSpecialties'];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const currentVal = el.value;
+        el.innerHTML = '<option value="">Select Category</option>';
+        categoriesList.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.name;
+            opt.textContent = c.name;
+            if (c.name === currentVal) opt.selected = true;
+            el.appendChild(opt);
+        });
+    });
+}
+
+function renderCategories() {
+    const container = document.getElementById('categoriesContainer');
+    container.innerHTML = '';
+    if (!categoriesList.length) {
+        container.innerHTML = '<p class="text-muted">No categories yet.</p>';
+        return;
+    }
+    categoriesList.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'col-md-3 mb-3';
+        div.innerHTML =
+            '<div class="card p-3 text-center">' +
+            '<h5>' + escapeHTML(c.name) + '</h5>' +
+            '<div class="mt-2">' +
+            '<button class="btn btn-warning btn-sm me-1" onclick="editCategory(' + c.id + ', \'' + escapeHTML(c.name) + '\')">Edit</button> ' +
+            '<button class="btn btn-danger btn-sm" onclick="deleteCategory(' + c.id + ')">Delete</button>' +
+            '</div></div>';
+        container.appendChild(div);
+    });
+}
+
+function openAddCategoryModal() {
+    document.getElementById('addCategoryForm').reset();
+    new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
+}
+
+document.getElementById('addCategoryForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = e.target.categoryName.value.trim();
+    if (!name) return alert('Category name is required');
+    try {
+        const res = await fetch(API_BASE + '/doctors/categories', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Failed to add category');
+        }
+        alert('Category added!');
+        bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+        loadCategories();
+        loadDoctors();
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+function editCategory(id, name) {
+    document.getElementById('editCategoryId').value = id;
+    document.getElementById('editCategoryName').value = name;
+    new bootstrap.Modal(document.getElementById('editCategoryModal')).show();
+}
+
+document.getElementById('editCategoryForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('editCategoryId').value;
+    const name = document.getElementById('editCategoryName').value.trim();
+    if (!name) return alert('Category name is required');
+    try {
+        const res = await fetch(API_BASE + '/doctors/categories/' + id, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Failed to update category');
+        }
+        alert('Category updated!');
+        bootstrap.Modal.getInstance(document.getElementById('editCategoryModal')).hide();
+        loadCategories();
+        loadDoctors();
+    } catch (err) {
+        alert(err.message);
+    }
+});
+
+async function deleteCategory(id) {
+    if (!confirm('Delete this category?')) return;
+    try {
+        const res = await fetch(API_BASE + '/doctors/categories/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) throw new Error('Failed to delete');
+        alert('Category deleted');
+        loadCategories();
+        loadDoctors();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function loadCategories() {
+    try {
+        const res = await fetch(API_BASE + '/doctors/categories', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        categoriesList = await res.json();
+        renderCategories();
+        loadCategoryDropdowns();
+        loadFilterOptions();
+    } catch (err) {
+        console.error("Fetch error:", err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadStaffs();
+    loadCategories();
+});

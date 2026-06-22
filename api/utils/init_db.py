@@ -13,7 +13,7 @@ if __package__ is None or __package__ == "":
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from api.database import engine, Base
-from api.models import AppointmentUser, AppointmentDoctor, AppointmentBooking
+from api.models import AppointmentUser, AppointmentDoctor, AppointmentBooking, Category
 from api.utils.security import hash_password
 
 
@@ -87,62 +87,62 @@ def initialize_database() -> None:
     # Create all tables
     Base.metadata.create_all(bind=engine)
     
-    # Check if data already exists
     db = Session(bind=engine)
     try:
         existing_users = db.query(AppointmentUser).first()
-        if existing_users:
-            # Database already has data, skip seeding
-            return
-        
-        # Seed minimal dummy data
-        seed_data = _get_minimal_dummy_data()
-        
-        # Add users
-        for item in seed_data.get("users", []):
-            user = AppointmentUser(
-                id=item["id"],
-                name=item["name"],
-                phone=_normalize_phone(item["phone"]),
-                password=hash_password(item["password"]),
-                email=item.get("email"),
-                age=item.get("age"),
-                gender=item.get("gender"),
-                role=item.get("role", "user"),
-                specialty=item.get("specialty"),
-            )
-            db.add(user)
-        
-        # Add doctors
-        for item in seed_data.get("doctors", []):
-            doctor = AppointmentDoctor(
-                id=int(item["id"]),
-                name=item["name"],
-                phone=_normalize_phone(item["phone"]),
-                category=item["category"],
-                working_schedule=json.dumps([
-                    {
-                        "day": day,
-                        "startTime": item["startTime"],
-                        "endTime": item["endTime"],
-                    }
-                    for day in (
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Saturday",
-                        "Sunday",
-                    )
-                ]),
-                room=item["room"],
-                is_available=1,
-            )
-            db.add(doctor)
-        
-        db.commit()
-        print("✓ Database initialized with minimal dummy data")
-        
+        if not existing_users:
+            # Seed minimal dummy data
+            seed_data = _get_minimal_dummy_data()
+            
+            for item in seed_data.get("users", []):
+                user = AppointmentUser(
+                    id=item["id"],
+                    name=item["name"],
+                    phone=_normalize_phone(item["phone"]),
+                    password=hash_password(item["password"]),
+                    email=item.get("email"),
+                    age=item.get("age"),
+                    gender=item.get("gender"),
+                    role=item.get("role", "user"),
+                    specialty=item.get("specialty"),
+                )
+                db.add(user)
+            
+            for item in seed_data.get("doctors", []):
+                doctor = AppointmentDoctor(
+                    id=int(item["id"]),
+                    name=item["name"],
+                    phone=_normalize_phone(item["phone"]),
+                    category=item["category"],
+                    working_schedule=json.dumps([
+                        {"day": day, "startTime": item["startTime"], "endTime": item["endTime"]}
+                        for day in ("Monday", "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday")
+                    ]),
+                    room=item["room"],
+                    is_available=1,
+                )
+                db.add(doctor)
+            
+            db.commit()
+            print("✓ Database initialized with minimal dummy data")
+
+        # Seed default categories if none exist
+        existing_cats = db.query(Category).first()
+        if not existing_cats:
+            default_categories = [
+                "Cardiologist", "Chest Medicine", "ENT & Head-Neck Surgeon",
+                "Emergency Medical Officer", "Gastroenterology",
+                "Gaynee & Obs Gynecology Obstetrics", "General & Colorectal Surgeon",
+                "Medicine Specialist", "Neuro Medicine", "Orthopedics",
+                "Pain Medicine Specialist", "Pediatric Doctor",
+                "Physical Medicine Specialist", "Physiotherapy",
+                "Skin Sex & VD Specialist", "Ultrasonography USG", "Urologist",
+            ]
+            for name in default_categories:
+                db.add(Category(name=name))
+            db.commit()
+            print("✓ Seeded default categories")
+
     except Exception as e:
         db.rollback()
         print(f"Error initializing database: {e}")

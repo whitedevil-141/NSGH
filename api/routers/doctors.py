@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from api.database import get_db
-from api.models import Doctor
-from api.schemas import DoctorOut
+from api.models import Doctor, Category
+from api.schemas import CategoryCreate, CategoryOut, DoctorOut
 from api.utils.deps import get_current_user
 from api.limiter import limiter
 from fastapi import Request
@@ -164,3 +164,45 @@ def delete_doctor(request: Request, doctor_id: int, db: Session = Depends(get_db
     db.commit()
 
     return {"message": "Doctor deleted successfully"}
+
+
+# Category CRUD
+@router.get("/categories", response_model=list[CategoryOut])
+def list_categories(db: Session = Depends(get_db)):
+    return db.query(Category).order_by(Category.name).all()
+
+
+@router.post("/categories", response_model=CategoryOut, status_code=201)
+def create_category(data: CategoryCreate, db: Session = Depends(get_db)):
+    existing = db.query(Category).filter(Category.name == data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category already exists")
+    cat = Category(name=data.name)
+    db.add(cat)
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.put("/categories/{category_id}", response_model=CategoryOut)
+def update_category(category_id: int, data: CategoryCreate, db: Session = Depends(get_db)):
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    existing = db.query(Category).filter(Category.name == data.name, Category.id != category_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Category name already exists")
+    cat.name = data.name
+    db.commit()
+    db.refresh(cat)
+    return cat
+
+
+@router.delete("/categories/{category_id}")
+def delete_category(category_id: int, db: Session = Depends(get_db)):
+    cat = db.query(Category).filter(Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(cat)
+    db.commit()
+    return {"message": "Category deleted successfully"}

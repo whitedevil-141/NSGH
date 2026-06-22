@@ -37,6 +37,13 @@ async def get_doctor(request: Request, doctor_id: int, db: Session = Depends(get
     }
 
 
+@router.get("/categories")
+@limiter.limit("30/minute")
+def fetch_categories(request: Request, db: Session = Depends(get_db)):
+    cats = db.query(Category).order_by(Category.name).all()
+    return [{"id": c.id, "name": c.name} for c in cats]
+
+
 @router.get("/doctors/data", response_model=DoctorsDataResponse)
 @limiter.limit("30/minute")
 def fetch_public_data(request: Request, db: Session = Depends(get_db)):
@@ -75,6 +82,11 @@ def fetch_public_data(request: Request, db: Session = Depends(get_db)):
                 timing=d.timing
             )
         )
+
+    # Merge categories from the categories table
+    db_categories = db.query(Category).order_by(Category.name).all()
+    category_names = [c.name for c in db_categories]
+    all_categories.update(category_names)
 
     return DoctorsDataResponse(
         doctors=doctors_data,
