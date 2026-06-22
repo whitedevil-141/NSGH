@@ -1462,7 +1462,8 @@ def download_appointment_pdf(
     start_y -= 20
     c.setFont("Helvetica", 10)
     c.setFillColor(colors.gray)
-    c.drawString(col1_x, start_y, f"Issued At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    now_local = datetime.utcnow() + timedelta(hours=6)
+    c.drawString(col1_x, start_y, f"Issued At: {now_local.day} {now_local.strftime('%B').lower()} {now_local.year} at {now_local.strftime('%I:%M %p').lower()}")
 
     c.setFont("Helvetica-Oblique", 10)
     c.setFillColor(colors.gray)
@@ -1489,13 +1490,121 @@ def download_appointment_pdf(
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
+@router.get("/serials/pdf")
+def download_serials_pdf(
+    doctor_id: Optional[int] = Query(None),
+    date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    """Download all serials as PDF with Serial no | Patient | Phone | Note | Issue Time."""
+    _require_role(current_user, "admin", "doctor")
+    
+    if current_user.role == "doctor":
+        doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
+        if doctor:
+            doctor_id = doctor.id
+    
+    if not date:
+        date = datetime.now().strftime("%Y-%m-%d")
+    
+    query = db.query(AppointmentBooking).filter(AppointmentBooking.date == date)
+    if doctor_id:
+        query = query.filter(AppointmentBooking.doctor_id == doctor_id)
+    query = query.order_by(AppointmentBooking.serial_number.asc())
+    appointments = query.all()
+    
+    try:
+        register_fonts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF font registration failed: {e}")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColor(colors.HexColor("#241d4e"))
+    c.drawCentredString(width / 2.0, height - 40, "New Shafipur General Hospital")
+    
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.darkgray)
+    c.drawCentredString(width / 2.0, height - 55, "Shafipur Bazar, Kaliakair, Gazipur-1751")
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width / 2.0, height - 80, f"SERIAL LIST - {date}")
+    if doctor_id:
+        doctor_name = appointments[0].doctor_name if appointments else ""
+        c.drawCentredString(width / 2.0, height - 95, f"Doctor: {doctor_name}")
+    
+    c.setLineWidth(1)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, height - 105, width - 50, height - 105)
+    
+    # Table headers
+    x_positions = [50, 120, 250, 380, 480]
+    headers = ["Serial", "Patient", "Phone", "Note", "Issue Time"]
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.HexColor("#4a5764"))
+    y = height - 125
+    for i, header in enumerate(headers):
+        c.drawString(x_positions[i], y, header)
+    
+    c.setLineWidth(0.5)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, y - 3, width - 50, y - 3)
+    
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.black)
+    y -= 20
+    
+    now_local_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+    
+    for app in appointments:
+        if y < 50:
+            c.showPage()
+            y = height - 40
+            c.setFont("Helvetica", 10)
+            c.setFillColor(colors.black)
+        
+        serial = str(app.serial_number) if app.serial_number else "-"
+        patient = str(app.patient_name)[:25] if app.patient_name else "-"
+        phone = str(app.patient_phone) if app.patient_phone else "-"
+        note = str(app.reason or "")[:20]
+        issue = str(app.booked_by_name or "Self")[:15]
+        
+        draw_bilingual_string(c, x_positions[0], y, serial, 10)
+        draw_bilingual_string(c, x_positions[1], y, patient, 10)
+        draw_bilingual_string(c, x_positions[2], y, phone, 10)
+        draw_bilingual_string(c, x_positions[3], y, note, 10)
+        draw_bilingual_string(c, x_positions[4], y, issue, 10)
+        y -= 18
+    
+    try:
+        c.showPage()
+        c.save()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {e}")
+    
+    pdf_bytes = buffer.getvalue()
+    
+    filename = f"serials-{date}.pdf"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-store",
+        "Content-Length": str(len(pdf_bytes)),
+    }
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
 @router.post("/appointments/{appointment_id}/cancel", response_model=AppointmentOut)
 def cancel_appointment(
     appointment_id: int,
     db: Session = Depends(get_db),
     current_user: AppointmentUser = Depends(_current_user),
 ):
-    _require_role(current_user, "admin", "marketing", "commission_doctor", "user")
+    _require_role(current_user, "admin", "marketing", "commission_doctor", "user", "receptionist")
     appointment = db.query(AppointmentBooking).filter(AppointmentBooking.id == appointment_id).first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Appointment not found")
