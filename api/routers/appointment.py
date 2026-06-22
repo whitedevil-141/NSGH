@@ -141,7 +141,7 @@ def _is_valid_phone_for_sms(phone: str) -> bool:
     
     # Check for obviously invalid sequences (too many repeating digits)
     for digit in "0123456789":
-        if digit * 4 in digits_only:  # 4+ consecutive same digits
+        if digit * 6 in digits_only:  # 6+ consecutive same digits
             return False
     
     return True
@@ -1090,7 +1090,7 @@ def toggle_doctor_availability(
     return _doctor_out(doctor)
 
 
-@router.get("/appointments", response_model=list[AppointmentOut])
+@router.get("/appointments", response_model=PaginatedAppointmentResponse)
 def list_appointments(
     date: Optional[str] = None,
     doctor_id: Optional[int] = None,
@@ -1138,7 +1138,9 @@ def list_appointments(
     else:
         query = query.order_by(AppointmentBooking.date.desc(), AppointmentBooking.serial_number.asc())
 
-    return [_appointment_out(appointment) for appointment in query.offset(skip).limit(limit).all()]
+    total = query.count()
+    items = [_appointment_out(appointment) for appointment in query.offset(skip).limit(limit).all()]
+    return PaginatedAppointmentResponse(items=items, total=total)
 
 
 @router.post("/appointments", response_model=AppointmentSuccessResponse)
@@ -1182,21 +1184,23 @@ def create_appointment(
     if patient_age is None or patient_age < 0 or patient_age > 120:
         raise HTTPException(status_code=400, detail="Valid patient age is required")
 
-    patient_phone = _require_phone(data.patientPhone or "")
+    patient_phone = (_normalize_phone(data.patientPhone or "") or "")
 
-    # Check if patient already has an appointment with this doctor on this date
-    patient_conflict = (
-        db.query(AppointmentBooking)
-        .filter(
-            AppointmentBooking.patient_phone == patient_phone,
-            AppointmentBooking.doctor_id == doctor.id,
-            AppointmentBooking.date == data.date,
-            AppointmentBooking.status == "Booked",
+    # Prevent duplicate booking: same patient name + phone + doctor + date
+    if patient_name and patient_phone:
+        duplicate = (
+            db.query(AppointmentBooking)
+            .filter(
+                AppointmentBooking.patient_name == patient_name,
+                AppointmentBooking.patient_phone == patient_phone,
+                AppointmentBooking.doctor_id == doctor.id,
+                AppointmentBooking.date == data.date,
+                AppointmentBooking.status == "Booked",
+            )
+            .first()
         )
-        .first()
-    )
-    if patient_conflict:
-        raise HTTPException(status_code=409, detail="This patient already has an appointment with this doctor on this date")
+        if duplicate:
+            raise HTTPException(status_code=409, detail=f"Patient {patient_name} already has an appointment with this doctor on this date")
 
     # Get next serial number for the queue
     serial_number = _get_next_serial_number(db, doctor.id, data.date)
@@ -1262,6 +1266,8 @@ def create_appointment(
                 f"নিউ সফিপুর জেনারেল হাসপাতাল"
             )
             send_sms(number=_sms_phone_number(patient_phone), message=sms_message)
+        else:
+            print(f"SMS skipped: phone {patient_phone} failed validation")
     except Exception as e:
         # Log the SMS failure so it can be debugged, but don't fail the booking
         print(f"Failed to send booking SMS to {patient_phone}: {str(e)}")
@@ -1322,14 +1328,13 @@ def update_appointment_status(
                 f"নিউ সফিপুর জেনারেল হাসপাতাল"
             )
             send_sms(number=_sms_phone_number(appointment.patient_phone), message=sms_message)
+        else:
+            print(f"SMS skipped: phone {appointment.patient_phone} failed validation")
     except Exception as e:
         # Log the SMS failure so it can be debugged, but don't fail the status update
         print(f"Failed to send status change SMS to {appointment.patient_phone}: {str(e)}")
 
     return _appointment_out(appointment)
-
-
-# PDF generation endpoint removed
 
 
 def _can_view_appointment(user: AppointmentUser, appointment: AppointmentBooking, db: Session) -> bool:
