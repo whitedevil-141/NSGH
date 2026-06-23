@@ -2,6 +2,34 @@
 const STORAGE_SESSION = 'medicare_session';
 const STORAGE_API_TOKEN = 'medicare_api_token';
 const STORAGE_VIEW = 'medicare_last_view';
+const STORAGE_SUB_VIEW = 'medicare_last_sub_view';
+const VIEW_HASH_MAP = {
+    'auth': '',
+    'dashboard': 'dashboard',
+    'doctor-dashboard': 'doctor-dashboard',
+    'doctor-today-serials': 'doctor-today-serials',
+    'marketing-dashboard': 'marketing-dashboard',
+    'receptionist-dashboard': 'receptionist-dashboard',
+    'doctors': 'doctors',
+    'appointments': 'appointments',
+    'admin': 'admin',
+    'sms-admin': 'sms-admin'
+};
+const ADMIN_SUB_HASH_MAP = {
+    'users': 'admin-users',
+    'doctors': 'admin-doctors',
+    'marketing': 'admin-marketing',
+    'receptionists': 'admin-receptionists',
+    'appointments': 'admin-appointments',
+    'today-serials': 'admin-today-serials',
+    'sms-admins': 'admin-sms-admins',
+    'notices': 'admin-notices',
+    'categories': 'admin-categories'
+};
+const SMS_SUB_HASH_MAP = {
+    'send': 'sms-send',
+    'history': 'sms-history'
+};
 const API_BASE = (window.NSGH_APPOINTMENT_API || (window.NSGH_API_BASE + '/appointment'));
 const SLOT_INTERVAL_MINUTES = 30;
 const BOOKING_WINDOW_DAYS = 7;
@@ -807,11 +835,25 @@ async function loadData() {
                 const user = appState.users.find(u => u.id === userId) || appState.users[0];
                 if (user) {
                     appState.currentUser = user;
+                    const { view: hashView, sub: hashSub } = getViewFromHash(window.location.hash);
                     const storedView = localStorage.getItem(STORAGE_VIEW);
-                    const targetView = storedView && canAccess(storedView)
-                        ? storedView
-                        : defaultViewFor(user);
+                    const storedSub = localStorage.getItem(STORAGE_SUB_VIEW);
+                    let targetView, targetSub;
+                    if (hashView && canAccess(hashView)) {
+                        targetView = hashView;
+                        targetSub = hashSub;
+                    } else if (storedView && canAccess(storedView)) {
+                        targetView = storedView;
+                        targetSub = storedSub || null;
+                    } else {
+                        targetView = defaultViewFor(user);
+                        targetSub = null;
+                    }
                     navigateSafe(targetView);
+                    if (targetSub) {
+                        if (targetView === 'admin') switchAdminTab(targetSub);
+                        else if (targetView === 'sms-admin') switchSmsTab(targetSub);
+                    }
                     return;
                 }
             }
@@ -850,6 +892,56 @@ function defaultViewFor(user) {
     if (role === ROLES.RECEPTIONIST) return 'receptionist-dashboard';
     if (role === ROLES.SMS_ADMIN) return 'sms-admin';
     return 'dashboard';
+}
+
+function getViewFromHash(hash) {
+    if (!hash) return { view: null, sub: null };
+    const parts = hash.replace(/^#/, '').split('/');
+    const viewKey = parts[0];
+    const subKey = parts[1] || null;
+    const entry = Object.entries(VIEW_HASH_MAP).find(([k, v]) => v === viewKey);
+    const view = entry ? entry[0] : null;
+    let sub = null;
+    if (view === 'admin' && subKey && ADMIN_SUB_HASH_MAP[subKey]) {
+        sub = ADMIN_SUB_HASH_MAP[subKey];
+    } else if (view === 'sms-admin' && subKey && SMS_SUB_HASH_MAP[subKey]) {
+        sub = SMS_SUB_HASH_MAP[subKey];
+    }
+    return { view, sub };
+}
+
+let _ignoreHash = 0;
+
+function setUrlHash(hash) {
+    const target = hash ? `#${hash}` : window.location.pathname;
+    if (window.location.hash !== target) {
+        _ignoreHash++;
+        history.replaceState(null, '', target);
+        _ignoreHash--;
+    }
+}
+
+function navigateToHash() {
+    const { view, sub } = getViewFromHash(window.location.hash);
+    if (!view) {
+        if (appState.currentUser) navigate(defaultViewFor(appState.currentUser));
+        else navigateSafe('auth');
+        return;
+    }
+    if (!appState.currentUser) {
+        navigateSafe('auth');
+        return;
+    }
+    if (!canAccess(view)) {
+        navigate(defaultViewFor(appState.currentUser));
+        return;
+    }
+    if (sub) {
+        if (view === 'admin') switchAdminTab(sub);
+        else if (view === 'sms-admin') switchSmsTab(sub);
+        return;
+    }
+    navigate(view);
 }
 
 function navigate(view) {
@@ -910,6 +1002,18 @@ function navigateSafe(view) {
     if (view === 'admin') renderAdmin();
     if (view === 'sms-admin') initSmsPortal();
     if (view === 'doctor-today-serials') renderDoctorTodaySerials();
+
+    // Update sidebar active state for main views (admin/sms-admin handled by sub-functions)
+    if (view !== 'auth' && view !== 'admin' && view !== 'sms-admin') {
+        document.querySelectorAll('.sidebar-nav .sidebar-item').forEach(el => el.classList.remove('active'));
+        const tab = getEl(`tab-${view}`);
+        if (tab) tab.classList.add('active');
+    }
+
+    if (view !== 'auth' && view !== 'admin' && view !== 'sms-admin') {
+        const navHash = VIEW_HASH_MAP[view];
+        if (navHash !== undefined) setUrlHash(navHash);
+    }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1180,7 +1284,17 @@ async function bulkDeleteSelected(tableId) {
 
 function redirectByRole(user, withToast = true) {
     if (withToast) showToast(`Welcome, ${user.name}!`);
-    navigate(defaultViewFor(user));
+    const { view: hashView, sub: hashSub } = getViewFromHash(window.location.hash);
+    if (hashView && canAccess(hashView)) {
+        if (hashSub) {
+            if (hashView === 'admin') switchAdminTab(hashSub);
+            else if (hashView === 'sms-admin') switchSmsTab(hashSub);
+        } else {
+            navigate(hashView);
+        }
+    } else {
+        navigate(defaultViewFor(user));
+    }
 }
 
 // --- Auth tabs ---
@@ -1510,12 +1624,14 @@ function logout() {
     appState.authToken = null;
     persistSession();
     localStorage.removeItem(STORAGE_VIEW);
+    localStorage.removeItem(STORAGE_SUB_VIEW);
     authState = { mode: 'login', pendingRegistration: null, pendingReset: null };
     ['login-phone', 'login-password'].forEach(id => {
         const el = getEl(id);
         if (el) el.value = '';
     });
     switchAuthTab('login');
+    setUrlHash('');
     navigateSafe('auth');
     showToast('Logged out successfully');
 }
@@ -2159,6 +2275,9 @@ function switchAdminTab(tabId) {
     if (tabId === 'admin-receptionists') renderAdminReceptionists();
     if (tabId === 'admin-sms-admins') renderAdminSmsAdmins();
     if (tabId === 'admin-categories') renderAdminCategories();
+    localStorage.setItem(STORAGE_SUB_VIEW, tabId);
+    const entry = Object.entries(ADMIN_SUB_HASH_MAP).find(([k, v]) => v === tabId);
+    if (entry) setUrlHash(`admin/${entry[0]}`);
 }
 
 function renderAdminUsers() {
@@ -3374,6 +3493,9 @@ function switchSmsTab(tabId) {
 
     if (tabId === 'sms-send') initSmsSendForm();
     if (tabId === 'sms-history') renderSmsHistory();
+    localStorage.setItem(STORAGE_SUB_VIEW, tabId);
+    const entry = Object.entries(SMS_SUB_HASH_MAP).find(([k, v]) => v === tabId);
+    if (entry) setUrlHash(`sms-admin/${entry[0]}`);
 }
 
 function initSmsSendForm() {
@@ -4060,6 +4182,15 @@ window.addEventListener('resize', () => {
         if (!appState.currentUser && hamburger) hamburger.classList.add('hidden');
         else if (appState.currentUser && hamburger) hamburger.classList.remove('hidden');
     }
+});
+
+// Hash-based navigation for back/forward
+window.addEventListener('hashchange', () => {
+    if (_ignoreHash > 0) return;
+    navigateToHash();
+});
+window.addEventListener('popstate', () => {
+    navigateToHash();
 });
 
 // Boot
