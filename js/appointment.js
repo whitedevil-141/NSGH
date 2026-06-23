@@ -3204,7 +3204,7 @@ async function renderAdminTodaySerials(action = null) {
     if (dateInput && !dateInput.value) dateInput.value = todayISO();
 
     const tbody = getEl('admin-today-serials-list');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
 
     try {
         const date = getEl('filter-admin-today-date')?.value || todayISO();
@@ -3223,7 +3223,7 @@ async function renderAdminTodaySerials(action = null) {
         appState.appointments = data;
 
         if (data.length === 0 && paginationState.todaySerials.skip === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No serials found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-muted)">No serials found.</td></tr>';
             getEl('today-serials-pagination').innerHTML = '';
             return;
         }
@@ -3233,6 +3233,7 @@ async function renderAdminTodaySerials(action = null) {
         tbody.innerHTML = sorted.map(app => `
         <tr${selected.has(String(app.id)) ? ' class="selected"' : ''}>
             <td class="checkbox-col" data-label=""><input type="checkbox" value="${app.id}" ${selected.has(String(app.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-today-serials-list', this)"></td>
+            <td data-label="#">APT-${String(Number(app.id)).padStart(7, '0')}</td>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
@@ -3258,7 +3259,7 @@ async function renderAdminTodaySerials(action = null) {
         renderPaginationControls('today-serials-pagination', paginationState.todaySerials, 'renderAdminTodaySerials', 'todaySerials');
         updateBulkToolbar('admin-today-serials-list');
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load serials</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Failed to load serials</td></tr>';
         getEl('today-serials-pagination').innerHTML = '';
     }
 }
@@ -3271,7 +3272,7 @@ async function renderDoctorTodaySerials(action = null) {
     if (dateInput && !dateInput.value) dateInput.value = todayISO();
 
     const tbody = getEl('doctor-today-serials-list');
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
 
     try {
         const date = getEl('doc-filter-today-date')?.value || todayISO();
@@ -3285,7 +3286,7 @@ async function renderDoctorTodaySerials(action = null) {
         const data = normalizeAppointments(rawData);
 
         if (data.length === 0 && paginationState.doctorTodaySerials.skip === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="color:var(--text-muted)">No serials found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:var(--text-muted)">No serials found.</td></tr>';
             getEl('doctor-today-serials-pagination').innerHTML = '';
             return;
         }
@@ -3293,6 +3294,7 @@ async function renderDoctorTodaySerials(action = null) {
         const sorted = sortAppointments(data);
         tbody.innerHTML = sorted.map(app => `
         <tr>
+            <td data-label="#">APT-${String(Number(app.id)).padStart(7, '0')}</td>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
@@ -3311,7 +3313,7 @@ async function renderDoctorTodaySerials(action = null) {
     `).join('');
         renderPaginationControls('doctor-today-serials-pagination', paginationState.doctorTodaySerials, 'renderDoctorTodaySerials', 'doctorTodaySerials');
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load serials</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load serials</td></tr>';
         getEl('doctor-today-serials-pagination').innerHTML = '';
     }
 }

@@ -16,6 +16,7 @@ from fastapi.responses import Response, StreamingResponse
 from fastapi.security import OAuth2PasswordBearer
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, or_, text
@@ -1595,73 +1596,89 @@ def download_appointment_pdf(
     c.setFillColor(colors.black)
     c.drawCentredString(width / 2.0, height - 120, "APPOINTMENT SLIP")
 
-    start_y = height - 160
-    col1_x = 50
-    col2_x = width / 2.0 + 10
-    label_offset = 120
-    line_height = 25
+    margin = 50
+    col_gap = 20
+    usable = width - 2 * margin
+    col_width = (usable - col_gap) / 2
+    col1_x = margin
+    col2_x = col1_x + col_width + col_gap
+    fs = 11
 
-    def draw_field(x, y, label, value):
-        c.setFont("Helvetica-Bold", 11)
-        c.setFillColor(colors.HexColor("#4a5764"))
-        c.drawString(x, y, f"{label}:")
-        c.setFillColor(colors.black)
-        text = str(value) if value not in (None, "") else "-"
-        draw_bilingual_string(c, x + label_offset, y, text, 11)
+    fields = []
+    def add(label, value):
+        text_val = str(value) if value not in (None, "", None) else "-"
+        fields.append((label, text_val))
 
-    draw_field(col1_x, start_y, "Appointment ID", f"#{appointment.id:06d}")
-    draw_field(col2_x, start_y, "Status", appointment.status)
-
-    start_y -= line_height
-    draw_field(col1_x, start_y, "Date", appointment.date)
+    add("Appointment ID", f"APT-{appointment.id:07d}")
+    add("Status", appointment.status)
+    add("Date", appointment.date)
     if appointment.serial_number:
-        draw_field(col2_x, start_y, "Serial", f"#{appointment.serial_number}")
+        add("Serial", f"#{appointment.serial_number}")
     else:
-        draw_field(col2_x, start_y, "Time", appointment.time or "-")
-
-    start_y -= line_height
-    draw_field(col1_x, start_y, "Doctor Name", appointment.doctor_name)
-    draw_field(col2_x, start_y, "Room", appointment.room)
-
-    start_y -= 15
-    c.setLineWidth(0.5)
-    c.setStrokeColor(colors.lightgrey)
-    c.line(50, start_y, width - 50, start_y)
-
-    start_y -= 20
-    draw_field(col1_x, start_y, "Patient Name", appointment.patient_name)
-    draw_field(col2_x, start_y, "Patient Phone", appointment.patient_phone)
-
+        add("Time", appointment.time or "-")
+    add("Doctor Name", appointment.doctor_name)
+    add("Room", appointment.room)
+    add("Patient Name", appointment.patient_name)
+    add("Patient Phone", appointment.patient_phone)
     if getattr(appointment, "patient_age", None) is not None:
-        start_y -= line_height
-        draw_field(col1_x, start_y, "Patient Age", appointment.patient_age)
+        add("Patient Age", appointment.patient_age)
 
-    start_y -= line_height
     booked_by = "Patient self-booking"
     if appointment.booked_by_name and appointment.booked_by_role != "user":
         booked_by = f"{appointment.booked_by_name} ({appointment.booked_by_role})"
-    draw_field(col1_x, start_y, "Booked By", booked_by)
+    add("Booked By", booked_by)
     if appointment.marketing_officer_name:
-        draw_field(col2_x, start_y, "Marketing Officer", appointment.marketing_officer_name)
+        add("Marketing Officer", appointment.marketing_officer_name)
     elif appointment.commission_doctor_name:
-        draw_field(col2_x, start_y, "Commission Doctor", appointment.commission_doctor_name)
+        add("Commission Doctor", appointment.commission_doctor_name)
 
-    start_y -= line_height
-    reason = appointment.reason or "Not provided"
-    c.setFont("Helvetica-Bold", 11)
-    c.setFillColor(colors.HexColor("#4a5764"))
-    c.drawString(col1_x, start_y, "Reason:")
-    c.setFillColor(colors.black)
-    wrapped_reason = wrap_bilingual(reason, max_width=width - col1_x - label_offset - 50, font_size=11)
-    if wrapped_reason:
-        for line in wrapped_reason:
-            draw_bilingual_string(c, col1_x + label_offset, start_y, line, 11)
-            start_y -= 15
-    else:
-        c.drawString(col1_x + label_offset, start_y, "-")
-        start_y -= 15
+    add("Reason", appointment.reason or "Not provided")
 
-    start_y -= 20
+    max_label_w = max(pdfmetrics.stringWidth(label, "Helvetica-Bold", fs) for label, _ in fields)
+    label_offset = max_label_w + 18
+    val_width = col_width - label_offset
+    line_h = max(fs * 2.5, 26)
+
+    def draw_field(x, y, label, value):
+        c.setFont("Helvetica-Bold", fs)
+        c.setFillColor(colors.HexColor("#4a5764"))
+        c.drawString(x, y, f"{label}:")
+        c.setFillColor(colors.black)
+
+        val_w = bilingual_string_width(value, fs)
+        if val_w <= val_width:
+            draw_bilingual_string(c, x + label_offset, y, value, fs)
+            return y
+        wrapped = wrap_bilingual(value, max_width=val_width, font_size=fs)
+        draw_bilingual_string(c, x + label_offset, y, wrapped[0], fs)
+        cur = y
+        for line in wrapped[1:]:
+            cur -= 14
+            draw_bilingual_string(c, x + label_offset, cur, line, fs)
+        return cur
+
+    y = height - 160
+    pairs = [(fields[i], fields[i + 1] if i + 1 < len(fields) else None) for i in range(0, len(fields), 2)]
+
+    for idx, (left, right) in enumerate(pairs):
+        if y < 60:
+            c.showPage()
+            y = height - 40
+
+        if idx == 4:
+            y -= 8
+            c.setLineWidth(0.5)
+            c.setStrokeColor(colors.lightgrey)
+            c.line(margin, y, width - margin, y)
+            y -= 20
+
+        new_y = draw_field(col1_x, y, left[0], left[1])
+        if right:
+            new_y = min(new_y, draw_field(col2_x, y, right[0], right[1]))
+        lines_extra = max(0, (y - new_y) / 14) if new_y < y else 0
+        y = new_y - (line_h - 14) if lines_extra > 0 else y - line_h
+
+    y -= 15
     c.setFont("Helvetica", 10)
     c.setFillColor(colors.gray)
     if appointment.created_at:
@@ -1670,7 +1687,7 @@ def download_appointment_pdf(
     else:
         now_local = datetime.utcnow() + timedelta(hours=6)
         issued_text = f"Issued At: {now_local.day} {now_local.strftime('%B').lower()} {now_local.year} at {now_local.strftime('%I:%M %p').lower()}"
-    c.drawString(col1_x, start_y, issued_text)
+    c.drawString(col1_x, y, issued_text)
 
     c.setFont("Helvetica-Oblique", 10)
     c.setFillColor(colors.gray)
@@ -1680,8 +1697,6 @@ def download_appointment_pdf(
         c.showPage()
         c.save()
     except Exception as e:
-        # Surface the failure cleanly instead of letting the worker hang
-        # behind cPanel/Passenger with a half-written response.
         raise HTTPException(status_code=500, detail=f"PDF rendering failed: {e}")
 
     pdf_bytes = buffer.getvalue()
