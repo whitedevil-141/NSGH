@@ -76,6 +76,7 @@ ensure_appointment_schema()
 
 app = FastAPI(
     title="NSGH Hospital Backend API",
+    version="2.0.0",
 )
 
 
@@ -117,7 +118,7 @@ def root(request: Request):
         "message": "Welcome to NSGH API 🚀",
         "docs_url": "/docs",
         "redoc_url": "/redoc",
-        "version": "1.0.0"
+        "version": "2.0.0"
     }
 
 
