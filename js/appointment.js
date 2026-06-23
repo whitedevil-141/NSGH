@@ -3080,6 +3080,9 @@ async function renderAdminTodaySerials(action = null) {
     if (action !== null && action !== 'reset') handlePaginationAction(action, paginationState.todaySerials);
     else if (action === 'reset') paginationState.todaySerials.skip = 0;
 
+    const dateInput = getEl('filter-admin-today-date');
+    if (dateInput && !dateInput.value) dateInput.value = todayISO();
+
     const tbody = getEl('admin-today-serials-list');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
 
@@ -3144,6 +3147,9 @@ async function renderAdminTodaySerials(action = null) {
 async function renderDoctorTodaySerials(action = null) {
     if (action !== null && action !== 'reset') handlePaginationAction(action, paginationState.doctorTodaySerials);
     else if (action === 'reset') paginationState.doctorTodaySerials.skip = 0;
+
+    const dateInput = getEl('doc-filter-today-date');
+    if (dateInput && !dateInput.value) dateInput.value = todayISO();
 
     const tbody = getEl('doctor-today-serials-list');
     tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
