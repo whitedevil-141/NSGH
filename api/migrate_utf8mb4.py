@@ -20,7 +20,22 @@ from sqlalchemy import text
 from api.database import engine
 
 
-TABLES = ("appointment_users", "appointment_doctors", "appointment_bookings")
+TABLES = (
+    "users",
+    "doctors",
+    "messages",
+    "staffs",
+    "gallery",
+    "machineries",
+    "departments",
+    "about",
+    "appointment_users",
+    "appointment_doctors",
+    "categories",
+    "notices",
+    "appointment_bookings",
+    "manual_sms",
+)
 TARGET_CHARSET = "utf8mb4"
 TARGET_COLLATION = "utf8mb4_unicode_ci"
 

@@ -18,7 +18,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, text
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 from api.database import get_db
@@ -1167,11 +1167,15 @@ def list_appointments(
         query = query.filter(AppointmentBooking.status == status)
     if search:
         like = f"%{search}%"
-        query = query.filter(
+        search_filters = [
             (AppointmentBooking.patient_name.ilike(like)) |
             (AppointmentBooking.patient_phone.ilike(like)) |
             (AppointmentBooking.doctor_name.ilike(like))
-        )
+        ]
+        clean = search.replace("APT-", "").replace("apt-", "").strip()
+        if clean.isdigit():
+            search_filters.append(AppointmentBooking.id == int(clean))
+        query = query.filter(or_(*search_filters))
 
     if date:
         query = query.order_by(AppointmentBooking.serial_number.asc())

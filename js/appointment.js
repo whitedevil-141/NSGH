@@ -1924,7 +1924,7 @@ async function renderAppointments(action = null) {
         getEl('filter-my-app-doctor-group')?.classList.remove('hidden');
     }
 
-    listEl.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+    listEl.innerHTML = '<tr><td colspan="8" class="text-center">Loading...</td></tr>';
     tableContainer.classList.remove('hidden');
     getEl('appointments-empty').classList.add('hidden');
 
@@ -1957,10 +1957,10 @@ async function renderAppointments(action = null) {
         listEl.innerHTML = sortAppointments(myApps).map(app => {
         const canCancel = canCancelSerial(app);
         const firstCol = role === ROLES.DOCTOR
-            ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
+            ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>`
             : (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST)
-                ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}<div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`
-                : `<strong>${escapeHTML(app.docName)}</strong><div class="row-subtle">Patient: ${escapeHTML(app.patientName)}</div><div class="row-subtle">Number: ${escapeHTML(app.patientPhone)}</div>${appointmentPatientDetailsMeta(app)}${appointmentSourceMeta(app)}${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}`;
+                ? `<strong>${escapeHTML(app.patientName)}</strong><div class="row-subtle">${escapeHTML(app.patientPhone)}</div><div class="row-subtle">Doctor: ${escapeHTML(app.docName)}</div>`
+                : `<strong>${escapeHTML(app.docName)}</strong><div class="row-subtle">Patient: ${escapeHTML(app.patientName)}</div><div class="row-subtle">Number: ${escapeHTML(app.patientPhone)}</div>`;
 
         const pdfBtn = `<button class="btn btn-outline btn-compact" onclick="viewAppointmentPdf(${Number(app.id)})">View Slip</button>`;
         const actionCol = role === ROLES.DOCTOR
@@ -1986,6 +1986,7 @@ async function renderAppointments(action = null) {
         return `
             <tr${selected.has(String(app.id)) ? ' class="selected"' : ''}>
                 <td class="checkbox-col" data-label=""><input type="checkbox" value="${app.id}" ${selected.has(String(app.id)) ? 'checked' : ''} onchange="toggleRowSelect('appointments-list', this)"></td>
+                <td data-label="#">APT-${String(Number(app.id)).padStart(7, '0')}</td>
                 <td data-label="${role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST ? 'Patient' : 'Doctor'}">${firstCol}</td>
                 <td data-label="Date">${formatDate(app.date)}</td>
                 <td data-label="Serial">${app.serial_number ? `#${app.serial_number}` : '-'}</td>
@@ -2000,7 +2001,7 @@ async function renderAppointments(action = null) {
         renderPaginationControls('my-app-pagination', paginationState.myApp, 'renderAppointments', 'myApp');
         updateBulkToolbar('appointments-list');
     } catch (e) {
-        listEl.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Failed to load appointments</td></tr>';
+        listEl.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Failed to load appointments</td></tr>';
         getEl('my-app-pagination').innerHTML = '';
     }
 }
@@ -3134,7 +3135,7 @@ async function renderAdminAppointments(action = null) {
     else if (action === 'reset') paginationState.adminApp.skip = 0;
 
     const tbody = getEl('admin-all-appointments-list');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
     
     try {
         const date = getEl('filter-admin-app-date')?.value || '';
@@ -3154,7 +3155,7 @@ async function renderAdminAppointments(action = null) {
         appState.appointments = data;
 
         if (data.length === 0 && paginationState.adminApp.skip === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color:var(--text-muted)">No appointments found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color:var(--text-muted)">No appointments found.</td></tr>';
             getEl('admin-app-pagination').innerHTML = '';
             return;
         }
@@ -3164,12 +3165,10 @@ async function renderAdminAppointments(action = null) {
         tbody.innerHTML = sorted.map(app => `
         <tr${selected.has(String(app.id)) ? ' class="selected"' : ''}>
             <td class="checkbox-col" data-label=""><input type="checkbox" value="${app.id}" ${selected.has(String(app.id)) ? 'checked' : ''} onchange="toggleRowSelect('admin-all-appointments-list', this)"></td>
+            <td data-label="#">APT-${String(Number(app.id)).padStart(7, '0')}</td>
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
-                ${appointmentPatientDetailsMeta(app)}
-                ${appointmentSourceMeta(app)}
-                ${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}
             </td>
             <td data-label="Doctor">${escapeHTML(app.docName)}</td>
             <td data-label="Date/Time">
@@ -3192,7 +3191,7 @@ async function renderAdminAppointments(action = null) {
         renderPaginationControls('admin-app-pagination', paginationState.adminApp, 'renderAdminAppointments', 'adminApp');
         updateBulkToolbar('admin-all-appointments-list');
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load appointments</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Failed to load appointments</td></tr>';
         getEl('admin-app-pagination').innerHTML = '';
     }
 }
@@ -3237,9 +3236,6 @@ async function renderAdminTodaySerials(action = null) {
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
-                ${appointmentPatientDetailsMeta(app)}
-                ${appointmentSourceMeta(app)}
-                ${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}
             </td>
             <td data-label="Doctor">${escapeHTML(app.docName)}</td>
             <td data-label="Serial / Date">
@@ -3300,9 +3296,6 @@ async function renderDoctorTodaySerials(action = null) {
             <td data-label="Patient">
                 <div><strong>${escapeHTML(app.patientName)}</strong></div>
                 <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
-                ${appointmentPatientDetailsMeta(app)}
-                ${appointmentSourceMeta(app)}
-                ${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}
             </td>
             <td data-label="Serial / Date">
                 <div>Serial: <strong>${app.serial_number ? `#${app.serial_number}` : '-'}</strong></div>
