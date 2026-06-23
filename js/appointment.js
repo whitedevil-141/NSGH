@@ -3021,11 +3021,13 @@ async function renderAdminAppointments(action = null) {
         const date = getEl('filter-admin-app-date')?.value || '';
         const status = getEl('filter-admin-app-status')?.value || '';
         const docId = getEl('filter-admin-app-doctor')?.value || '';
+        const search = getEl('search-admin-app')?.value || '';
 
         let url = `/appointments?skip=${paginationState.adminApp.skip}&limit=${paginationState.adminApp.limit}`;
         if (date) url += `&date=${date}`;
         if (status) url += `&status=${status}`;
         if (docId) url += `&doctor_id=${docId}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
 
         const rawData = await apiRequest(url);
         paginationState.adminApp.total = rawData.total || 0;
@@ -3090,10 +3092,12 @@ async function renderAdminTodaySerials(action = null) {
         const date = getEl('filter-admin-today-date')?.value || todayISO();
         const status = getEl('filter-admin-today-status')?.value || '';
         const docId = getEl('filter-admin-today-doctor')?.value || '';
+        const search = getEl('search-admin-today')?.value || '';
 
         let url = `/appointments?skip=${paginationState.todaySerials.skip}&limit=${paginationState.todaySerials.limit}&date=${date}`;
         if (status) url += `&status=${status}`;
         if (docId) url += `&doctor_id=${docId}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
 
         const rawData = await apiRequest(url);
         paginationState.todaySerials.total = rawData.total || 0;
@@ -3207,8 +3211,10 @@ function clearDoctorTodaySerialsFilters() {
 }
 
 function exportDoctorTodaySerialsPdf() {
-    const date = getEl('doc-filter-today-date')?.value || todayISO();
-    downloadSerialsPdf(date, '', '');
+    const date = getEl('filter-admin-today-date')?.value || todayISO();
+    const docId = getEl('filter-admin-today-doctor')?.value || '';
+    const status = getEl('filter-admin-today-status')?.value || '';
+    downloadSerialsPdf(date, docId, status);
 }
 
 function generateTimeOptions(selectId) {
@@ -3597,6 +3603,7 @@ function clearMyAppFilters() {
 }
 
 function clearAdminAppFilters() {
+    if(getEl('search-admin-app')) getEl('search-admin-app').value = '';
     if(getEl('filter-admin-app-date')) getEl('filter-admin-app-date').value = '';
     if(getEl('filter-admin-app-status')) getEl('filter-admin-app-status').value = '';
     if(getEl('filter-admin-app-doctor')) getEl('filter-admin-app-doctor').value = '';
@@ -3634,26 +3641,90 @@ async function downloadSerialsPdf(date = '', docId = '', status = '') {
 }
 
 function clearTodaySerialsFilters() {
+    if(getEl('search-admin-today')) getEl('search-admin-today').value = '';
     if(getEl('filter-admin-today-date')) getEl('filter-admin-today-date').value = '';
     if(getEl('filter-admin-today-status')) getEl('filter-admin-today-status').value = '';
     if(getEl('filter-admin-today-doctor')) getEl('filter-admin-today-doctor').value = '';
     renderAdminTodaySerials('reset');
 }
 
+async function downloadAppointmentsPdf(date = '', docId = '', status = '') {
+    if (!appState.authToken) {
+        showToast('Please sign in', 'error');
+        return;
+    }
+    try {
+        let url = `${API_BASE}/appointments/pdf`;
+        const params = new URLSearchParams();
+        if (date) params.append('date', date);
+        if (docId) params.append('doctor_id', docId);
+        if (status) params.append('status', status);
+        const qs = params.toString();
+        if (qs) url += '?' + qs;
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${appState.authToken}` }
+        });
+        if (!response.ok) {
+            let detail = 'Could not generate PDF';
+            try { detail = (await response.json())?.detail || detail; } catch {}
+            showToast(detail, 'error');
+            return;
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+    } catch (error) {
+        showToast(error?.message || 'Could not generate PDF', 'error');
+    }
+}
+
 function exportAdminAppointmentsPdf() {
     const date = getEl('filter-admin-app-date')?.value || '';
     const docId = getEl('filter-admin-app-doctor')?.value || '';
     const status = getEl('filter-admin-app-status')?.value || '';
-    downloadSerialsPdf(date, docId, status);
+    downloadAppointmentsPdf(date, docId, status);
 }
 function exportTodaySerialsPdf() {
-    const date = getEl('filter-admin-today-date')?.value || todayISO();
-    const docId = getEl('filter-admin-today-doctor')?.value || '';
-    downloadSerialsPdf(date, docId);
+    const date = getEl('doc-filter-today-date')?.value || todayISO();
+    const status = getEl('doc-filter-today-status')?.value || '';
+    downloadSerialsPdf(date, '', status);
 }
 
 // --- Admin Notices ---
 let adminNoticesCache = [];
+
+async function exportMyAppointmentsPdf() {
+    if (!appState.authToken) {
+        showToast('Please sign in', 'error');
+        return;
+    }
+    try {
+        const date = getEl('filter-my-app-date')?.value || '';
+        const status = getEl('filter-my-app-status')?.value || '';
+        const docId = getEl('filter-my-app-doctor')?.value || '';
+        let url = `${API_BASE}/appointments/my/pdf`;
+        const params = new URLSearchParams();
+        if (date) params.append('date', date);
+        if (status) params.append('status', status);
+        if (docId) params.append('doctor_id', docId);
+        const qs = params.toString();
+        if (qs) url += '?' + qs;
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${appState.authToken}` }
+        });
+        if (!response.ok) {
+            let detail = 'Could not generate PDF';
+            try { detail = (await response.json())?.detail || detail; } catch {}
+            showToast(detail, 'error');
+            return;
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+    } catch (error) {
+        showToast(error?.message || 'Could not generate PDF', 'error');
+    }
+}
 
 function renderAdminNotices() {
     const tbody = getEl('admin-notice-list');

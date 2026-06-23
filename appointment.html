@@ -456,7 +456,9 @@
             <div class="flex justify-between items-center mb-4">
                 <h2 id="appointments-heading" class="mb-4">My Appointments</h2>
                 <div class="flex gap-2">
+                    <button class="btn btn-outline" onclick="exportMyAppointmentsPdf()">Export as PDF</button>
                     <button class="btn btn-outline" id="appointments-back-btn" onclick="navigate('dashboard')">Back to Dashboard</button>
+                    
                 </div>
             </div>
 
@@ -749,9 +751,12 @@
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                                <input type="text" id="search-admin-app" placeholder="Search patient, phone, doctor..." oninput="renderAdminAppointments('reset')">
+                            </div>
+                            <div class="input-group" style="margin:0; flex:1; min-width:130px;">
                                 <input type="date" id="filter-admin-app-date" onchange="renderAdminAppointments('reset')">
                             </div>
-                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:130px;">
                                 <select id="filter-admin-app-status" onchange="renderAdminAppointments('reset')">
                                     <option value="">All Statuses</option>
                                     <option value="Booked">Booked</option>
@@ -759,7 +764,7 @@
                                     <option value="Cancelled">Cancelled</option>
                                 </select>
                             </div>
-                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:130px;">
                                 <select id="filter-admin-app-doctor" onchange="renderAdminAppointments('reset')">
                                     <option value="">All Doctors</option>
                                 </select>
@@ -805,9 +810,12 @@
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
                             <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                                <input type="text" id="search-admin-today" placeholder="Search patient, phone, doctor..." oninput="renderAdminTodaySerials('reset')">
+                            </div>
+                            <div class="input-group" style="margin:0; flex:1; min-width:130px;">
                                 <input type="date" id="filter-admin-today-date" onchange="renderAdminTodaySerials('reset')">
                             </div>
-                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:130px;">
                                 <select id="filter-admin-today-status" onchange="renderAdminTodaySerials('reset')">
                                     <option value="">All Statuses</option>
                                     <option value="Booked">Booked</option>
@@ -815,7 +823,7 @@
                                     <option value="Cancelled">Cancelled</option>
                                 </select>
                             </div>
-                            <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                            <div class="input-group" style="margin:0; flex:1; min-width:130px;">
                                 <select id="filter-admin-today-doctor" onchange="renderAdminTodaySerials('reset')">
                                     <option value="">All Doctors</option>
                                 </select>

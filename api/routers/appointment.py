@@ -1127,6 +1127,7 @@ def list_appointments(
     date: Optional[str] = None,
     doctor_id: Optional[int] = None,
     status: Optional[str] = None,
+    search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db), 
@@ -1164,6 +1165,13 @@ def list_appointments(
         query = query.filter(AppointmentBooking.doctor_id == doctor_id)
     if status:
         query = query.filter(AppointmentBooking.status == status)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            (AppointmentBooking.patient_name.ilike(like)) |
+            (AppointmentBooking.patient_phone.ilike(like)) |
+            (AppointmentBooking.doctor_name.ilike(like))
+        )
 
     if date:
         query = query.order_by(AppointmentBooking.serial_number.asc())
@@ -1389,6 +1397,161 @@ def _can_view_appointment(user: AppointmentUser, appointment: AppointmentBooking
     return False
 
 
+def _calc_x_positions(headers, rows, font_size=10, left=50, right=545, min_w=35, pad=14):
+    n = len(headers)
+    widths = [0.0] * n
+    for i, h in enumerate(headers):
+        widths[i] = max(widths[i], bilingual_string_width(h, font_size, bold=True))
+    for row in rows:
+        for i, val in enumerate(row):
+            if i < n:
+                widths[i] = max(widths[i], bilingual_string_width(str(val), font_size))
+    for i in range(n):
+        widths[i] = max(widths[i] + pad, min_w)
+    avail = right - left
+    total = sum(widths)
+    if total > avail:
+        scale = avail / total
+        widths = [w * scale for w in widths]
+    elif total < avail:
+        extra = (avail - total) / n
+        widths = [w + extra for w in widths]
+    pos = []
+    x = left
+    for w in widths:
+        pos.append(x)
+        x += w
+    return pos
+
+
+@router.get("/appointments/my/pdf")
+def download_my_appointments_pdf(
+    date: Optional[str] = Query(None),
+    doctor_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    """Download current user's appointments as PDF with Appt. ID | Patient | Doctor | Phone | Status | Date."""
+    query = db.query(AppointmentBooking)
+    if current_user.role == "user":
+        query = query.filter(
+            (AppointmentBooking.patient_phone == current_user.phone)
+            | (AppointmentBooking.booked_by_id == current_user.id)
+        )
+    elif current_user.role == "doctor":
+        doctor = db.query(AppointmentDoctor).filter(AppointmentDoctor.phone == current_user.phone).first()
+        query = query.filter(AppointmentBooking.doctor_id == (doctor.id if doctor else -1))
+    elif current_user.role == "marketing":
+        query = query.filter(
+            (AppointmentBooking.marketing_officer_id == current_user.id)
+            | (AppointmentBooking.booked_by_id == current_user.id)
+        )
+    elif current_user.role == "commission_doctor":
+        query = query.filter(
+            (AppointmentBooking.commission_doctor_id == current_user.id)
+            | (AppointmentBooking.booked_by_id == current_user.id)
+        )
+    elif current_user.role == "receptionist":
+        query = query.filter(AppointmentBooking.booked_by_id == current_user.id)
+    elif current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="You do not have permission for this action")
+
+    if date:
+        query = query.filter(AppointmentBooking.date == date)
+    if doctor_id:
+        query = query.filter(AppointmentBooking.doctor_id == doctor_id)
+    if status:
+        query = query.filter(AppointmentBooking.status == status)
+
+    if date:
+        query = query.order_by(AppointmentBooking.serial_number.asc())
+    else:
+        query = query.order_by(AppointmentBooking.date.desc(), AppointmentBooking.serial_number.asc())
+    appointments = query.all()
+
+    try:
+        register_fonts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF font registration failed: {e}")
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColor(colors.HexColor("#241d4e"))
+    c.drawCentredString(width / 2.0, height - 40, "New Shafipur General Hospital")
+
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.darkgray)
+    c.drawCentredString(width / 2.0, height - 55, "Shafipur Bazar, Kaliakair, Gazipur-1751")
+
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    draw_bilingual_centered(c, width / 2.0, height - 80, "MY APPOINTMENTS", 14, bold=True)
+    if date:
+        draw_bilingual_centered(c, width / 2.0, height - 95, f"Date: {date}", 12, bold=False)
+
+    rows = []
+    for app in appointments:
+        rows.append([
+            f"APT-{app.id:07d}" if app.id else "-",
+            str(app.patient_name)[:16] if app.patient_name else "-",
+            str(app.doctor_name)[:14] if app.doctor_name else "-",
+            str(app.patient_phone) if app.patient_phone else "-",
+            str(app.status) if app.status else "-",
+            str(app.date) if app.date else "-",
+        ])
+    headers = ["Appt. ID", "Patient", "Doctor", "Phone", "Status", "Date"]
+    x_positions = _calc_x_positions(headers, rows)
+
+    c.setLineWidth(1)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, height - 105, width - 50, height - 105)
+
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.HexColor("#4a5764"))
+    y = height - 125
+    for i, header in enumerate(headers):
+        c.drawString(x_positions[i], y, header)
+
+    c.setLineWidth(0.5)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, y - 3, width - 50, y - 3)
+
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.black)
+    y -= 20
+
+    for row in rows:
+        if y < 50:
+            c.showPage()
+            y = height - 40
+            c.setFont("Helvetica", 10)
+            c.setFillColor(colors.black)
+
+        for i, val in enumerate(row):
+            draw_bilingual_string(c, x_positions[i], y, val, 10)
+        y -= 18
+
+    try:
+        c.showPage()
+        c.save()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {e}")
+
+    pdf_bytes = buffer.getvalue()
+
+    filename = "my-appointments.pdf"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-store",
+        "Content-Length": str(len(pdf_bytes)),
+    }
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
 @router.get("/appointments/{appointment_id}/pdf")
 def download_appointment_pdf(
     appointment_id: int,
@@ -1530,6 +1693,118 @@ def download_appointment_pdf(
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
+@router.get("/appointments/pdf")
+def download_appointments_pdf(
+    doctor_id: Optional[int] = Query(None),
+    date: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: AppointmentUser = Depends(_current_user),
+):
+    """Download all appointments as PDF with Appt. ID | Patient | Doctor | Phone | Status | Issued At."""
+    _require_role(current_user, "admin")
+    
+    query = db.query(AppointmentBooking)
+    if date:
+        query = query.filter(AppointmentBooking.date == date)
+    if doctor_id:
+        query = query.filter(AppointmentBooking.doctor_id == doctor_id)
+    if status:
+        query = query.filter(AppointmentBooking.status == status)
+    query = query.order_by(AppointmentBooking.date.desc(), AppointmentBooking.serial_number.asc())
+    appointments = query.all()
+    
+    try:
+        register_fonts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF font registration failed: {e}")
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColor(colors.HexColor("#241d4e"))
+    c.drawCentredString(width / 2.0, height - 40, "New Shafipur General Hospital")
+    
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.darkgray)
+    c.drawCentredString(width / 2.0, height - 55, "Shafipur Bazar, Kaliakair, Gazipur-1751")
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColor(colors.black)
+    draw_bilingual_centered(c, width / 2.0, height - 80, f"APPOINTMENTS - {date or 'All'}", 14, bold=True)
+    if doctor_id:
+        doctor_name = appointments[0].doctor_name if appointments else ""
+        draw_bilingual_centered(c, width / 2.0, height - 95, f"Doctor: {doctor_name}", 14, bold=True)
+    
+    rows = []
+    for app in appointments:
+        if app.created_at:
+            try:
+                issued_dt = datetime.strptime(app.created_at, "%Y-%m-%d %H:%M:%S")
+                issue = issued_dt.strftime("%Y-%m-%d %H:%M")
+            except ValueError:
+                issue = app.created_at[-16:]
+        else:
+            issue = "-"
+        rows.append([
+            f"APT-{app.id:07d}" if app.id else "-",
+            str(app.patient_name)[:16] if app.patient_name else "-",
+            str(app.doctor_name)[:14] if app.doctor_name else "-",
+            str(app.patient_phone) if app.patient_phone else "-",
+            str(app.status) if app.status else "-",
+            issue,
+        ])
+    headers = ["Appt. ID", "Patient", "Doctor", "Phone", "Status", "Issued At"]
+    x_positions = _calc_x_positions(headers, rows)
+
+    c.setLineWidth(1)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, height - 105, width - 50, height - 105)
+
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.HexColor("#4a5764"))
+    y = height - 125
+    for i, header in enumerate(headers):
+        c.drawString(x_positions[i], y, header)
+
+    c.setLineWidth(0.5)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, y - 3, width - 50, y - 3)
+
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.black)
+    y -= 20
+
+    for row in rows:
+        if y < 50:
+            c.showPage()
+            y = height - 40
+            c.setFont("Helvetica", 10)
+            c.setFillColor(colors.black)
+
+        for i, val in enumerate(row):
+            draw_bilingual_string(c, x_positions[i], y, val, 10)
+        y -= 18
+    
+    try:
+        c.showPage()
+        c.save()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF rendering failed: {e}")
+    
+    pdf_bytes = buffer.getvalue()
+    
+    filename = f"appointments-{date or 'all'}.pdf"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-store",
+        "Content-Length": str(len(pdf_bytes)),
+    }
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+
+
 @router.get("/serials/pdf")
 def download_serials_pdf(
     doctor_id: Optional[int] = Query(None),
@@ -1538,7 +1813,7 @@ def download_serials_pdf(
     db: Session = Depends(get_db),
     current_user: AppointmentUser = Depends(_current_user),
 ):
-    """Download all serials as PDF with Serial no | Patient | Phone | Note | Issue Time."""
+    """Download all serials as PDF with Appt. ID | Patient | Doctor | Phone | Serial | Status | Issued At."""
     _require_role(current_user, "admin", "doctor")
     
     if current_user.role == "doctor":
@@ -1580,38 +1855,8 @@ def download_serials_pdf(
         doctor_name = appointments[0].doctor_name if appointments else ""
         draw_bilingual_centered(c, width / 2.0, height - 95, f"Doctor: {doctor_name}", 14, bold=True)
     
-    c.setLineWidth(1)
-    c.setStrokeColor(colors.lightgrey)
-    c.line(50, height - 105, width - 50, height - 105)
-    
-    # Table headers
-    x_positions = [50, 155, 265, 345, 425]
-    headers = ["ID", "Patient", "Doctor", "Phone", "Issued At"]
-    c.setFont("Helvetica-Bold", 10)
-    c.setFillColor(colors.HexColor("#4a5764"))
-    y = height - 125
-    for i, header in enumerate(headers):
-        c.drawString(x_positions[i], y, header)
-    
-    c.setLineWidth(0.5)
-    c.setStrokeColor(colors.lightgrey)
-    c.line(50, y - 3, width - 50, y - 3)
-    
-    c.setFont("Helvetica", 10)
-    c.setFillColor(colors.black)
-    y -= 20
-    
+    rows = []
     for app in appointments:
-        if y < 50:
-            c.showPage()
-            y = height - 40
-            c.setFont("Helvetica", 10)
-            c.setFillColor(colors.black)
-        
-        serial = str(app.serial_number) if app.serial_number else "-"
-        patient = str(app.patient_name)[:20] if app.patient_name else "-"
-        doctor = str(app.doctor_name)[:14] if app.doctor_name else "-"
-        phone = str(app.patient_phone) if app.patient_phone else "-"
         if app.created_at:
             try:
                 issued_dt = datetime.strptime(app.created_at, "%Y-%m-%d %H:%M:%S")
@@ -1620,12 +1865,45 @@ def download_serials_pdf(
                 issue = app.created_at[-16:]
         else:
             issue = "-"
-        
-        draw_bilingual_string(c, x_positions[0], y, serial, 10)
-        draw_bilingual_string(c, x_positions[1], y, patient, 10)
-        draw_bilingual_string(c, x_positions[2], y, doctor, 10)
-        draw_bilingual_string(c, x_positions[3], y, phone, 10)
-        draw_bilingual_string(c, x_positions[4], y, issue, 10)
+        rows.append([
+            f"APT-{app.id:07d}" if app.id else "-",
+            str(app.patient_name)[:16] if app.patient_name else "-",
+            str(app.doctor_name)[:14] if app.doctor_name else "-",
+            str(app.patient_phone) if app.patient_phone else "-",
+            f"#{app.serial_number}" if app.serial_number else "-",
+            str(app.status) if app.status else "-",
+            issue,
+        ])
+    headers = ["Appt. ID", "Patient", "Doctor", "Phone", "Serial", "Status", "Issued At"]
+    x_positions = _calc_x_positions(headers, rows)
+
+    c.setLineWidth(1)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, height - 105, width - 50, height - 105)
+
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(colors.HexColor("#4a5764"))
+    y = height - 125
+    for i, header in enumerate(headers):
+        c.drawString(x_positions[i], y, header)
+
+    c.setLineWidth(0.5)
+    c.setStrokeColor(colors.lightgrey)
+    c.line(50, y - 3, width - 50, y - 3)
+
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.black)
+    y -= 20
+
+    for row in rows:
+        if y < 50:
+            c.showPage()
+            y = height - 40
+            c.setFont("Helvetica", 10)
+            c.setFillColor(colors.black)
+
+        for i, val in enumerate(row):
+            draw_bilingual_string(c, x_positions[i], y, val, 10)
         y -= 18
     
     try:
