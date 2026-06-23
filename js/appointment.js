@@ -60,7 +60,8 @@ let authState = {
 let paginationState = {
     myApp: { skip: 0, limit: 10, total: 0, page: 1 },
     adminApp: { skip: 0, limit: 10, total: 0, page: 1 },
-    todaySerials: { skip: 0, limit: 10, total: 0, page: 1 }
+    todaySerials: { skip: 0, limit: 10, total: 0, page: 1 },
+    doctorTodaySerials: { skip: 0, limit: 10, total: 0, page: 1 }
 };
 
 let bookingDatePickerState = {
@@ -836,6 +837,7 @@ function canAccess(view) {
         case 'doctors': return role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
         case 'appointments': return role === ROLES.USER || role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
         case 'sms-admin': return role === ROLES.SMS_ADMIN;
+        case 'doctor-today-serials': return role === ROLES.DOCTOR;
         default: return false;
     }
 }
@@ -867,7 +869,7 @@ function navigateSafe(view) {
     appState.currentView = view;
     if (view === 'auth') localStorage.removeItem(STORAGE_VIEW);
     else localStorage.setItem(STORAGE_VIEW, view);
-    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view', 'sms-admin-view']
+    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'doctor-today-serials-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view', 'sms-admin-view']
         .forEach(v => getEl(v)?.classList.add('hidden'));
     getEl(`${view}-view`)?.classList.remove('hidden');
 
@@ -907,6 +909,7 @@ function navigateSafe(view) {
     }
     if (view === 'admin') renderAdmin();
     if (view === 'sms-admin') initSmsPortal();
+    if (view === 'doctor-today-serials') renderDoctorTodaySerials();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -949,6 +952,8 @@ function buildSidebarNav(role) {
     if (role === ROLES.DOCTOR) {
         navItems.push({ type: 'label', text: 'Doctor' });
         navItems.push({ type: 'item', id: 'doctor-dashboard', text: 'Doctor Dashboard', icon: '#doctor-icon' });
+        navItems.push({ type: 'item', id: 'appointments', text: 'My Appointments', icon: '#appointments-icon' });
+        navItems.push({ type: 'item', id: 'doctor-today-serials', text: "Today's Serials", icon: '#serials-icon' });
     }
 
     if (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR) {
@@ -987,6 +992,7 @@ function buildSidebarNav(role) {
 function switchSidebarItem(id) {
     if (id === 'dashboard') { navigateSafe('dashboard'); initDashboard(); return; }
     if (id === 'doctor-dashboard') { navigateSafe('doctor-dashboard'); initDoctorDashboard(); return; }
+    if (id === 'doctor-today-serials') { navigateSafe('doctor-today-serials'); renderDoctorTodaySerials(); return; }
     if (id === 'marketing-dashboard') { navigateSafe('marketing-dashboard'); initMarketingDashboard(); return; }
     if (id === 'receptionist-dashboard') { navigateSafe('receptionist-dashboard'); initReceptionistDashboard(); return; }
     if (id === 'doctors') { navigateSafe('doctors'); renderDoctors(); return; }
@@ -3133,6 +3139,70 @@ async function renderAdminTodaySerials(action = null) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load serials</td></tr>';
         getEl('today-serials-pagination').innerHTML = '';
     }
+}
+
+async function renderDoctorTodaySerials(action = null) {
+    if (action !== null && action !== 'reset') handlePaginationAction(action, paginationState.doctorTodaySerials);
+    else if (action === 'reset') paginationState.doctorTodaySerials.skip = 0;
+
+    const tbody = getEl('doctor-today-serials-list');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+
+    try {
+        const date = getEl('doc-filter-today-date')?.value || todayISO();
+        const status = getEl('doc-filter-today-status')?.value || '';
+
+        let url = `/appointments?skip=${paginationState.doctorTodaySerials.skip}&limit=${paginationState.doctorTodaySerials.limit}&date=${date}`;
+        if (status) url += `&status=${status}`;
+
+        const rawData = await apiRequest(url);
+        paginationState.doctorTodaySerials.total = rawData.total || 0;
+        const data = normalizeAppointments(rawData);
+
+        if (data.length === 0 && paginationState.doctorTodaySerials.skip === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="color:var(--text-muted)">No serials found.</td></tr>';
+            getEl('doctor-today-serials-pagination').innerHTML = '';
+            return;
+        }
+
+        const sorted = sortAppointments(data);
+        tbody.innerHTML = sorted.map(app => `
+        <tr>
+            <td data-label="Patient">
+                <div><strong>${escapeHTML(app.patientName)}</strong></div>
+                <div class="row-subtle">${escapeHTML(app.patientPhone)}</div>
+                ${appointmentPatientDetailsMeta(app)}
+                ${appointmentSourceMeta(app)}
+                ${app.reason ? `<div class="row-note">${escapeHTML(app.reason)}</div>` : ''}
+            </td>
+            <td data-label="Serial / Date">
+                <div>Serial: <strong>${app.serial_number ? `#${app.serial_number}` : '-'}</strong></div>
+                <div class="row-subtle">${formatDate(app.date)}</div>
+            </td>
+            <td data-label="Status"><span class="badge ${statusBadgeClass(app.status)}">${escapeHTML(app.status)}</span></td>
+            <td data-label="Actions">
+                <div class="table-actions">
+                    <button class="btn btn-outline btn-compact" onclick="viewAppointmentPdf(${Number(app.id)})">View Slip</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+        renderPaginationControls('doctor-today-serials-pagination', paginationState.doctorTodaySerials, 'renderDoctorTodaySerials', 'doctorTodaySerials');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load serials</td></tr>';
+        getEl('doctor-today-serials-pagination').innerHTML = '';
+    }
+}
+
+function clearDoctorTodaySerialsFilters() {
+    getEl('doc-filter-today-date').value = '';
+    getEl('doc-filter-today-status').value = '';
+    renderDoctorTodaySerials('reset');
+}
+
+function exportDoctorTodaySerialsPdf() {
+    const date = getEl('doc-filter-today-date')?.value || todayISO();
+    downloadSerialsPdf(date, '', '');
 }
 
 function generateTimeOptions(selectId) {

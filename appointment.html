@@ -292,12 +292,52 @@
                     <h3>View Appointments</h3>
                     <p class="mt-1">See all scheduled appointments with your patients.</p>
                 </div>
-                <div class="card action-card" onclick="navigate('appointments')">
+                <div class="card action-card" onclick="switchSidebarItem('doctor-today-serials')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                     <h3>View Serials</h3>
                     <p class="mt-1">See all serials with date selection.</p>
                 </div>
             </div>
+        </section>
+
+        <!-- View 2C: Doctor Today's Serials -->
+        <section id="doctor-today-serials-view" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h1>Today's Serials</h1>
+                <button class="btn btn-outline" onclick="exportTodaySerialsPdf()">Export as PDF</button>
+            </div>
+
+            <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
+                <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                    <input type="date" id="doc-filter-today-date" onchange="renderDoctorTodaySerials('reset')">
+                </div>
+                <div class="input-group" style="margin:0; flex:1; min-width:150px;">
+                    <select id="doc-filter-today-status" onchange="renderDoctorTodaySerials('reset')">
+                        <option value="">All Statuses</option>
+                        <option value="Booked">Booked</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline" style="margin:0; min-width:80px;" onclick="clearDoctorTodaySerialsFilters()">Clear</button>
+            </div>
+
+            <div class="table-container mt-4">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Serial / Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="doctor-today-serials-list">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="doctor-today-serials-pagination" class="mt-4"></div>
         </section>
 
         <!-- View 2C2: Receptionist Dashboard -->
@@ -760,7 +800,7 @@
                     <div id="admin-today-serials-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="mb-4">Serials</h3>
-                            <button class="btn btn-outline" onclick="exportTodaySerialsPdf()">Export as PDF</button>
+                <button class="btn btn-outline" onclick="exportDoctorTodaySerialsPdf()">Export as PDF</button>
                         </div>
 
                         <div class="filter-bar mb-4 flex gap-2" style="flex-wrap: wrap;">
