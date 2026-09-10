@@ -703,6 +703,19 @@
                         <div id="admin-receptionists-result-count" class="result-count"></div>
                     </div>
 
+                    <div id="admin-commission-sms-users-content" class="hidden">
+                        <div class="commission-heading">
+                            <div><h3>Commission SMS users</h3><p class="commission-muted">Create and manage accounts for the commission SMS panel.</p></div>
+                            <button class="btn btn-primary" onclick="editCommissionUser()">+ Add user</button>
+                        </div>
+                        <label for="commission-user-search">Search users</label>
+                        <input id="commission-user-search" type="search" placeholder="Name, phone or email" oninput="renderCommissionUsers()">
+                        <div class="table-container"><table>
+                            <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
+                            <tbody id="commission-user-list"></tbody>
+                        </table></div>
+                    </div>
+
                     <!-- Admin SMS Admins Sub-view -->
                     <div id="admin-sms-admins-content" class="hidden">
                         <div class="flex justify-between items-center mb-4">
@@ -953,6 +966,57 @@
                 </div>
             </div>
         </section>
+        <section id="commission-sms-panel-view" class="hidden">
+            <div class="commission-heading">
+                <div><p class="commission-eyebrow">NSGH / Partner communications</p><h2>Commission SMS</h2><p class="commission-muted">Payment updates, with a personal touch.</p></div>
+                <span class="badge badge-info" id="commission-today"></span>
+            </div>
+            <p id="commission-load-error" class="hidden commission-error" role="alert"></p>
+            <div id="commission-send-content" class="hidden">
+                <form id="commission-send-form" class="commission-workspace" onsubmit="event.preventDefault(); sendCommissionSms();">
+                    <div class="card">
+                        <h3>Send a payment update</h3>
+                        <p class="commission-muted mb-4">Choose a doctor and enter the commission already paid.</p>
+                        <div class="input-group"><label for="commission-doctor-select">Doctor</label><select id="commission-doctor-select" required onchange="previewCommissionSms()"><option value="">Loading doctors…</option></select></div>
+                        <div id="commission-doctor-detail" class="commission-recipient">Select a doctor to see their details.</div>
+                        <div class="commission-fields">
+                            <div class="input-group"><label for="commission-amount">Commission amount (BDT)</label><input id="commission-amount" type="number" min="0.01" max="9999999999.99" step="0.01" inputmode="decimal" placeholder="0.00" required oninput="previewCommissionSms()"></div>
+                            <div class="input-group"><label for="commission-date">Payment date</label><input id="commission-date" type="date" required oninput="previewCommissionSms()"><small class="commission-muted">Defaults to today in Bangladesh.</small></div>
+                        </div>
+                        <div class="input-group"><label for="commission-template-select">SMS template</label><select id="commission-template-select" required onchange="previewCommissionSms()"><option value="">Loading templates…</option></select></div>
+                        <button class="btn btn-outline btn-compact" type="button" onclick="switchCommissionTab('commission-templates')">Manage templates</button>
+                    </div>
+                    <aside class="card commission-preview-card">
+                        <p class="commission-eyebrow">Ready for review</p><h3>Message preview</h3>
+                        <p id="commission-preview" class="commission-message" aria-live="polite">Choose a doctor and template to preview your SMS.</p>
+                        <p id="commission-character-count" class="commission-muted"></p>
+                        <p class="commission-muted">This sends an SMS notification. It does not transfer money.</p>
+                        <button id="commission-send-button" class="btn btn-primary" type="submit" disabled>Send commission SMS</button>
+                        <p id="commission-send-result" role="status" class="commission-muted"></p>
+                    </aside>
+                </form>
+            </div>
+            <div id="commission-doctors-content" class="hidden card">
+                <div class="commission-heading"><div><h3>Doctor directory</h3><p class="commission-muted">Manage the recipients of your commission updates.</p></div><button class="btn btn-primary" onclick="editCommissionDoctor()">+ Add doctor</button></div>
+                <div class="input-group"><label for="commission-doctor-search">Search doctors</label><input id="commission-doctor-search" type="search" placeholder="Doctor ID, name, phone or address" oninput="renderCommissionDoctors()"></div>
+                <div class="table-container"><table><thead><tr><th>Doctor ID</th><th>Doctor name</th><th>Doctor address</th><th>Phone</th><th>Actions</th></tr></thead><tbody id="commission-doctor-list"></tbody></table></div>
+            </div>
+            <div id="commission-templates-content" class="hidden card">
+                <div class="commission-heading"><div><h3>SMS templates</h3><p class="commission-muted">Use <code>{name}</code>, <code>{amount}</code> and <code>{date}</code> to personalize messages.</p></div><button class="btn btn-primary" onclick="editCommissionTemplate()">+ Add template</button></div>
+                <div id="commission-template-list" class="commission-template-list"></div>
+            </div>
+            <div id="commission-history-content" class="hidden card">
+                <div class="commission-heading"><div><h3>SMS history</h3><p class="commission-muted">Your original messages and their submission status.</p></div><button class="btn btn-outline" onclick="renderCommissionHistory()">Refresh</button></div>
+                <form class="commission-history-filters" onsubmit="event.preventDefault(); renderCommissionHistory(0);">
+                    <div class="input-group"><label for="commission-history-search">Search messages</label><input id="commission-history-search" type="search" placeholder="Doctor ID, name or phone"></div>
+                    <div class="input-group"><label for="commission-history-date">Payment date</label><input id="commission-history-date" type="date"></div>
+                    <button class="btn btn-primary" type="submit">Search</button><button class="btn btn-outline" type="button" onclick="this.form.reset(); renderCommissionHistory(0)">Clear</button>
+                </form>
+                <div class="table-container"><table><thead><tr><th>Submitted at</th><th>Doctor</th><th>Commission</th><th>Message</th><th>Status</th></tr></thead><tbody id="commission-history-list"></tbody></table></div>
+                <div class="commission-pagination"><span id="commission-history-count" class="commission-muted" aria-live="polite"></span><button id="commission-history-prev" class="btn btn-outline btn-compact" onclick="renderCommissionHistory(commissionState.historySkip - 20)">Previous</button><button id="commission-history-next" class="btn btn-outline btn-compact" onclick="renderCommissionHistory(commissionState.historySkip + 20)">Next</button></div>
+            </div>
+        </section>
+
         <!-- View 6: SMS Admin Portal -->
         <section id="sms-admin-view" class="hidden">
             <div class="flex justify-between items-center mb-4">
@@ -1576,7 +1640,16 @@
     </div>
 
     <!-- External JavaScript -->
+    <dialog id="commission-editor" class="commission-dialog" aria-labelledby="commission-editor-title">
+        <form id="commission-editor-form">
+            <div class="commission-heading"><h3 id="commission-editor-title"></h3><button type="button" class="close-btn" aria-label="Close editor" onclick="document.getElementById('commission-editor').close()">&times;</button></div>
+            <div id="commission-editor-fields"></div>
+            <p id="commission-editor-error" class="commission-error" role="alert"></p>
+            <div class="commission-editor-actions"><button type="button" class="btn btn-outline" onclick="document.getElementById('commission-editor').close()">Cancel</button><button id="commission-editor-save" type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+    </dialog>
     <script src="js/config.js"></script>
+    <script src="js/commission-sms.js"></script>
     <script src="js/appointment.js"></script>
 </body>
 </html>

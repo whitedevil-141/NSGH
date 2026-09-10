@@ -6,36 +6,48 @@ from fastapi import HTTPException
 from api.utils.config import load_env
 
 
-BULKSMSBD_SMS_URL = "https://bulksmsbd.net/api/smsapi"
+AUTOMAS_SMS_URL = "https://api.automas.com.bd/smsapiv3"
 
 
 def send_sms(number: str, message: str) -> dict:
     load_env()
-    api_key = os.getenv("BULKSMSBD_API_KEY")
-    senderid = os.getenv("BULKSMSBD_SENDER_ID")
-    if not api_key or not senderid:
-        raise HTTPException(status_code=500, detail="SMS provider is not configured")
 
-    payload = {
-        "api_key": api_key,
-        "senderid": senderid,
-        "number": number,
-        "message": message,
+    api_key = "6060a92efeb1296ea7722c9c3f6bd558"
+    sender_id = "8809617640056"
+
+    if not api_key or not sender_id:
+        raise HTTPException(
+            status_code=500,
+            detail="SMS provider is not configured",
+        )
+
+    params = {
+        "apikey": api_key,
+        "sender": sender_id,
+        "msisdn": number,
+        "smstext": message,
     }
 
     try:
-        response = requests.post(BULKSMSBD_SMS_URL, data=payload, timeout=10)
+        response = requests.get(
+            AUTOMAS_SMS_URL,
+            params=params,
+            timeout=10,
+        )
         response.raise_for_status()
     except requests.RequestException:
-        raise HTTPException(status_code=502, detail="SMS provider request failed")
+        raise HTTPException(
+            status_code=502,
+            detail="SMS provider request failed",
+        )
 
+    # AutoMAS may return a plain-text response rather than JSON.
     try:
         provider_response = response.json()
     except ValueError:
-        provider_response = {"raw": response.text}
-
-    response_code = str(provider_response.get("response_code", ""))
-    if response_code and response_code not in {"200", "202"}:
-        raise HTTPException(status_code=502, detail="SMS provider rejected the request")
+        provider_response = {
+            "raw": response.text,
+            "status_code": response.status_code,
+        }
 
     return provider_response

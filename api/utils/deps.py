@@ -15,6 +15,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("role") == "commission_sms":
+            raise HTTPException(status_code=403, detail="Use the commission SMS panel for this account")
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(

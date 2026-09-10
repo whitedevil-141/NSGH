@@ -64,7 +64,7 @@ from api.utils.security import hash_password, verify_password
 router = APIRouter(tags=["Appointment Portal"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="appointment/login")
 
-VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor", "receptionist", "sms_admin"}
+VALID_ROLES = {"user", "doctor", "admin", "marketing", "commission_doctor", "receptionist", "sms_admin", "commission_sms"}
 VALID_STATUSES = {"Booked", "Completed", "Cancelled"}
 SLOT_INTERVAL_MINUTES = 30
 BOOKING_WINDOW_DAYS = 1
@@ -615,6 +615,8 @@ def login(data: AppointmentLoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/data", response_model=AppointmentDataResponse)
 def get_data(db: Session = Depends(get_db), current_user: AppointmentUser = Depends(_current_user)):
+    if current_user.role == "commission_sms":
+        return AppointmentDataResponse(users=[_user_out(current_user)], doctors=[], appointments=[])
     users = []
     if current_user.role == "admin":
         users = [_user_out(user) for user in db.query(AppointmentUser).all()]

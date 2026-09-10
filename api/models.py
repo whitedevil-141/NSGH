@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, Numeric, UniqueConstraint
 from api.database import Base
 
 class User(Base):
@@ -159,3 +159,46 @@ class ManualSms(Base):
     sent_by_id = Column(String(32), nullable=True, index=True)
     sent_by_name = Column(String(100), nullable=True)
     created_at = Column(String(30), nullable=True)
+
+
+class CommissionSmsDoctor(Base):
+    __tablename__ = "commission_sms_doctors"
+    __table_args__ = (UniqueConstraint("owner_id", "doctor_id", name="uq_commission_doctor_owner"),)
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(String(32), nullable=False, index=True)
+    doctor_id = Column(String(50), nullable=False)
+    name = Column(String(100), nullable=False)
+    address = Column(String(500), nullable=False)
+    phone = Column(String(20), nullable=False)
+
+
+class CommissionSmsTemplate(Base):
+    __tablename__ = "commission_sms_templates"
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(String(32), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    body = Column(Text, nullable=False)
+
+
+class CommissionSmsHistory(Base):
+    __tablename__ = "commission_sms_history"
+    __table_args__ = (UniqueConstraint("owner_id", "request_id", name="uq_commission_sms_request"),)
+
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(String(32), nullable=False, index=True)
+    request_id = Column(String(36), nullable=False)
+    request_hash = Column(String(64), nullable=False)
+    doctor_id = Column(String(50), nullable=False)
+    doctor_name = Column(String(100), nullable=False)
+    doctor_address = Column(String(500), nullable=False)
+    phone = Column(String(20), nullable=False)
+    template_name = Column(String(100), nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    payment_date = Column(String(10), nullable=False)
+    message = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    status_detail = Column(String(500), nullable=True)
+    sent_by_name = Column(String(100), nullable=False)
+    created_at = Column(String(30), nullable=False, index=True)

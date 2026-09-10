@@ -13,7 +13,8 @@ const VIEW_HASH_MAP = {
     'doctors': 'doctors',
     'appointments': 'appointments',
     'admin': 'admin',
-    'sms-admin': 'sms-admin'
+    'sms-admin': 'sms-admin',
+    'commission-sms-panel': 'commission-sms-panel'
 };
 const ADMIN_SUB_HASH_MAP = {
     'users': 'admin-users',
@@ -23,6 +24,7 @@ const ADMIN_SUB_HASH_MAP = {
     'appointments': 'admin-appointments',
     'today-serials': 'admin-today-serials',
     'sms-admins': 'admin-sms-admins',
+    'commission-sms-users': 'admin-commission-sms-users',
     'notices': 'admin-notices',
     'categories': 'admin-categories'
 };
@@ -30,6 +32,7 @@ const SMS_SUB_HASH_MAP = {
     'send': 'sms-send',
     'history': 'sms-history'
 };
+const COMMISSION_SUB_HASH_MAP = { send: 'commission-send', doctors: 'commission-doctors', templates: 'commission-templates', history: 'commission-history' };
 const API_BASE = (window.NSGH_APPOINTMENT_API || (window.NSGH_API_BASE + '/appointment'));
 const SLOT_INTERVAL_MINUTES = 30;
 const BOOKING_WINDOW_DAYS = 7;
@@ -54,7 +57,7 @@ const WEEKDAY_ALIASES = {
     sunday: 'Sunday'
 };
 
-const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor', RECEPTIONIST: 'receptionist', SMS_ADMIN: 'sms_admin' };
+const ROLES = { USER: 'user', DOCTOR: 'doctor', ADMIN: 'admin', MARKETING: 'marketing', COMMISSION_DOCTOR: 'commission_doctor', RECEPTIONIST: 'receptionist', SMS_ADMIN: 'sms_admin', COMMISSION_SMS: 'commission_sms' };
 const VALID_APPOINTMENT_STATUSES = ['Booked', 'Completed', 'Cancelled'];
 
 const PERMISSIONS = {
@@ -64,7 +67,8 @@ const PERMISSIONS = {
     marketing: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true, changeOwnPassword: true },
     commission_doctor: { marketingDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
     receptionist: { receptionistDashboard: true, viewDoctors: true, viewAppointments: true, createAppointments: true, cancelAppointments: true },
-    sms_admin: { smsPortal: true }
+    sms_admin: { smsPortal: true },
+    commission_sms: { commissionSmsPortal: true }
 };
 
 let appState = {
@@ -279,7 +283,8 @@ function roleLabel(role) {
         marketing: 'Marketing Officer',
         commission_doctor: 'Commission Doctor',
         receptionist: 'Receptionist',
-        sms_admin: 'SMS Admin'
+        sms_admin: 'SMS Admin',
+        commission_sms: 'Commission SMS'
     };
     return labels[role] || String(role || 'User').replace(/_/g, ' ');
 }
@@ -853,6 +858,7 @@ async function loadData() {
                     if (targetSub) {
                         if (targetView === 'admin') switchAdminTab(targetSub);
                         else if (targetView === 'sms-admin') switchSmsTab(targetSub);
+                        else if (targetView === 'commission-sms-panel') switchCommissionTab(targetSub);
                     }
                     return;
                 }
@@ -879,6 +885,7 @@ function canAccess(view) {
         case 'doctors': return role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
         case 'appointments': return role === ROLES.USER || role === ROLES.DOCTOR || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST;
         case 'sms-admin': return role === ROLES.SMS_ADMIN;
+        case 'commission-sms-panel': return role === ROLES.COMMISSION_SMS;
         case 'doctor-today-serials': return role === ROLES.DOCTOR;
         default: return false;
     }
@@ -891,6 +898,7 @@ function defaultViewFor(user) {
     if (role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR) return 'marketing-dashboard';
     if (role === ROLES.RECEPTIONIST) return 'receptionist-dashboard';
     if (role === ROLES.SMS_ADMIN) return 'sms-admin';
+    if (role === ROLES.COMMISSION_SMS) return 'commission-sms-panel';
     return 'dashboard';
 }
 
@@ -906,6 +914,8 @@ function getViewFromHash(hash) {
         sub = ADMIN_SUB_HASH_MAP[subKey];
     } else if (view === 'sms-admin' && subKey && SMS_SUB_HASH_MAP[subKey]) {
         sub = SMS_SUB_HASH_MAP[subKey];
+    } else if (view === 'commission-sms-panel' && subKey && COMMISSION_SUB_HASH_MAP[subKey]) {
+        sub = COMMISSION_SUB_HASH_MAP[subKey];
     }
     return { view, sub };
 }
@@ -939,6 +949,7 @@ function navigateToHash() {
     if (sub) {
         if (view === 'admin') switchAdminTab(sub);
         else if (view === 'sms-admin') switchSmsTab(sub);
+        else if (view === 'commission-sms-panel') switchCommissionTab(sub);
         return;
     }
     navigate(view);
@@ -961,7 +972,7 @@ function navigateSafe(view) {
     appState.currentView = view;
     if (view === 'auth') localStorage.removeItem(STORAGE_VIEW);
     else localStorage.setItem(STORAGE_VIEW, view);
-    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'doctor-today-serials-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view', 'sms-admin-view']
+    ['auth-view', 'dashboard-view', 'doctor-dashboard-view', 'doctor-today-serials-view', 'marketing-dashboard-view', 'receptionist-dashboard-view', 'doctors-view', 'appointments-view', 'admin-view', 'sms-admin-view', 'commission-sms-panel-view']
         .forEach(v => getEl(v)?.classList.add('hidden'));
     getEl(`${view}-view`)?.classList.remove('hidden');
 
@@ -1001,16 +1012,17 @@ function navigateSafe(view) {
     }
     if (view === 'admin') renderAdmin();
     if (view === 'sms-admin') initSmsPortal();
+    if (view === 'commission-sms-panel') initCommissionPortal();
     if (view === 'doctor-today-serials') renderDoctorTodaySerials();
 
     // Update sidebar active state for main views (admin/sms-admin handled by sub-functions)
-    if (view !== 'auth' && view !== 'admin' && view !== 'sms-admin') {
+    if (view !== 'auth' && view !== 'admin' && view !== 'sms-admin' && view !== 'commission-sms-panel') {
         document.querySelectorAll('.sidebar-nav .sidebar-item').forEach(el => el.classList.remove('active'));
         const tab = getEl(`tab-${view}`);
         if (tab) tab.classList.add('active');
     }
 
-    if (view !== 'auth' && view !== 'admin' && view !== 'sms-admin') {
+    if (view !== 'auth' && view !== 'admin' && view !== 'sms-admin' && view !== 'commission-sms-panel') {
         const navHash = VIEW_HASH_MAP[view];
         if (navHash !== undefined) setUrlHash(navHash);
     }
@@ -1044,6 +1056,7 @@ function buildSidebarNav(role) {
         navItems.push({ type: 'item', id: 'admin-appointments', text: 'All Appointments', icon: '#appointments-icon' });
         navItems.push({ type: 'item', id: 'admin-today-serials', text: "Today's Serials", icon: '#serials-icon' });
         navItems.push({ type: 'item', id: 'admin-sms-admins', text: 'SMS Admins', icon: '#sms-icon' });
+        navItems.push({ type: 'item', id: 'admin-commission-sms-users', text: 'Commission SMS Users', icon: '#users-icon' });
         navItems.push({ type: 'item', id: 'admin-notices', text: 'Notices', icon: '#notices-icon' });
         navItems.push({ type: 'item', id: 'admin-categories', text: 'Categories', icon: '#categories-icon' });
     }
@@ -1076,6 +1089,14 @@ function buildSidebarNav(role) {
         navItems.push({ type: 'item', id: 'sms-history', text: 'SMS History', icon: '#history-icon' });
     }
 
+    if (role === ROLES.COMMISSION_SMS) {
+        navItems.push({ type: 'label', text: 'Commission SMS' });
+        navItems.push({ type: 'item', id: 'commission-send', text: 'Send SMS', icon: '#sms-icon' });
+        navItems.push({ type: 'item', id: 'commission-doctors', text: 'Doctors', icon: '#doctor-icon' });
+        navItems.push({ type: 'item', id: 'commission-templates', text: 'SMS Templates', icon: '#notices-icon' });
+        navItems.push({ type: 'item', id: 'commission-history', text: 'SMS History', icon: '#history-icon' });
+    }
+
     if (role === ROLES.USER || role === ROLES.MARKETING || role === ROLES.COMMISSION_DOCTOR || role === ROLES.RECEPTIONIST) {
         navItems.push({ type: 'label', text: 'General' });
         navItems.push({ type: 'item', id: 'doctors', text: 'View Doctors', icon: '#doctor-icon' });
@@ -1094,6 +1115,7 @@ function buildSidebarNav(role) {
 }
 
 function switchSidebarItem(id) {
+    if (Object.values(COMMISSION_SUB_HASH_MAP).includes(id)) { switchCommissionTab(id); return; }
     if (id === 'dashboard') { navigateSafe('dashboard'); initDashboard(); return; }
     if (id === 'doctor-dashboard') { navigateSafe('doctor-dashboard'); initDoctorDashboard(); return; }
     if (id === 'doctor-today-serials') { navigateSafe('doctor-today-serials'); renderDoctorTodaySerials(); return; }
@@ -1289,6 +1311,7 @@ function redirectByRole(user, withToast = true) {
         if (hashSub) {
             if (hashView === 'admin') switchAdminTab(hashSub);
             else if (hashView === 'sms-admin') switchSmsTab(hashSub);
+            else if (hashView === 'commission-sms-panel') switchCommissionTab(hashSub);
         } else {
             navigate(hashView);
         }
@@ -1620,6 +1643,7 @@ async function resetPassword() {
 
 // --- Logout ---
 function logout() {
+    clearCommissionWorkspace();
     appState.currentUser = null;
     appState.authToken = null;
     persistSession();
@@ -2256,7 +2280,7 @@ function switchAdminTab(tabId) {
     const activeTab = getEl(`tab-${tabId}`);
     if (activeTab) activeTab.classList.add('active');
 
-    ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-receptionists', 'admin-sms-admins', 'admin-appointments', 'admin-today-serials', 'admin-notices', 'admin-categories'].forEach(t => {
+    ['admin-users', 'admin-doctors', 'admin-marketing', 'admin-receptionists', 'admin-sms-admins', 'admin-commission-sms-users', 'admin-appointments', 'admin-today-serials', 'admin-notices', 'admin-categories'].forEach(t => {
         getEl(`${t}-content`)?.classList.add('hidden');
     });
     getEl(`${tabId}-content`)?.classList.remove('hidden');
@@ -2275,6 +2299,7 @@ function switchAdminTab(tabId) {
     if (tabId === 'admin-notices') renderAdminNotices();
     if (tabId === 'admin-receptionists') renderAdminReceptionists();
     if (tabId === 'admin-sms-admins') renderAdminSmsAdmins();
+    if (tabId === 'admin-commission-sms-users') renderCommissionUsers();
     if (tabId === 'admin-categories') renderAdminCategories();
     localStorage.setItem(STORAGE_SUB_VIEW, tabId);
     const entry = Object.entries(ADMIN_SUB_HASH_MAP).find(([k, v]) => v === tabId);
