@@ -87,13 +87,21 @@ async function refreshCommissionWorkspace() {
 }
 
 function populateCommissionSelects() {
-    const doctors = getEl('commission-doctor-select');
     const templates = getEl('commission-template-select');
-    const oldDoctor = doctors.value, oldTemplate = templates.value;
-    doctors.innerHTML = `<option value="">${commissionState.doctors.length ? 'Select a doctor' : 'Add a doctor in the Doctors section first'}</option>` + commissionState.doctors.map(d => `<option value="${d.id}">${escapeHTML(d.doctor_id)} · ${escapeHTML(d.name)}</option>`).join('');
+    const oldTemplate = templates.value;
     templates.innerHTML = `<option value="">${commissionState.templates.length ? 'Select a template' : 'Add an SMS template first'}</option>` + commissionState.templates.map(t => `<option value="${t.id}">${escapeHTML(t.name)}</option>`).join('');
-    doctors.value = oldDoctor;
     templates.value = commissionState.templates.some(t => String(t.id) === oldTemplate) ? oldTemplate : String(commissionState.templates[0]?.id || '');
+    filterCommissionDoctorSelect();
+}
+
+function filterCommissionDoctorSelect() {
+    const select = getEl('commission-doctor-select');
+    const selected = select.value;
+    const query = getEl('commission-recipient-search').value.trim().toLowerCase();
+    const doctors = commissionState.doctors.filter(d => [d.doctor_id, d.name, d.address, d.phone].some(value => value.toLowerCase().includes(query)));
+    const placeholder = !commissionState.doctors.length ? 'Add a doctor in the Doctors section first' : doctors.length ? 'Select a doctor' : 'No doctors match your search';
+    select.innerHTML = `<option value="">${placeholder}</option>` + doctors.map(d => `<option value="${d.id}">${escapeHTML(d.doctor_id)} · ${escapeHTML(d.name)}</option>`).join('');
+    select.value = doctors.some(d => String(d.id) === selected) ? selected : '';
     previewCommissionSms();
 }
 
