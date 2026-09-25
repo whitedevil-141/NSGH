@@ -7,6 +7,13 @@
 .commission-workspace .card { margin: 0; }
 .commission-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .commission-recipient { border-left: 3px solid var(--primary); background: var(--surface-muted); padding: 14px 18px; margin: 0 0 24px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.commission-doctor-results { margin-top: 8px; max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.commission-doctor-option { display: block; width: 100%; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text-main); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.commission-doctor-option:last-child { border-bottom: 0; }
+.commission-doctor-option:hover, .commission-doctor-option[aria-selected="true"] { background: var(--primary-soft); outline: 2px solid var(--primary); outline-offset: -2px; }
+.commission-doctor-option strong, .commission-doctor-option small { display: block; }
+.commission-doctor-option small { margin-top: 4px; color: var(--text-muted); }
+#commission-doctor-search-empty { padding: 12px 14px; }
 .commission-message { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; margin: 20px 0; }
 .commission-preview-card { border-top: 3px solid var(--primary); }
 .commission-preview-card .commission-message { padding: 24px; background: var(--primary-soft); border-radius: var(--radius-md); min-height: 170px; }

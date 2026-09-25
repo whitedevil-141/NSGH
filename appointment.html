@@ -978,7 +978,14 @@
                         <h3>Send a payment update</h3>
                         <p class="commission-muted mb-4">Choose a doctor and enter the commission already paid.</p>
                         <div class="input-group"><label for="commission-doctor-select">Doctor</label><select id="commission-doctor-select" required onchange="previewCommissionSms()"><option value="">Loading doctors…</option></select></div>
-                        <div class="input-group"><label for="commission-recipient-search">Search doctors</label><input id="commission-recipient-search" type="search" placeholder="Doctor ID, name, phone or address" aria-controls="commission-doctor-select" oninput="filterCommissionDoctorSelect()" onkeydown="if (event.key === 'Enter') event.preventDefault();"></div>
+                        <div class="input-group commission-doctor-search" onfocusout="if (!this.contains(event.relatedTarget)) hideCommissionDoctorSuggestions();">
+                            <label for="commission-recipient-search">Search doctors</label>
+                            <input id="commission-recipient-search" type="search" role="combobox" autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="commission-doctor-suggestions" placeholder="Doctor ID, name, phone or address" oninput="filterCommissionDoctorSelect()" onfocus="filterCommissionDoctorSelect()" onkeydown="handleCommissionDoctorSearchKey(event)">
+                            <div id="commission-doctor-search-results" class="commission-doctor-results hidden">
+                                <div id="commission-doctor-suggestions" role="listbox" aria-label="Matching doctors" onmousedown="if (event.target.closest('[role=option]')) event.preventDefault();" onclick="const option = event.target.closest('[role=option]'); if (option) selectCommissionDoctorSuggestion(option.dataset.doctorId);"></div>
+                                <p id="commission-doctor-search-empty" class="commission-muted hidden" role="status">No doctors found</p>
+                            </div>
+                        </div>
                         <div id="commission-doctor-detail" class="commission-recipient">Select a doctor to see their details.</div>
                         <div class="commission-fields">
                             <div class="input-group"><label for="commission-amount">Commission amount (BDT)</label><input id="commission-amount" type="number" min="0.01" max="9999999999.99" step="0.01" inputmode="decimal" placeholder="0.00" required oninput="previewCommissionSms()"></div>

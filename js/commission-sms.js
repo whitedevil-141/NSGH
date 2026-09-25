@@ -45,6 +45,7 @@ function initCommissionPortal() {
 
 function switchCommissionTab(tabId) {
     if (!canAccess('commission-sms-panel')) return;
+    hideCommissionDoctorSuggestions();
     if (!Object.values(COMMISSION_SUB_HASH_MAP).includes(tabId)) tabId = 'commission-send';
     if (appState.currentView !== 'commission-sms-panel') navigateSafe('commission-sms-panel');
     Object.values(COMMISSION_SUB_HASH_MAP).forEach(id => getEl(`${id}-content`).classList.toggle('hidden', id !== tabId));
@@ -102,7 +103,60 @@ function filterCommissionDoctorSelect() {
     const placeholder = !commissionState.doctors.length ? 'Add a doctor in the Doctors section first' : doctors.length ? 'Select a doctor' : 'No doctors match your search';
     select.innerHTML = `<option value="">${placeholder}</option>` + doctors.map(d => `<option value="${d.id}">${escapeHTML(d.doctor_id)} · ${escapeHTML(d.name)}</option>`).join('');
     select.value = doctors.some(d => String(d.id) === selected) ? selected : '';
+    hideCommissionDoctorSuggestions();
+    const suggestions = getEl('commission-doctor-suggestions');
+    suggestions.replaceChildren();
+    if (query && document.activeElement === getEl('commission-recipient-search') && !commissionState.sending) {
+        suggestions.innerHTML = doctors.map(d => `<button type="button" class="commission-doctor-option" id="commission-doctor-option-${d.id}" role="option" aria-selected="false" tabindex="-1" data-doctor-id="${d.id}"><strong>${escapeHTML(d.name)} · ${escapeHTML(d.doctor_id)}</strong><small>${escapeHTML(d.phone)}</small><small>${escapeHTML(d.address)}</small></button>`).join('');
+        getEl('commission-doctor-search-empty').classList.toggle('hidden', doctors.length > 0);
+        getEl('commission-doctor-search-results').classList.remove('hidden');
+        getEl('commission-recipient-search').setAttribute('aria-expanded', 'true');
+    }
     previewCommissionSms();
+}
+
+function hideCommissionDoctorSuggestions() {
+    getEl('commission-doctor-search-results').classList.add('hidden');
+    const search = getEl('commission-recipient-search');
+    search.setAttribute('aria-expanded', 'false');
+    search.removeAttribute('aria-activedescendant');
+    getEl('commission-doctor-suggestions').querySelectorAll('[aria-selected="true"]').forEach(option => option.setAttribute('aria-selected', 'false'));
+}
+
+function selectCommissionDoctorSuggestion(id) {
+    const select = getEl('commission-doctor-select');
+    if (commissionState.sending || ![...select.options].some(option => option.value === String(id))) return;
+    select.value = String(id);
+    getEl('commission-recipient-search').focus({ preventScroll: true });
+    hideCommissionDoctorSuggestions();
+    previewCommissionSms();
+}
+
+function handleCommissionDoctorSearchKey(event) {
+    // Enter in this field must never submit the SMS form, including during IME composition.
+    if (event.key === 'Enter') event.preventDefault();
+    if (event.isComposing) return;
+    const search = getEl('commission-recipient-search');
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        hideCommissionDoctorSuggestions();
+        return;
+    }
+    if (event.key === 'Enter') {
+        const active = getEl(search.getAttribute('aria-activedescendant'));
+        if (search.getAttribute('aria-expanded') === 'true' && active) selectCommissionDoctorSuggestion(active.dataset.doctorId);
+        return;
+    }
+    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+    event.preventDefault();
+    if (search.getAttribute('aria-expanded') !== 'true') filterCommissionDoctorSelect();
+    const options = [...getEl('commission-doctor-suggestions').querySelectorAll('[role="option"]')];
+    if (!options.length) return;
+    const current = options.findIndex(option => option.id === search.getAttribute('aria-activedescendant'));
+    const next = current === -1 ? (event.key === 'ArrowDown' ? 0 : options.length - 1) : (current + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+    options.forEach((option, index) => option.setAttribute('aria-selected', String(index === next)));
+    search.setAttribute('aria-activedescendant', options[next].id);
+    options[next].scrollIntoView({ block: 'nearest' });
 }
 
 function renderCommissionText(body, values) {
@@ -130,6 +184,7 @@ async function sendCommissionSms() {
     // Retain this ID after a network error so the retry can retrieve the original attempt.
     if (!commissionState.attempt || commissionState.attempt.signature !== signature) commissionState.attempt = { signature, id: crypto.randomUUID() };
     commissionState.sending = true;
+    hideCommissionDoctorSuggestions();
     getEl('commission-send-button').disabled = true;
     getEl('commission-send-button').textContent = 'Submitting…';
     const inputs = [...getEl('commission-send-form').querySelectorAll('input, select')];
