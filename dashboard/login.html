@@ -47,7 +47,17 @@ document.getElementById('loginForm').addEventListener('submit', async e=>{
     // After successful login
     const tokenData = await res.json();
     const expiresAt = Math.floor(Date.now() / 1000) + tokenData.expires_in;
-
+    const accountResponse = await fetch(window.NSGH_API_BASE + '/auth/me', {
+      headers: { Authorization: 'Bearer ' + tokenData.access_token }
+    });
+    if (!accountResponse.ok) throw new Error('Unable to validate your account');
+    const account = await accountResponse.json();
+    if (account.role !== 'admin') {
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('token_expiry');
+      alert('An admin account is required to access this dashboard.');
+      return;
+    }
     sessionStorage.setItem('token', tokenData.access_token);
     sessionStorage.setItem('token_expiry', expiresAt);
     window.location.href='dashboard.html';

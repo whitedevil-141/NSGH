@@ -4,7 +4,7 @@ from typing import List, Optional
 from api.database import get_db
 from api.models import Doctor, Category
 from api.schemas import CategoryCreate, CategoryOut, DoctorOut
-from api.utils.deps import get_current_user
+from api.utils.deps import get_current_admin
 from api.limiter import limiter
 from fastapi import Request
 from api.utils.image_handler import upload_to_hosting, delete_from_hosting
@@ -13,7 +13,7 @@ import json
 
 router = APIRouter(
     tags=["Doctors"],
-    dependencies=[Depends(get_current_user)]
+    dependencies=[Depends(get_current_admin)]
 )
 
 
@@ -35,6 +35,8 @@ async def add_doctor(
     if photo:
         try:
             photo_url = upload_to_hosting(photo)
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Photo upload failed: {e}")
 

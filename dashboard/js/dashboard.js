@@ -1,8 +1,7 @@
 const API_BASE = window.NSGH_API_BASE || 'https://api.nsghbd.com';
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
-    sessionStorage.removeItem('token');
-    window.location.href = 'login.html';
+    redirectToLogin();
 });
 
 function escapeHTML(value) {
@@ -224,16 +223,10 @@ if (addForm) {
         }
 
         try {
-            const res = await fetch(API_BASE + '/doctors/add', {
+            await dashboardApiRequest('/doctors/add', {
                 method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token },
                 body: uploadData
             });
-
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(errText);
-            }
 
             alert("Doctor added!");
             addForm.reset();
@@ -325,16 +318,10 @@ if (editForm) {
         }
 
         try {
-            const res = await fetch(API_BASE + '/doctors/update/' + id, {
+            await dashboardApiRequest('/doctors/update/' + id, {
                 method: 'PUT',
-                headers: { 'Authorization': 'Bearer ' + token },
                 body: uploadData
             });
-
-            if (!res.ok) {
-                const errText = await res.text();
-                throw new Error(errText);
-            }
 
             alert("Doctor updated!");
             bootstrap.Modal.getInstance(document.getElementById('editDoctorModal')).hide();
@@ -349,15 +336,14 @@ if (editForm) {
 async function deleteDoctor(id) {
     if (!confirm("Delete this doctor?")) return;
     try {
-        await fetch(API_BASE + '/doctors/' + id, {
-            method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + token }
+        await dashboardApiRequest('/doctors/' + id, {
+            method: 'DELETE'
         });
         alert("Deleted");
         loadDoctors();
     } catch (err) {
         console.error(err);
-        alert("Failed to delete");
+        alert("Failed to delete doctor: " + err.message);
     }
 }
 
@@ -406,16 +392,10 @@ if (addStaffForm) {
         const form = new FormData(addStaffForm);
 
         try {
-            const res = await fetch(API_BASE + '/staffs/add', {
+            await dashboardApiRequest('/staffs/add', {
                 method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token },
                 body: form
             });
-
-            if (!res.ok) {
-                const errMsg = await res.text();
-                throw new Error(errMsg || "Failed to add staff");
-            }
 
             alert("Staff added!");
             addStaffForm.reset();
@@ -461,16 +441,10 @@ if (editStaffForm) {
         }
 
         try {
-            const res = await fetch(API_BASE + '/staffs/update/' + id, {
+            await dashboardApiRequest('/staffs/update/' + id, {
                 method: 'PUT',
-                headers: { 'Authorization': 'Bearer ' + token },
                 body: form
             });
-
-            if (!res.ok) {
-                const errMsg = await res.text();
-                throw new Error(errMsg || "Failed to update staff");
-            }
 
             alert("Staff updated!");
             editStaffForm.reset();
@@ -486,9 +460,8 @@ if (editStaffForm) {
 async function deleteStaff(id) {
     if (!confirm("Delete this staff?")) return;
     try {
-        await fetch(API_BASE + '/staffs/' + id, {
-            method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + token }
+        await dashboardApiRequest('/staffs/' + id, {
+            method: 'DELETE'
         });
         alert("Deleted");
         loadStaffs();
@@ -546,15 +519,11 @@ document.getElementById('addCategoryForm').addEventListener('submit', async e =>
     const name = e.target.categoryName.value.trim();
     if (!name) return alert('Category name is required');
     try {
-        const res = await fetch(API_BASE + '/doctors/categories', {
+        await dashboardApiRequest('/doctors/categories', {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name })
         });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || 'Failed to add category');
-        }
         alert('Category added!');
         bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
         loadCategories();
@@ -576,15 +545,11 @@ document.getElementById('editCategoryForm').addEventListener('submit', async e =
     const name = document.getElementById('editCategoryName').value.trim();
     if (!name) return alert('Category name is required');
     try {
-        const res = await fetch(API_BASE + '/doctors/categories/' + id, {
+        await dashboardApiRequest('/doctors/categories/' + id, {
             method: 'PUT',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name })
         });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || 'Failed to update category');
-        }
         alert('Category updated!');
         bootstrap.Modal.getInstance(document.getElementById('editCategoryModal')).hide();
         loadCategories();
@@ -597,11 +562,9 @@ document.getElementById('editCategoryForm').addEventListener('submit', async e =
 async function deleteCategory(id) {
     if (!confirm('Delete this category?')) return;
     try {
-        const res = await fetch(API_BASE + '/doctors/categories/' + id, {
-            method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + token }
+        await dashboardApiRequest('/doctors/categories/' + id, {
+            method: 'DELETE'
         });
-        if (!res.ok) throw new Error('Failed to delete');
         alert('Category deleted');
         loadCategories();
         loadDoctors();
@@ -612,10 +575,7 @@ async function deleteCategory(id) {
 
 async function loadCategories() {
     try {
-        const res = await fetch(API_BASE + '/doctors/categories', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) throw new Error(await res.text());
+        const res = await dashboardApiRequest('/doctors/categories');
         categoriesList = await res.json();
         renderCategories();
         loadCategoryDropdowns();

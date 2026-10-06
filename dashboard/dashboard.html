@@ -9,27 +9,8 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <script>
-      const token = sessionStorage.getItem('token');
-      const expiresAt = sessionStorage.getItem('token_expiry'); // timestamp in seconds
-
-      function redirectToLogin() {
-          sessionStorage.removeItem('token');
-          sessionStorage.removeItem('token_expiry');
-          window.location.href = 'login.html';
-      }
-
-      if (!token || !expiresAt) {
-          // No token stored
-          redirectToLogin();
-      } else {
-          const now = Math.floor(Date.now() / 1000); // current time in seconds
-          if (now >= parseInt(expiresAt)) {
-              // Token expired
-              redirectToLogin();
-          }
-      }
-    </script>
+    <script src="js/api.js"></script>
+    <script>requireDashboardToken();</script>
   </head>
   <body class="dashboard-body">
 

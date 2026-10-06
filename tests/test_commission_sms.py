@@ -216,8 +216,8 @@ class CommissionSmsTests(unittest.TestCase):
     def test_no_access_to_appointments_or_legacy_management(self):
         self.assertEqual(self.client.get("/appointment/appointments", headers=self.headers(self.user)).status_code, 403)
         token = self.headers(self.user)["Authorization"].removeprefix("Bearer ")
-        with self.assertRaises(HTTPException) as denied:
-            get_current_user(token)
+        with Session(engine) as db, self.assertRaises(HTTPException) as denied:
+            get_current_user(token, db)
         self.assertEqual(denied.exception.status_code, 403)
         self.assertEqual(self.client.get("/appointment/commission-sms/doctors").status_code, 401)
 

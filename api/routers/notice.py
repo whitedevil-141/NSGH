@@ -5,14 +5,14 @@ from sqlalchemy.orm import Session
 from api.database import get_db
 from api.models import Notice
 from api.schemas import NoticeCreate, NoticeOut, NoticeUpdate
-from api.utils.deps import get_current_user
+from api.utils.deps import get_current_admin
 
 
 router = APIRouter(tags=["Notice"])
 
 
 @router.get("/notices", response_model=list[NoticeOut])
-def list_notices(db: Session = Depends(get_db)):
+def list_notices(db: Session = Depends(get_db), current_user=Depends(get_current_admin)):
     return db.query(Notice).order_by(Notice.id.desc()).all()
 
 
@@ -22,7 +22,7 @@ def list_active_notices(db: Session = Depends(get_db)):
 
 
 @router.post("/notices", response_model=NoticeOut, status_code=status.HTTP_201_CREATED)
-def create_notice(data: NoticeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def create_notice(data: NoticeCreate, db: Session = Depends(get_db), current_user=Depends(get_current_admin)):
     notice = Notice(
         title=data.title,
         content=data.content,
@@ -36,7 +36,7 @@ def create_notice(data: NoticeCreate, db: Session = Depends(get_db), current_use
 
 
 @router.put("/notices/{notice_id}", response_model=NoticeOut)
-def update_notice(notice_id: int, data: NoticeUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def update_notice(notice_id: int, data: NoticeUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_admin)):
     notice = db.query(Notice).filter(Notice.id == notice_id).first()
     if not notice:
         raise HTTPException(status_code=404, detail="Notice not found")
@@ -49,7 +49,7 @@ def update_notice(notice_id: int, data: NoticeUpdate, db: Session = Depends(get_
 
 
 @router.delete("/notices/{notice_id}")
-def delete_notice(notice_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def delete_notice(notice_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_admin)):
     notice = db.query(Notice).filter(Notice.id == notice_id).first()
     if not notice:
         raise HTTPException(status_code=404, detail="Notice not found")

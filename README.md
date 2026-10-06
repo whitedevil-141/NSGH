@@ -1,6 +1,10 @@
 # NSGH
 New Shafipur General Hospital Official Website
 
+Website management routes (`/doctors`, `/staffs`, notice management, and `/auth/register`) require a valid bearer token belonging to an existing admin account. Dashboard and appointment admin tokens both work for website management; appointment records continue to use appointment-scoped accounts and their existing role permissions. Public website reads and patient registration remain available. The dashboard checks session expiry on each request and returns to login on 401. Image-hosting authentication failures return 502 with an SFTP configuration message rather than 401; verify the API server's `SFTP_HOST`, `SFTP_USERNAME`, and `SFTP_PASSWORD` if that message appears.
+
+Deploy both the API changes and static dashboard files together, restart FastAPI, then sign in again. Existing unscoped dashboard tokens remain supported until expiry. Creating a website account through `/auth/register` now requires an existing admin token.
+
 Commission SMS panel is available in `appointment.html` using the existing appointment login.
 
 - An appointment admin can open **Commission SMS Users** to create, edit, reset passwords for, or delete accounts. The new role is `commission_sms`.

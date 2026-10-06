@@ -1,5 +1,14 @@
 The backend tests and browser test server always use a temporary SQLite database and a mocked SMS provider. They do not import `api.main`, read production data, or send real SMS.
 
+Authorization tests also cover website management, appointment routes, both admin login flows, invalid and expired tokens, account removal and role changes, and mocked image-hosting authentication failures.
+
+The dashboard browser regression test starts its own local static server and intercepts every API and CDN request. After installing Playwright as below, run it with:
+
+```powershell
+$env:NODE_PATH = (Resolve-Path .cache/browser/node_modules).Path
+node tests/dashboard_browser_test.cjs
+```
+
 Backend tests:
 
 ```powershell

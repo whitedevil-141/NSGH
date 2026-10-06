@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from api import crud, models, database
 from api.utils.jwt_handler import create_access_token
 from api.utils.security import hash_password, verify_password
+from api.utils.deps import get_current_admin, get_current_user
 from api.schemas import RegisterRequest
 from api.limiter import limiter
 from fastapi import Request
@@ -36,6 +37,7 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
                 "sub": user.username,
                 "user_id": user.user_id,
                 "role": user.role,  # optional: for admin/doctor separation
+                "scope": "dashboard",
             },
             expires_delta=expires_delta,
         )
@@ -48,9 +50,14 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 # ==========================
 # REGISTER ENDPOINT
 # ==========================
+@router.get("/me", tags=["Auth"])
+def current_account(current_user: dict = Depends(get_current_user)):
+    return {key: current_user.get(key) for key in ("user_id", "sub", "role", "scope")}
+
+
 @router.post("/register", status_code=status.HTTP_201_CREATED, tags=["Auth"])
 @limiter.limit("3/minute")
-def register_user(request: Request, data: RegisterRequest):
+def register_user(request: Request, data: RegisterRequest, current_user=Depends(get_current_admin)):
     with database.SessionLocal() as db:
         # check if username already exists
         existing = crud.get_user_by_username(db, data.username)

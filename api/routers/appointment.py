@@ -10,7 +10,6 @@ from threading import Lock
 from typing import Optional
 from uuid import uuid4
 
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
 from fastapi.security import OAuth2PasswordBearer
@@ -56,7 +55,8 @@ from api.utils.pdf import (
     register_fonts,
     wrap_bilingual,
 )
-from api.utils.jwt_handler import JWT_ALGORITHM, JWT_SECRET, create_access_token
+from api.utils.jwt_handler import create_access_token
+from api.utils.deps import decode_access_token
 from api.utils.sms import send_sms
 from api.utils.security import hash_password, verify_password
 
@@ -412,13 +412,10 @@ def _current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        if payload.get("scope") != "appointment":
-            raise credentials_exception
-        user_id = payload.get("user_id")
-    except jwt.PyJWTError:
+    payload = decode_access_token(token)
+    if payload.get("scope") != "appointment":
         raise credentials_exception
+    user_id = payload["user_id"]
 
     user = db.query(AppointmentUser).filter(AppointmentUser.id == user_id).first()
     if not user:
